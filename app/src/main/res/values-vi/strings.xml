@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AgriTech</string>
+
+    <string name="welcome">Chào mừng</string>
+    <string name="login_desc">Đăng nhập để quản lí sản phẩm và đơn hàng</string>
+    <string name="phone_number">SỐ ĐIỆN THOẠI</string>
+    <string name="password">MẬT KHẨU</string>
+    <string name="forgot_password">QUÊN MẬT KHẨU?</string>
+    <string name="login_button">Đăng nhập</string>
+    <string name="dont_have_account">Chưa có tài khoản? </string>
+    <string name="sign_up">Đăng ký</string>
+    <string name="terraform_ledger">TerraForm Ledger</string>
+    <string name="create_account">Tạo tài khoản</string>
+    <string name="join_digital_arboretum">Tham gia hệ sinh thái nông nghiệp số ngay hôm nay</string>
+    <string name="select_your_role">CHỌN VAI TRÒ CỦA BẠN</string>
+    <string name="role_buyer">Người mua</string>
+    <string name="role_farmer">Nông dân</string>
+    <string name="full_name">HỌ VÀ TÊN</string>
+    <string name="full_name_placeholder">Nguyễn Văn A</string>
+    <string name="email_address">ĐỊA CHỈ EMAIL</string>
+    <string name="email_placeholder">nguyenvana@example.com</string>
+    <string name="confirm_password">XÁC NHẬN MẬT KHẨU</string>
+    <string name="password_placeholder">••••••••</string>
+    <string name="phone_placeholder">+84 000 000 000</string>
+    <string name="already_have_account">Đã có tài khoản? </string>
+    <string name="security">Bảo mật</string>
+
+    <string name="forgot_password_x">Quên mật khẩu?</string>
+    <string name="forgot_password_desc">Nhập email đã đăng ký của bạn dưới đây để nhận mã xác minh.</string>
+    <string name="email_address_label">ĐỊA CHỈ EMAIL</string>
+    <string name="enter_email_hint">Nhập email của bạn</string>
+    <string name="send_code">Gửi mã</string>
+    <string name="trouble_receiving_code">Gặp khó khăn khi nhận mã? </string>
+    <string name="contact_support">Liên hệ hỗ trợ</string>
+
+    <string name="verification_badge">XÁC MINH</string>
+    <string name="verify_email_title">Xác minh Email</string>
+    <string name="verify_email_desc_prefix">Chúng tôi đã gửi mã 6 chữ số đến </string>
+    <string name="verify_email_desc_suffix">. Vui lòng nhập mã dưới đây để tiếp tục.</string>
+    <string name="didnt_receive_code">Chưa nhận được mã?</string>
+    <string name="resend_in">Gửi lại sau %s</string>
+    <string name="verify_button">Xác minh</string>
+    <string name="secure_ledger_protocol">GIAO THỨC BẢO MẬT SỔ CÁI</string>
+
+    <string name="reset_password">Đặt lại mật khẩu</string>
+    <string name="reset_password_desc">Tạo một mật khẩu mới, mạnh cho tài khoản của bạn.</string>
+    <string name="security_policy_text">Chính sách bảo mật: Mật khẩu mới của bạn phải chứa ít nhất 8 ký tự và bao gồm cả chữ cái và số.</string>
+    <string name="new_password_label">MẬT KHẨU MỚI</string>
+    <string name="confirm_new_password_label">XÁC NHẬN MẬT KHẨU MỚI</string>
+    <string name="update_password">Cập nhật mật khẩu</string>
+    <string name="locked_out">Bị khóa tài khoản? </string>
+    <string name="password_des">Mật khẩu phải từ 8 kí tự và bao gồm cả chữ và số</string>
+</resources>

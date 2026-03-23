@@ -1,0 +1,53 @@
+<resources>
+    <string name="app_name">Agritech</string>
+
+    <string name="welcome">Welcome</string>
+    <string name="login_desc">Login to manage your harvests and orders</string>
+    <string name="phone_number">PHONE NUMBER</string>
+    <string name="password">PASSWORD</string>
+    <string name="forgot_password">FORGOT PASSWORD?</string>
+    <string name="login_button">Login</string>
+    <string name="dont_have_account">Don\'t have an account? </string>
+    <string name="sign_up">Sign Up</string>
+    <string name="terraform_ledger">TerraForm Ledger</string>
+    <string name="create_account">Create Account</string>
+    <string name="join_digital_arboretum">Join the digital arboretum today</string>
+    <string name="select_your_role">SELECT YOUR ROLE</string>
+    <string name="role_buyer">Buyer</string>
+    <string name="role_farmer">Farmer</string>
+    <string name="full_name">FULL NAME</string>
+    <string name="full_name_placeholder">John Doe</string>
+    <string name="email_address">EMAIL ADDRESS</string>
+    <string name="email_placeholder">john@example.com</string>
+    <string name="confirm_password">CONFIRM PASSWORD</string>
+    <string name="password_placeholder">••••••••</string>
+    <string name="phone_placeholder">+1 (555) 000-0000</string>
+    <string name="already_have_account">Already have an account? </string>
+    <string name="security">Security</string>
+
+    <string name="forgot_password_x">Forgot Password?</string>
+    <string name="forgot_password_desc">Enter your registered email below to receive a verification code.</string>
+    <string name="email_address_label">EMAIL ADDRESS</string>
+    <string name="enter_email_hint">Enter your email</string>
+    <string name="send_code">Send Code</string>
+    <string name="trouble_receiving_code">Having trouble receiving the code? </string>
+    <string name="contact_support">Contact Support</string>
+
+    <string name="verification_badge">VERIFICATION</string>
+    <string name="verify_email_title">Verify Email</string>
+    <string name="verify_email_desc_prefix">We\'ve sent a 6-digit code to </string>
+    <string name="verify_email_desc_suffix">. Please enter it below to proceed.</string>
+    <string name="didnt_receive_code">Didn\'t receive the code?</string>
+    <string name="resend_in">Resend in %s</string>
+    <string name="verify_button">Verify</string>
+    <string name="secure_ledger_protocol">SECURE LEDGER PROTOCOL</string>
+
+    <string name="reset_password">Reset Password</string>
+    <string name="reset_password_desc">Create a new, strong password for your account.</string>
+    <string name="security_policy_text">Security Policy: Your new password must contain at least 8 characters and include a mix of letters and numbers.</string>
+    <string name="new_password_label">NEW PASSWORD</string>
+    <string name="confirm_new_password_label">CONFIRM NEW PASSWORD</string>
+    <string name="update_password">Update Password</string>
+    <string name="locked_out">Locked out? </string>
+    <string name="password_des">Password must be longer than 8 characters and contain both text and numbers</string>
+</resources>
