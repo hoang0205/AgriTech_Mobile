@@ -38,16 +38,18 @@
     <string name="verify_email_desc_prefix">We\'ve sent a 6-digit code to </string>
     <string name="verify_email_desc_suffix">. Please enter it below to proceed.</string>
     <string name="didnt_receive_code">Didn\'t receive the code?</string>
-    <string name="resend_in">Resend in %s</string>
+    <string name="resend_in">Resend in 00:%1$s</string>
     <string name="verify_button">Verify</string>
     <string name="secure_ledger_protocol">SECURE LEDGER PROTOCOL</string>
 
     <string name="reset_password">Reset Password</string>
     <string name="reset_password_desc">Create a new, strong password for your account.</string>
-    <string name="security_policy_text">Security Policy: Your new password must contain at least 8 characters and include a mix of letters and numbers.</string>
+    <string name="security_policy_text">Your new password must contain at least 8 characters and include a mix of letters and numbers.</string>
     <string name="new_password_label">NEW PASSWORD</string>
     <string name="confirm_new_password_label">CONFIRM NEW PASSWORD</string>
     <string name="update_password">Update Password</string>
     <string name="locked_out">Locked out? </string>
     <string name="password_des">Password must be longer than 8 characters and contain both text and numbers</string>
+    <string name="password_error">Passwords do not match</string>
+    <string name="resend">Resend</string>
 </resources>

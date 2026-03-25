@@ -62,29 +62,40 @@ fun AppNavigation() {
             ) {
                 ForgotPasswordScreen(
                     onBackClick = { navController.popBackStack() },
-                    onSendCodeClick = { navController.navigate("verify_email") }
+                    onSendCodeClick = { email -> navController.navigate("verify_email/$email") }
                 )
             }
 
             composable(
-                route = "verify_email",
+                route = "verify_email/{email}",
                 enterTransition = { slideInHorizontally(initialOffsetX = { 1000 }) + fadeIn() },
                 exitTransition = { slideOutHorizontally(targetOffsetX = { 1000 }) + fadeOut() }
             ) {
+                val email = it.arguments?.getString("email") ?: ""
                 VerifyEmailScreen(
+                    email = email,
                     onBackClick = { navController.popBackStack() },
-                    onVerifyClick = { navController.navigate("reset_password") }
+                    onVerifyClick = { otp -> navController.navigate("reset_password/$email/$otp") }
                 )
             }
 
             composable(
-                route = "reset_password",
+                route = "reset_password/{email}/{otp}",
                 enterTransition = { slideInHorizontally(initialOffsetX = { 1000 }) + fadeIn() },
                 exitTransition = { slideOutHorizontally(targetOffsetX = { 1000 }) + fadeOut() }
             ) {
-                ResetPasswordScreen (
+                val email = it.arguments?.getString("email") ?: ""
+                val otp = it.arguments?.getString("otp") ?: ""
+
+                ResetPasswordScreen(
+                    email = email,
+                    otp = otp,
                     onBackClick = { navController.popBackStack() },
-                    onUpdateClick = { navController.navigate("login") }
+                    onUpdateClick = {
+                        navController.navigate("login") {
+                            popUpTo("auth_graph") { inclusive = true }
+                        }
+                    }
                 )
             }
         }

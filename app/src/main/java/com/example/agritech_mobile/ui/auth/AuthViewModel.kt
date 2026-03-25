@@ -3,6 +3,7 @@ package com.example.agritech_mobile.ui.auth
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.agritech_mobile.data.local.TokenManager
 import com.example.agritech_mobile.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +21,8 @@ sealed class AuthState {
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val repository: AuthRepository
+    private val repository: AuthRepository,
+    private val tokenManager: TokenManager
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
@@ -29,11 +31,13 @@ class AuthViewModel @Inject constructor(
     fun resetState() {
         _authState.value = AuthState.Idle
     }
+
     fun login(phone: String, password: String) {
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             val result = repository.login(phone, password)
             result.onSuccess { response ->
+                tokenManager.saveTokens(response.accessToken, response.refreshToken)
                 _authState.value = AuthState.Success("Thành công", response.accessToken)
             }.onFailure { exception ->
                 _authState.value = AuthState.Error(exception.message ?: "Lỗi không xác định")
@@ -60,6 +64,62 @@ class AuthViewModel @Inject constructor(
             }.onFailure { exception ->
                 _authState.value = AuthState.Error(exception.message ?: "Lỗi hệ thống")
                 Log.e("AuthViewModel", "Register Error: ${exception.message}")
+            }
+        }
+    }
+
+    fun requestResetPassword(
+        email: String
+    ) {
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            val result = repository.requestResetPassword(email)
+            result.onSuccess { response ->
+                if (response.success) {
+                    _authState.value = AuthState.Success(response.message)
+                } else {
+                    _authState.value = AuthState.Error(response.message)
+                }
+            }.onFailure { exception ->
+                _authState.value = AuthState.Error(exception.message ?: "Lỗi hệ thống")
+            }
+        }
+    }
+
+    fun verifyEmail(
+        email: String,
+        otp: String
+    ) {
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            val result = repository.verifyEmail(email, otp)
+            result.onSuccess { response ->
+                if (response.success) {
+                    _authState.value = AuthState.Success(response.message)
+                } else {
+                    _authState.value = AuthState.Error(response.message)
+                }
+            }.onFailure { exception ->
+                _authState.value = AuthState.Error(exception.message ?: "Lỗi hệ thống")
+            }
+        }
+    }
+
+    fun resetPassword(
+        email: String,
+        newPassword: String
+    ) {
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            val result = repository.resetPassword(email, newPassword)
+            result.onSuccess { response ->
+                if (response.success) {
+                    _authState.value = AuthState.Success(response.message)
+                } else {
+                    _authState.value = AuthState.Error(response.message)
+                }
+            }.onFailure { exception ->
+                _authState.value = AuthState.Error(exception.message ?: "Lỗi hệ thống")
             }
         }
     }

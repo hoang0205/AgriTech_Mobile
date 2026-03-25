@@ -39,16 +39,18 @@
     <string name="verify_email_desc_prefix">Chúng tôi đã gửi mã 6 chữ số đến </string>
     <string name="verify_email_desc_suffix">. Vui lòng nhập mã dưới đây để tiếp tục.</string>
     <string name="didnt_receive_code">Chưa nhận được mã?</string>
-    <string name="resend_in">Gửi lại sau %s</string>
+    <string name="resend_in">Gửi lại sau 00:%1$s</string>
     <string name="verify_button">Xác minh</string>
     <string name="secure_ledger_protocol">GIAO THỨC BẢO MẬT SỔ CÁI</string>
 
     <string name="reset_password">Đặt lại mật khẩu</string>
     <string name="reset_password_desc">Tạo một mật khẩu mới, mạnh cho tài khoản của bạn.</string>
-    <string name="security_policy_text">Chính sách bảo mật: Mật khẩu mới của bạn phải chứa ít nhất 8 ký tự và bao gồm cả chữ cái và số.</string>
+    <string name="security_policy_text">Mật khẩu mới của bạn phải chứa ít nhất 8 ký tự và bao gồm cả chữ cái và số.</string>
     <string name="new_password_label">MẬT KHẨU MỚI</string>
     <string name="confirm_new_password_label">XÁC NHẬN MẬT KHẨU MỚI</string>
     <string name="update_password">Cập nhật mật khẩu</string>
     <string name="locked_out">Bị khóa tài khoản? </string>
     <string name="password_des">Mật khẩu phải từ 8 kí tự và bao gồm cả chữ và số</string>
+    <string name="password_error">Mật khẩu không khớp</string>
+    <string name="resend">Gửi lại</string>
 </resources>

@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,6 +52,9 @@ data class SignUpUiState(
     val password: String = "",
     val confirmPassword: String = "",
     val isLoading: Boolean = false,
+
+    val isPasswordVisible: Boolean = false,
+    val isConfirmPasswordVisible: Boolean = false,
 
     val passwordError: String? = null,
     val confirmPasswordError: String? = null,
@@ -127,6 +132,12 @@ fun SignUpScreen(
         onConfirmPasswordChange = {
             uiState = uiState.copy(confirmPassword = it, confirmPasswordError = null)
         },
+        onTogglePasswordVisibility = {
+            uiState = uiState.copy(isPasswordVisible = !uiState.isPasswordVisible)
+        },
+        onToggleConfirmPasswordVisibility = {
+            uiState = uiState.copy(isConfirmPasswordVisible = !uiState.isConfirmPasswordVisible)
+        },
         onSignUpClick = { validateAndSignUp() },
         onLoginClick = onLoginClick
     )
@@ -140,6 +151,8 @@ fun SignUpContent(
     onPhoneChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
+    onTogglePasswordVisibility: () -> Unit,
+    onToggleConfirmPasswordVisibility: () -> Unit,
     onSignUpClick: () -> Unit,
     onLoginClick: () -> Unit
 ) {
@@ -236,7 +249,9 @@ fun SignUpContent(
                     value = uiState.password,
                     onValueChange = onPasswordChange,
                     placeholder = stringResource(id = R.string.password_placeholder),
-                    isPassword = true,
+                    isPasswordField = true,
+                    isPasswordVisible = uiState.isPasswordVisible,
+                    onVisibilityToggle = onTogglePasswordVisibility,
                     errorMessage = uiState.passwordError,
                     helperText = stringResource(R.string.password_des)
                 )
@@ -248,7 +263,9 @@ fun SignUpContent(
                     value = uiState.confirmPassword,
                     onValueChange = onConfirmPasswordChange,
                     placeholder = stringResource(id = R.string.password_placeholder),
-                    isPassword = true,
+                    isPasswordField = true,
+                    isPasswordVisible = uiState.isPasswordVisible,
+                    onVisibilityToggle = onTogglePasswordVisibility,
                     errorMessage = uiState.confirmPasswordError
                 )
 
@@ -317,7 +334,9 @@ fun CustomInputField(
     placeholder: String,
     icon: ImageVector? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
-    isPassword: Boolean = false,
+    isPasswordField: Boolean = false,
+    isPasswordVisible: Boolean = false,
+    onVisibilityToggle: (() -> Unit)? = null,
     errorMessage: String? = null,
     helperText: String? = null
 ) {
@@ -351,8 +370,23 @@ fun CustomInputField(
             leadingIcon = icon?.let {
                 { Icon(imageVector = it, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp)) }
             },
+            trailingIcon = if (isPasswordField && onVisibilityToggle != null) {
+                {
+                    IconButton(onClick = onVisibilityToggle) {
+                        Icon(
+                            imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (isPasswordVisible) "Ẩn mật khẩu" else "Hiện mật khẩu",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else null,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+            visualTransformation = if (isPasswordField && !isPasswordVisible) {
+                PasswordVisualTransformation()
+            } else {
+                VisualTransformation.None
+            },
             singleLine = true,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
@@ -390,6 +424,7 @@ fun SignUpScreenPreview() {
             uiState = SignUpUiState(),
             onFullNameChange = {}, onEmailChange = {}, onPhoneChange = {},
             onPasswordChange = {}, onConfirmPasswordChange = {},
+            onTogglePasswordVisibility = {}, onToggleConfirmPasswordVisibility = {},
             onSignUpClick = {}, onLoginClick = {}
         )
     }
@@ -405,10 +440,12 @@ fun SignUpScreenErrorPreview() {
                 confirmPassword = "12",
                 passwordError = "Mật khẩu phải từ 8 kí tự, bao gồm số và chữ",
                 confirmPasswordError = "Mật khẩu không khớp",
-                backendError = "Email nguyenvana@gmail.com đã tồn tại!"
+                backendError = "Email nguyenvana@gmail.com đã tồn tại!",
+                isPasswordVisible = true
             ),
             onFullNameChange = {}, onEmailChange = {}, onPhoneChange = {},
             onPasswordChange = {}, onConfirmPasswordChange = {},
+            onTogglePasswordVisibility = {}, onToggleConfirmPasswordVisibility = {},
             onSignUpClick = {}, onLoginClick = {}
         )
     }

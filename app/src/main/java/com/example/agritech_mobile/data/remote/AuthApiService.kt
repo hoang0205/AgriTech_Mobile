@@ -20,10 +20,20 @@ interface AuthApiService {
     @POST("api/auth/forgot-password")
     suspend fun forgotPassword(
         @Body request: ForgotPasswordRequest
-    ): Response<String>
+    ): Response<MessageResponse>
 
     @POST("api/auth/reset-password")
     suspend fun resetPassword(
         @Body request: ResetPasswordRequest
-    ): Response<String>
+    ): Response<MessageResponse>
+
+    @POST("api/auth/verify-email")
+    suspend fun verifyEmail(
+        @Body request: VerifyEmail
+    ): Response<MessageResponse>
+
+    @POST("api/auth/refresh-token")
+    suspend fun refreshToken(
+        @Body request: RefreshTokenRequest
+    ): Response<LoginResponse>
 }
