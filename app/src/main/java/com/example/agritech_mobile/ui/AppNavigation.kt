@@ -2,24 +2,30 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.agritech_mobile.ui.auth.ForgotPasswordScreen
 import com.example.agritech_mobile.ui.auth.LoginScreen
 import com.example.agritech_mobile.ui.auth.ResetPasswordScreen
 import com.example.agritech_mobile.ui.auth.SignUpScreen
 import com.example.agritech_mobile.ui.auth.VerifyEmailScreen
 import com.example.agritech_mobile.ui.dashboard.HomeScreen
+import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
+import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    startRoute: String
+) {
     val navController = rememberNavController()
 
     NavHost(
         navController = navController,
-        startDestination = "auth_graph"
+        startDestination = startRoute
     ) {
         navigation(
             route = "auth_graph",
@@ -47,11 +53,11 @@ fun AppNavigation() {
                 enterTransition = { slideInHorizontally(initialOffsetX = { 1000 }) + fadeIn() },
                 exitTransition = { slideOutHorizontally(targetOffsetX = { 1000 }) + fadeOut() }
             ) {
-                 SignUpScreen(
+                SignUpScreen(
                     onLoginClick = { navController.popBackStack() },
-                     onRegisterSucces = {
-                         navController.popBackStack("login", inclusive = false)
-                     }
+                    onRegisterSucces = {
+                        navController.popBackStack("login", inclusive = false)
+                    }
                 )
             }
 
@@ -104,11 +110,55 @@ fun AppNavigation() {
         composable(
             route = "main_screen",
             enterTransition = {
-                scaleIn(initialScale = 0.8f, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300))
+                scaleIn(
+                    initialScale = 0.8f,
+                    animationSpec = tween(300)
+                ) + fadeIn(animationSpec = tween(300))
             },
             exitTransition = { fadeOut() }
         ) {
-            HomeScreen()
+            HomeScreen(
+                onNavigateToDetail = { productId ->
+                    navController.navigate("product_detail/$productId")
+                },
+                onNavigateToCreateProduct = {
+                    navController.navigate("create_product")
+                }
+            )
+        }
+
+        composable(
+            route = "product_detail/{productId}",
+            arguments = listOf(
+                navArgument("productId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId") ?: ""
+
+            ProductDetailScreen(
+                onBackClick = { navController.popBackStack() },
+                productId = productId
+            )
+        }
+
+        composable(
+            route = "create_product",
+            enterTransition = {
+                slideInVertically(
+                    initialOffsetY = { it },
+                    animationSpec = tween(durationMillis = 400)
+                ) + fadeIn(animationSpec = tween(400))
+            },
+            exitTransition = {
+                slideOutVertically(
+                    targetOffsetY = { it },
+                    animationSpec = tween(durationMillis = 400)
+                ) + fadeOut(animationSpec = tween(400))
+            }
+        ) {
+            SellProductScreen(
+                onBackClick = { navController.popBackStack() },
+            )
         }
     }
 }

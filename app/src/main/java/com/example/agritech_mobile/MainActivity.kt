@@ -12,14 +12,28 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.example.agritech_mobile.data.local.TokenManager
 import com.example.agritech_mobile.ui.auth.LoginScreen
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var tokenManager: TokenManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val accessToken = tokenManager.getAccessToken()
+
+        val startDestination = if (!accessToken.isNullOrEmpty()) {
+            "main_screen"
+        } else {
+            "auth_graph"
+        }
 
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
@@ -32,7 +46,7 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation()
+                    AppNavigation(startRoute = startDestination)
                 }
             }
         }

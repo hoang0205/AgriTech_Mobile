@@ -52,4 +52,62 @@
     <string name="password_des">Password must be longer than 8 characters and contain both text and numbers</string>
     <string name="password_error">Passwords do not match</string>
     <string name="resend">Resend</string>
+    <string name="greeting_user">Hello, %1$s!</string>
+    <string name="search_placeholder">Search for produce, vegetables...</string>
+    <string name="category_title">Categories</string>
+    <string name="new_products_title">New Products</string>
+    <string name="see_all">See all</string>
+    <string name="suggested_title">Suggested for you</string>
+    <string name="sold_by">Sold by: %1$s</string>
+
+    <string name="nav_home">HOME</string>
+    <string name="nav_cart">CART</string>
+    <string name="nav_orders">ORDERS</string>
+    <string name="nav_account">ACCOUNT</string>
+
+    <string name="cat_vegetables">Vegetables</string>
+    <string name="cat_fruits">Fruits</string>
+    <string name="cat_meat">Meat</string>
+
+    <string name="sell_product_title">Sell agricultural products</string>
+    <string name="product_images">Product images</string>
+    <string name="max_5_images">MAX 5 IMAGES</string>
+    <string name="click_to_upload">Click to upload image</string>
+    <string name="upload_subtext">PNG, JPG max 10MB</string>
+
+    <string name="product_name">Product name</string>
+    <string name="product_name_hint">Ex: Da Lat Tomato</string>
+
+    <string name="category">Category</string>
+    <string name="category_hint">Select product category</string>
+
+    <string name="price">Price (VND)</string>
+    <string name="price_hint">0</string>
+    <string name="currency">VND</string>
+
+    <string name="unit">Unit</string>
+    <string name="unit_hint">kg, bunch, fruit...</string>
+
+    <string name="quantity">Available quantity</string>
+
+    <string name="description">Detailed description</string>
+    <string name="description_hint">Describe the cultivation process, safety certificates, or delivery information...</string>
+
+    <string name="cert_title">Clean agricultural certificate</string>
+    <string name="cert_desc">Add VietGAP, GlobalGAP certificates to increase credibility and closing ability.</string>
+    <string name="add_cert">Add certificate +</string>
+
+    <string name="btn_sell">Sell</string>
+
+    <string name="product_rating_format">%1$s (%2$s Reviews)</string>
+    <string name="stock_format">Stock: %1$s %2$s</string>
+    <string name="sold_by_label">Sold by:</string>
+    <string name="view_shop_btn">View Shop</string>
+    <string name="product_desc_title">Product description</string>
+    <string name="shipping_fee_tag">SHIPPING FEE: %1$s VND</string>
+    <string name="delivery_time_tag">DELIVERY IN 2H</string>
+    <string name="add_to_cart_btn">Add to cart</string>
+    <string name="loading">Loading...</string>
+    <string name="library">Library</string>
+    <string name="take_picture">Take a picture</string>
 </resources>
