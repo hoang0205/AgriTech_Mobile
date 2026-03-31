@@ -67,10 +67,6 @@
     <string name="nav_orders">Đơn hàng</string>
     <string name="nav_account">Tài khoản</string>
 
-    <string name="cat_vegetables">Rau củ</string>
-    <string name="cat_fruits">Trái cây</string>
-    <string name="cat_meat">Thịt</string>
-
     <string name="sell_product_title">Đăng bán nông sản</string>
     <string name="product_images">Hình ảnh sản phẩm</string>
     <string name="max_5_images">TỐI ĐA 5 ẢNH</string>
@@ -112,4 +108,14 @@
     <string name="loading">Đang tải...</string>
     <string name="library">Thư viện</string>
     <string name="take_picture">Chụp ảnh</string>
+    <string name="search_noti">Nhập tên sản phẩm bạn muốn tìm...</string>
+    <string name="search_result_not_found">Không tìm thấy kết quả tìm kiếm</string>
+
+    <string name="cat_vegetables">Rau củ</string>
+    <string name="cat_fruits">Trái cây</string>
+    <string name="cat_meat">Thịt</string>
+    <string name="cat_seafood">Thủy hải sản</string>
+    <string name="cat_others">Sản phẩm khác</string>
+
+    <string name="category_dropdown_hint">Chọn danh mục sản phẩm</string>
 </resources>

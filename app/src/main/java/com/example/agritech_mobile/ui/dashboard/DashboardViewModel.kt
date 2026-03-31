@@ -11,6 +11,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
@@ -42,25 +45,63 @@ class DashboardViewModel @Inject constructor(
     private val _productState = MutableStateFlow<ProductResponse?>(null)
     val productState: StateFlow<ProductResponse?> = _productState.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    private val _textSuggestions = MutableStateFlow<List<String>>(emptyList())
+    val textSuggestions: StateFlow<List<String>> = _textSuggestions.asStateFlow()
+
+    private val _searchResults = MutableStateFlow<List<ProductResponse>>(emptyList())
+    val searchResults: StateFlow<List<ProductResponse>> = _searchResults.asStateFlow()
 
     init {
         loadHomeData()
+        viewModelScope.launch {
+            _searchQuery
+                .debounce(300)
+                .distinctUntilChanged()
+                .collectLatest { query ->
+                    if (query.isNotBlank()) {
+                        val result = repository.getSuggestedProducts(query)
+                        result.onSuccess { suggestions ->
+                            _textSuggestions.value = suggestions
+                        }.onFailure {
+                            _textSuggestions.value = emptyList()
+                        }
+                    } else {
+                        _textSuggestions.value = emptyList()
+                    }
+                }
+        }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+        _searchResults.value = emptyList()
+    }
+
+    fun executeSearch(query: String) {
+        _dashboardState.value = DashboardState.Loading
+        viewModelScope.launch {
+            val result = repository.searchProducts(query)
+            result.onSuccess { response ->
+                _dashboardState.value = DashboardState.Idle
+                _searchResults.value = response.content
+                _textSuggestions.value = emptyList()
+            }.onFailure { exception ->
+                _dashboardState.value = DashboardState.Error(exception.message ?: "Lỗi hệ thống")
+            }
+        }
     }
 
     fun loadHomeData() {
         _dashboardState.value = DashboardState.Loading
-
         viewModelScope.launch {
             try {
                 val newProductsDeferred = async { repository.getProducts() }
                 val randomProductsDeferred = async { repository.getRandomProducts() }
-
                 val newProductsResult = newProductsDeferred.await()
                 val randomProductsResult = randomProductsDeferred.await()
-
                 val newProducts = newProductsResult.getOrNull()?.content ?: emptyList()
                 val suggestedProducts = randomProductsResult.getOrNull() ?: emptyList()
-
                 _dashboardState.value = DashboardState.HomeDataSuccess(
                     newProducts = newProducts,
                     suggestedProducts = suggestedProducts
@@ -138,11 +179,6 @@ class DashboardViewModel @Inject constructor(
             createProduct(
                 name, category, price, quantity, unit, description, uploadedUrls
             )
-//            if (isSuccess) {
-//                _dashboardState.value = DashboardState.ActionSuccess("Đăng bán sản phẩm thành công!")
-//            } else {
-//                _dashboardState.value = DashboardState.Error("Lỗi hệ thống khi lưu thông tin sản phẩm!")
-//            }
         }
     }
 

@@ -1,6 +1,8 @@
 package com.example.agritech_mobile.ui.dashboard
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,23 +12,31 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -66,12 +76,29 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val dashboardState by viewModel.dashboardState.collectAsStateWithLifecycle()
+
+    val textSuggestions by viewModel.textSuggestions.collectAsStateWithLifecycle()
+    val searchResultsRes by viewModel.searchResults.collectAsStateWithLifecycle()
+
     var uiState by remember { mutableStateOf(HomeUiState()) }
 
+    val finalSearchResults = searchResultsRes.map { res ->
+        Product(
+            id = res.id,
+            name = res.name,
+            priceStr = "${res.price.toLong()} đ",
+            seller = res.farmerName,
+            imageUrl = res.imageUrls.firstOrNull() ?: "",
+            isNew = false
+        )
+    }
+
     val defaultCategories = listOf(
-        CategoryItem("RAU_CU", R.string.cat_vegetables, Icons.Default.Eco),
-        CategoryItem("TRAI_CAY", R.string.cat_fruits, Icons.Default.RiceBowl),
-        CategoryItem("THIT", R.string.cat_meat, Icons.Default.SetMeal)
+        CategoryItem("Rau củ", R.string.cat_vegetables, Icons.Default.Eco),
+        CategoryItem("Trái cây", R.string.cat_fruits, Icons.Default.RiceBowl),
+        CategoryItem("Thịt", R.string.cat_meat, Icons.Default.SetMeal),
+        CategoryItem("Thủy hải sản", R.string.cat_seafood, Icons.Default.Computer),
+        CategoryItem("Khác", R.string.cat_others, Icons.Default.OtherHouses),
     )
 
     LaunchedEffect(Unit) {
@@ -81,66 +108,36 @@ fun HomeScreen(
 
     LaunchedEffect(dashboardState) {
         when (dashboardState) {
-            is DashboardState.Loading -> {
-                uiState = uiState.copy(isLoading = true)
-            }
-
+            is DashboardState.Loading -> uiState = uiState.copy(isLoading = true)
             is DashboardState.HomeDataSuccess -> {
                 val state = dashboardState as DashboardState.HomeDataSuccess
-
                 val mappedNew = state.newProducts.map { res ->
                     Product(
-                        id = res.id,
-                        name = res.name,
-                        priceStr = "${res.price.toLong()} đ",
-                        seller = res.farmerName,
-                        isNew = true,
-                        imageUrl = res.imageUrls.firstOrNull() ?: ""
+                        res.id,
+                        res.name,
+                        "${res.price.toLong()} đ",
+                        res.farmerName,
+                        false,
+                        true,
+                        res.imageUrls.firstOrNull() ?: ""
                     )
                 }
-
                 val mappedSuggestedProducts = state.suggestedProducts.map { res ->
                     Product(
-                        id = res.id,
-                        name = res.name,
-                        priceStr = "${res.price.toLong()} đ",
-                        seller = res.farmerName,
-                        isNew = false,
-                        imageUrl = res.imageUrls.firstOrNull() ?: ""
+                        res.id,
+                        res.name,
+                        "${res.price.toLong()} đ",
+                        res.farmerName,
+                        false,
+                        false,
+                        res.imageUrls.firstOrNull() ?: ""
                     )
                 }
-
                 uiState = uiState.copy(
                     isLoading = false,
                     newProducts = mappedNew,
                     suggestedProducts = mappedSuggestedProducts
                 )
-            }
-
-            is DashboardState.ProductListSuccess -> {
-                val state = dashboardState as DashboardState.ProductListSuccess
-                val mappedProducts = state.products.map { res ->
-                    Product(
-                        id = res.id,
-                        name = res.name,
-                        priceStr = "${res.price.toLong()} đ",
-                        seller = res.farmerName,
-                        imageUrl = res.imageUrls.firstOrNull() ?: "",
-                        isNew = uiState.searchQuery.isBlank()
-                    )
-                }
-                if (uiState.searchQuery.isNotBlank()) {
-                    uiState = uiState.copy(
-                        isLoading = false,
-                        suggestedProducts = mappedProducts,
-                        newProducts = emptyList()
-                    )
-                } else {
-                    uiState = uiState.copy(
-                        isLoading = false,
-                        newProducts = mappedProducts
-                    )
-                }
             }
 
             is DashboardState.Error -> {
@@ -153,24 +150,24 @@ fun HomeScreen(
                 viewModel.resetState()
             }
 
-            else -> {}
+            else -> uiState = uiState.copy(isLoading = false)
         }
     }
 
     HomeContent(
         uiState = uiState,
+        textSuggestions = textSuggestions,
+        searchResults = finalSearchResults,
         onSearchChange = { newQuery ->
             uiState = uiState.copy(searchQuery = newQuery)
-            if (newQuery.isNotBlank()) {
-                viewModel.searchProducts(newQuery)
-            } else {
-                viewModel.loadHomeData()
-            }
+            viewModel.onSearchQueryChanged(newQuery)
+        },
+        onExecuteSearch = { queryToSearch ->
+            uiState = uiState.copy(searchQuery = queryToSearch)
+            viewModel.executeSearch(queryToSearch)
         },
         onCategoryClick = { category -> viewModel.getProductsByCategory(category.name) },
-        onProductClick = { product ->
-            onNavigateToDetail(product.id)
-        },
+        onProductClick = { product -> onNavigateToDetail(product.id) },
         onSeeAllClick = { viewModel.getProducts() },
         onCreateProductClick = { onNavigateToCreateProduct() }
     )
@@ -179,93 +176,250 @@ fun HomeScreen(
 @Composable
 fun HomeContent(
     uiState: HomeUiState,
+    textSuggestions: List<String>,
+    searchResults: List<Product>,
     onSearchChange: (String) -> Unit,
+    onExecuteSearch: (String) -> Unit,
     onCategoryClick: (CategoryItem) -> Unit,
     onProductClick: (Product) -> Unit,
     onSeeAllClick: () -> Unit,
     onCreateProductClick: () -> Unit
 ) {
     val backgroundColor = Color(0xFFF8F9FA)
+    var isSearchMode by rememberSaveable { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    BackHandler(enabled = isSearchMode) {
+        isSearchMode = false
+        focusManager.clearFocus()
+        onSearchChange("")
+    }
 
     Scaffold(
-        bottomBar = { AgritechBottomNavigation(onCreateProductClick) },
+        bottomBar = {
+            if (!isSearchMode) AgritechBottomNavigation(onCreateProductClick)
+        },
         containerColor = backgroundColor
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 24.dp)
-        ) {
-            item {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)) {
+
+            AnimatedVisibility(
+                visible = !isSearchMode,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
                 HomeHeader(userName = uiState.userName)
             }
 
-            item {
-                HomeSearchBar(
-                    query = uiState.searchQuery,
-                    onQueryChange = onSearchChange
-                )
-            }
+            HomeSearchBar(
+                query = uiState.searchQuery,
+                onQueryChange = onSearchChange,
+                isSearchMode = isSearchMode,
+                onFocusChange = { isFocused -> if (isFocused) isSearchMode = true },
+                onBackClick = {
+                    isSearchMode = false
+                    focusManager.clearFocus()
+                    onSearchChange("")
+                },
+                onSearchAction = {
+                    focusManager.clearFocus()
+                    onExecuteSearch(uiState.searchQuery)
+                }
+            )
 
-            item {
-                SectionTitle(title = stringResource(R.string.category_title))
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(bottom = 24.dp)
-                ) {
-                    items(uiState.categories) { category ->
-                        CategoryChip(category = category, onClick = { onCategoryClick(category) })
+            if (isSearchMode) {
+                if (uiState.isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color(0xFF1B5E20))
+                    }
+                } else if (searchResults.isNotEmpty()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 24.dp)
+                    ) {
+                        items(searchResults.chunked(2)) { rowProducts ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                for (product in rowProducts) {
+                                    SuggestedProductCard(
+                                        product = product,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { onProductClick(product) }
+                                    )
+                                }
+                                if (rowProducts.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                } else if (textSuggestions.isNotEmpty()) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.White)
+                    ) {
+                        items(textSuggestions) { text ->
+                            TextSuggestionItem(
+                                text = text,
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    onExecuteSearch(text)
+                                }
+                            )
+                        }
+                    }
+                } else if (uiState.searchQuery.isNotBlank()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.search_result_not_found), color = Color.Gray)
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.search_noti), color = Color.Gray)
                     }
                 }
-            }
-
-            item {
-                SectionTitle(
-                    title = stringResource(R.string.new_products_title),
-                    actionText = stringResource(R.string.see_all),
-                    onActionClick = onSeeAllClick
-                )
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.padding(bottom = 32.dp)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
-                    items(uiState.newProducts) { product ->
-                        NewProductCard(
-                            product = product,
-                            onClick = { onProductClick(product) }
-                        )
+                    item {
+                        SectionTitle(title = stringResource(R.string.category_title))
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(bottom = 24.dp)
+                        ) {
+                            items(uiState.categories) { category ->
+                                CategoryChip(
+                                    category = category,
+                                    onClick = { onCategoryClick(category) })
+                            }
+                        }
                     }
-                }
-            }
-
-            item {
-                SectionTitle(title = stringResource(R.string.suggested_title))
-            }
-
-            items(uiState.suggestedProducts.chunked(2)) { rowProducts ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    for (product in rowProducts) {
-                        SuggestedProductCard(
-                            product = product,
-                            modifier = Modifier.weight(1f),
-                            onClick = { onProductClick(product) }
+                    item {
+                        SectionTitle(
+                            title = stringResource(R.string.new_products_title),
+                            actionText = stringResource(R.string.see_all),
+                            onActionClick = onSeeAllClick
                         )
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(bottom = 32.dp)
+                        ) {
+                            items(uiState.newProducts) { product ->
+                                NewProductCard(
+                                    product = product,
+                                    onClick = { onProductClick(product) })
+                            }
+                        }
                     }
-                    if (rowProducts.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
+                    item { SectionTitle(title = stringResource(R.string.suggested_title)) }
+                    items(uiState.suggestedProducts.chunked(2)) { rowProducts ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            for (product in rowProducts) {
+                                SuggestedProductCard(
+                                    product = product,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onProductClick(product) })
+                            }
+                            if (rowProducts.size == 1) Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+fun HomeSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    isSearchMode: Boolean,
+    onFocusChange: (Boolean) -> Unit,
+    onBackClick: () -> Unit,
+    onSearchAction: () -> Unit
+) {
+    TextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = if (isSearchMode) 12.dp else 24.dp)
+            .onFocusChanged { onFocusChange(it.isFocused) },
+        placeholder = { Text(stringResource(R.string.search_placeholder), color = Color.Gray) },
+        leadingIcon = {
+            if (isSearchMode) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.Gray
+                    )
+                }
+            } else {
+                Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
+            }
+        },
+        trailingIcon = {
+            if (isSearchMode && query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Clear",
+                        tint = Color.Gray
+                    )
+                }
+            }
+        },
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { onSearchAction() }),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color.White, unfocusedContainerColor = Color.White,
+            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent
+        ),
+        shape = RoundedCornerShape(12.dp),
+        singleLine = true
+    )
+}
+
+@Composable
+fun TextSuggestionItem(text: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Default.Search,
+            contentDescription = null,
+            tint = Color.Gray,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(text = text, style = MaterialTheme.typography.bodyLarge, color = Color(0xFF212121))
+    }
+    HorizontalDivider(
+        color = Color(0xFFEEEEEE),
+        thickness = 1.dp,
+        modifier = Modifier.padding(horizontal = 20.dp)
+    )
 }
 
 @Composable
@@ -303,28 +457,6 @@ fun HomeHeader(userName: String) {
 }
 
 @Composable
-fun HomeSearchBar(query: String, onQueryChange: (String) -> Unit) {
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .padding(bottom = 24.dp),
-        placeholder = { Text(stringResource(R.string.search_placeholder), color = Color.Gray) },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent
-        ),
-        shape = RoundedCornerShape(12.dp),
-        singleLine = true
-    )
-}
-
-@Composable
 fun SectionTitle(title: String, actionText: String? = null, onActionClick: (() -> Unit)? = null) {
     Row(
         modifier = Modifier
@@ -343,8 +475,7 @@ fun SectionTitle(title: String, actionText: String? = null, onActionClick: (() -
                 text = actionText,
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                 color = Color(0xFF1B5E20),
-                modifier = Modifier.clickable { onActionClick() }
-            )
+                modifier = Modifier.clickable { onActionClick() })
         }
     }
 }
@@ -375,16 +506,10 @@ fun CategoryChip(category: CategoryItem, onClick: () -> Unit) {
 }
 
 @Composable
-fun NewProductCard(
-    product: Product,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .width(160.dp)
-            .clickable { onClick() }
-    ) {
+fun NewProductCard(product: Product, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Column(modifier = Modifier
+        .width(160.dp)
+        .clickable { onClick() }) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -400,7 +525,6 @@ fun NewProductCard(
                 placeholder = painterResource(R.drawable.ic_launcher_background),
                 error = painterResource(R.drawable.ic_launcher_background)
             )
-
             Box(
                 modifier = Modifier
                     .padding(8.dp)
@@ -408,8 +532,7 @@ fun NewProductCard(
                     .clip(CircleShape)
                     .background(Color.White)
                     .align(Alignment.TopEnd)
-                    .clickable { /* TODO: Toggle Favorite */ },
-                contentAlignment = Alignment.Center
+                    .clickable { /* TODO: Toggle Favorite */ }, contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Favorite,
@@ -454,9 +577,7 @@ fun NewProductCard(
 
 @Composable
 fun SuggestedProductCard(product: Product, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Column(
-        modifier = modifier.clickable { onClick() }
-    ) {
+    Column(modifier = modifier.clickable { onClick() }) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -507,18 +628,9 @@ fun SuggestedProductCard(product: Product, modifier: Modifier = Modifier, onClic
 }
 
 @Composable
-fun AgritechBottomNavigation(
-    onCreateProductClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        Surface(
-            color = Color.White,
-            shadowElevation = 16.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+fun AgritechBottomNavigation(onCreateProductClick: () -> Unit) {
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+        Surface(color = Color.White, shadowElevation = 16.dp, modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -537,9 +649,7 @@ fun AgritechBottomNavigation(
                     isSelected = false,
                     modifier = Modifier.weight(1f)
                 )
-
-                Spacer(modifier = Modifier.width(64.dp))
-
+                Spacer(modifier = Modifier.width(60.dp))
                 BottomNavItem(
                     icon = Icons.Outlined.ShoppingCart,
                     label = stringResource(R.string.nav_cart),
@@ -554,7 +664,6 @@ fun AgritechBottomNavigation(
                 )
             }
         }
-
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.offset(y = (-15).dp)
@@ -564,8 +673,7 @@ fun AgritechBottomNavigation(
                     .size(56.dp)
                     .clip(CircleShape)
                     .background(Color(0xFF1B5E20))
-                    .clickable { onCreateProductClick() },
-                contentAlignment = Alignment.Center
+                    .clickable { onCreateProductClick() }, contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -587,18 +695,21 @@ fun BottomNavItem(
     modifier: Modifier = Modifier
 ) {
     val color = if (isSelected) Color(0xFF1B5E20) else Color.Gray
+    val formattedLabel = label.lowercase().split(" ")
+        .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
+
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .clickable { /* TODO:*/ },
+            .padding(vertical = 4.dp, horizontal = 2.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { /* TODO: Xử lý chuyển tab */ },
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.wrapContentWidth(unbounded = true)
         ) {
             Icon(
                 imageVector = icon,
@@ -608,14 +719,13 @@ fun BottomNavItem(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 9.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                ),
+                text = formattedLabel,
+                fontSize = with(LocalDensity.current) { 10.dp.toSp() },
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 color = color,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Visible
             )
         }
     }
@@ -625,66 +735,12 @@ fun BottomNavItem(
 @Composable
 fun HomeScreenPreview() {
     AgritechTheme {
-        val dummyCategories = listOf(
-            CategoryItem("RAU_CU", R.string.cat_vegetables, Icons.Default.Eco),
-            CategoryItem("TRAI_CAY", R.string.cat_fruits, Icons.Default.RiceBowl),
-            CategoryItem("THIT", R.string.cat_meat, Icons.Default.SetMeal)
-        )
-
-        val dummyNewProducts = listOf(
-            Product(
-                id = "1",
-                name = "Dưa hấu Long An",
-                priceStr = "15.000 đ",
-                seller = "Đoàn Minh Hoàng",
-                imageUrl = "",
-                isFavorite = true,
-                isNew = true
-            ),
-            Product(
-                id = "2",
-                name = "Rau muống thủy canh",
-                priceStr = "10.000 đ",
-                seller = "HTX Nông Nghiệp",
-                imageUrl = "",
-                isFavorite = false,
-                isNew = true
-            )
-        )
-
-        val dummySuggestedProducts = listOf(
-            Product(
-                id = "3",
-                name = "Thịt heo sạch 3F",
-                priceStr = "120.000 đ",
-                seller = "Trại heo sạch",
-                imageUrl = "",
-                isFavorite = false,
-                isNew = false
-            ),
-            Product(
-                id = "4",
-                name = "Cà chua sấy khô",
-                priceStr = "45.000 đ",
-                seller = "Đoàn Minh Hoàng",
-                imageUrl = "",
-                isFavorite = true,
-                isNew = false
-            )
-        )
-
-        val fakeUiState = HomeUiState(
-            userName = "Hoàng",
-            searchQuery = "",
-            categories = dummyCategories,
-            newProducts = dummyNewProducts,
-            suggestedProducts = dummySuggestedProducts,
-            isLoading = false
-        )
-
         HomeContent(
-            uiState = fakeUiState,
+            uiState = HomeUiState(userName = "Hoàng", searchQuery = ""),
+            textSuggestions = listOf("Dưa hấu Long An", "Dưa lưới"),
+            searchResults = emptyList(),
             onSearchChange = {},
+            onExecuteSearch = {},
             onCategoryClick = {},
             onProductClick = {},
             onSeeAllClick = {},

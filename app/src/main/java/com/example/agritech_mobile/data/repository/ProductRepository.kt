@@ -132,4 +132,22 @@ class ProductRepository @Inject constructor(
             Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
         }
     }
+
+    suspend fun getSuggestedProducts(query: String): Result<List<String>> {
+        return try {
+            val response = apiService.getSuggestedProducts(query)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Phản hồi từ server bị rỗng!"))
+                }
+            } else {
+                Result.failure(Exception("Lỗi từ server: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
+        }
+    }
 }

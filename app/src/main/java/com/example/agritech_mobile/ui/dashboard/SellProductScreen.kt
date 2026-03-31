@@ -120,12 +120,37 @@ fun SellProductScreen(
     }
 
     fun handlePublish() {
-        if (uiState.productName.isBlank() || uiState.price.isBlank()) {
-            Toast.makeText(context, "Vui lòng nhập tên và giá sản phẩm!", Toast.LENGTH_SHORT).show()
-            return
-        }
         if (uiState.images.isEmpty()) {
             Toast.makeText(context, "Vui lòng chọn ít nhất 1 ảnh sản phẩm!", Toast.LENGTH_SHORT)
+                .show()
+            return
+        }
+        if (uiState.productName.isBlank()) {
+            Toast.makeText(context, "Vui lòng nhập tên sản phẩm!", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (uiState.category.isBlank()) {
+            Toast.makeText(context, "Vui lòng chọn danh mục!", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (uiState.price.isBlank()) {
+            Toast.makeText(context, "Vui lòng nhập giá bán!", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (uiState.unit.isBlank()) {
+            Toast.makeText(
+                context,
+                "Vui lòng nhập đơn vị tính (VD: kg, hộp...)!",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        if (uiState.quantity <= 0) {
+            Toast.makeText(context, "Số lượng sản phẩm phải lớn hơn 0!", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (uiState.description.isBlank()) {
+            Toast.makeText(context, "Vui lòng nhập mô tả chi tiết sản phẩm!", Toast.LENGTH_SHORT)
                 .show()
             return
         }
@@ -149,7 +174,6 @@ fun SellProductScreen(
         }
     }
 
-
     SellProductContent(
         uiState = uiState,
         onNameChange = { uiState = uiState.copy(productName = it) },
@@ -157,7 +181,7 @@ fun SellProductScreen(
         onUnitChange = { uiState = uiState.copy(unit = it) },
         onQuantityChange = { uiState = uiState.copy(quantity = it) },
         onDescriptionChange = { uiState = uiState.copy(description = it) },
-        onCategoryClick = { /* Hiện BottomSheet hoặc Dropdown chọn danh mục */ },
+        onCategoryChange = { selectedCat -> uiState = uiState.copy(category = selectedCat) },
         onImageUploadClick = {
             multiplePhotoPickerLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -169,7 +193,7 @@ fun SellProductScreen(
         onRemoveImage = { uriToRemove ->
             uiState = uiState.copy(images = uiState.images - uriToRemove)
         },
-        onAddCertClick = { /* Mở thêm chứng chỉ */ },
+        onAddCertClick = { },
         onBackClick = onBackClick,
         onPublishClick = {
             if (!uiState.isLoading) {
@@ -179,7 +203,6 @@ fun SellProductScreen(
     )
 }
 
-
 @Composable
 fun SellProductContent(
     uiState: SellProductUiState,
@@ -188,7 +211,7 @@ fun SellProductContent(
     onUnitChange: (String) -> Unit,
     onQuantityChange: (Int) -> Unit,
     onDescriptionChange: (String) -> Unit,
-    onCategoryClick: () -> Unit,
+    onCategoryChange: (String) -> Unit,
     onImageUploadClick: () -> Unit,
     onCameraCaptureClick: () -> Unit,
     onRemoveImage: (Uri) -> Unit,
@@ -221,6 +244,7 @@ fun SellProductContent(
                 tint = primaryGreen,
                 modifier = Modifier
                     .size(24.dp)
+                    .clip(CircleShape)
                     .clickable { onBackClick() }
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -300,14 +324,12 @@ fun SellProductContent(
                                 fontWeight = FontWeight.Medium
                             )
                         }
-
                         Box(
                             modifier = Modifier
                                 .width(1.dp)
                                 .height(60.dp)
                                 .background(borderGray.copy(alpha = 0.5f))
                         )
-
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
@@ -325,7 +347,8 @@ fun SellProductContent(
                             Text(
                                 stringResource(R.string.take_picture),
                                 color = primaryGreen,
-                                fontWeight = FontWeight.Medium)
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                 }
@@ -347,7 +370,6 @@ fun SellProductContent(
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
-
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
@@ -359,7 +381,7 @@ fun SellProductContent(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Close,
+                                    Icons.Default.Close,
                                     contentDescription = "Delete",
                                     tint = Color.Red,
                                     modifier = Modifier.size(16.dp)
@@ -367,7 +389,6 @@ fun SellProductContent(
                             }
                         }
                     }
-
                     if (uiState.images.size < 5) {
                         item {
                             Box(
@@ -380,17 +401,21 @@ fun SellProductContent(
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(
-                                        imageVector = Icons.Default.Photo,
+                                        Icons.Default.Photo,
                                         contentDescription = "Thư viện",
                                         tint = textGray,
                                         modifier = Modifier.size(28.dp)
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Thư viện", fontSize = 12.sp, color = textGray, fontWeight = FontWeight.Medium)
+                                    Text(
+                                        "Thư viện",
+                                        fontSize = 12.sp,
+                                        color = textGray,
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
                             }
                         }
-
                         item {
                             Box(
                                 modifier = Modifier
@@ -402,13 +427,18 @@ fun SellProductContent(
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(
-                                        imageVector = Icons.Default.PhotoCamera,
+                                        Icons.Default.PhotoCamera,
                                         contentDescription = "Chụp ảnh",
                                         tint = textGray,
                                         modifier = Modifier.size(28.dp)
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Chụp ảnh", fontSize = 12.sp, color = textGray, fontWeight = FontWeight.Medium)
+                                    Text(
+                                        "Chụp ảnh",
+                                        fontSize = 12.sp,
+                                        color = textGray,
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
                             }
                         }
@@ -431,30 +461,10 @@ fun SellProductContent(
                 color = textDark
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFF5F5F5))
-                    .clickable { onCategoryClick() }
-                    .padding(horizontal = 16.dp, vertical = 16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = uiState.category.ifEmpty { stringResource(R.string.category_hint) },
-                        color = if (uiState.category.isEmpty()) textGray else textDark
-                    )
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint = textDark
-                    )
-                }
-            }
+            CategoryDropdownMenu(
+                selectedCategory = uiState.category,
+                onCategorySelected = onCategoryChange
+            )
             Spacer(modifier = Modifier.height(20.dp))
 
             FormInputField(
@@ -550,11 +560,7 @@ fun SellProductContent(
             ) {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Verified,
-                            contentDescription = null,
-                            tint = primaryGreen
-                        )
+                        Icon(Icons.Default.Verified, contentDescription = null, tint = primaryGreen)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = stringResource(R.string.cert_title),
@@ -588,7 +594,13 @@ fun SellProductContent(
 
             Spacer(modifier = Modifier.height(100.dp))
         }
-
+        val isFormValid = uiState.images.isNotEmpty() &&
+                uiState.productName.isNotBlank() &&
+                uiState.category.isNotBlank() &&
+                uiState.price.isNotBlank() &&
+                uiState.unit.isNotBlank() &&
+                uiState.quantity > 0 &&
+                uiState.description.isNotBlank()
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -597,11 +609,13 @@ fun SellProductContent(
         ) {
             Button(
                 onClick = onPublishClick,
+                enabled = isFormValid && !uiState.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (uiState.isLoading) Color.Gray else primaryGreen
+                    containerColor = primaryGreen,
+                    disabledContainerColor = Color.LightGray
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -615,7 +629,8 @@ fun SellProductContent(
                     Text(
                         text = stringResource(R.string.loading),
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold)
+                        fontWeight = FontWeight.Bold
+                    )
                 } else {
                     Text(
                         text = stringResource(R.string.btn_sell),
@@ -627,7 +642,6 @@ fun SellProductContent(
         }
     }
 }
-
 
 @Composable
 fun FormInputField(
@@ -666,6 +680,60 @@ fun FormInputField(
         } else null
     )
     Spacer(modifier = Modifier.height(20.dp))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoryDropdownMenu(
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit
+) {
+    val categories = listOf(
+        stringResource(R.string.cat_vegetables),
+        stringResource(R.string.cat_fruits),
+        stringResource(R.string.cat_meat),
+        stringResource(R.string.cat_seafood),
+        stringResource(R.string.cat_others)
+    )
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        TextField(
+            value = selectedCategory.ifEmpty { stringResource(R.string.category_dropdown_hint) },
+            onValueChange = {},
+            readOnly = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFFF5F5F5),
+                unfocusedContainerColor = Color(0xFFF5F5F5),
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            ),
+            shape = RoundedCornerShape(8.dp)
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Color.White)
+        ) {
+            categories.forEach { selectionOption ->
+                DropdownMenuItem(
+                    text = { Text(selectionOption, color = Color(0xFF1D1D1D)) },
+                    onClick = {
+                        onCategorySelected(selectionOption)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Preview(showBackground = true, showSystemUi = true)

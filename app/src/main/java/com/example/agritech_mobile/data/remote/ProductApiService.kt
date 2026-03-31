@@ -30,7 +30,7 @@ interface ProductApiService {
 
     @GET("api/products/search")
     suspend fun searchProducts(
-        @Query("query") query: String,
+        @Query("keyword") query: String,
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 10
     ): Response<PageResponse<ProductResponse>>
@@ -46,5 +46,11 @@ interface ProductApiService {
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 10
     ): Response<PageResponse<ProductResponse>>
+
+    @GET("api/products/suggest")
+    suspend fun getSuggestedProducts(
+        @Query("keyword") query: String,
+    ) : Response<List<String>>
+
 }
 

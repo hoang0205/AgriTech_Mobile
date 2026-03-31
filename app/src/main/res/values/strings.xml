@@ -65,10 +65,6 @@
     <string name="nav_orders">ORDERS</string>
     <string name="nav_account">ACCOUNT</string>
 
-    <string name="cat_vegetables">Vegetables</string>
-    <string name="cat_fruits">Fruits</string>
-    <string name="cat_meat">Meat</string>
-
     <string name="sell_product_title">Sell agricultural products</string>
     <string name="product_images">Product images</string>
     <string name="max_5_images">MAX 5 IMAGES</string>
@@ -110,4 +106,14 @@
     <string name="loading">Loading...</string>
     <string name="library">Library</string>
     <string name="take_picture">Take a picture</string>
+    <string name="search_noti">Type to search for products...</string>
+    <string name="search_result_not_found">Cannot find your search request</string>
+
+    <string name="cat_vegetables">Vegetables</string>
+    <string name="cat_fruits">Fruits</string>
+    <string name="cat_meat">Meat</string>
+    <string name="cat_seafood">Seafood</string>
+    <string name="cat_others">Others</string>
+
+    <string name="category_dropdown_hint">Select product category</string>
 </resources>
