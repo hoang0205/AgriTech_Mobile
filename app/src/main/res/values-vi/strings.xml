@@ -53,4 +53,83 @@
     <string name="password_des">Mật khẩu phải từ 8 kí tự và bao gồm cả chữ và số</string>
     <string name="password_error">Mật khẩu không khớp</string>
     <string name="resend">Gửi lại</string>
+
+    <string name="greeting_user">Xin chào, %1$s!</string>
+    <string name="search_placeholder">Tìm kiếm nông sản, rau củ...</string>
+    <string name="category_title">Danh mục</string>
+    <string name="new_products_title">Sản phẩm mới</string>
+    <string name="see_all">Xem tất cả</string>
+    <string name="suggested_title">Gợi ý cho bạn</string>
+    <string name="sold_by">Bán bởi: %1$s</string>
+
+    <string name="nav_home">Trang chủ</string>
+    <string name="nav_cart">Giỏ hàng</string>
+    <string name="nav_orders">Đơn hàng</string>
+    <string name="nav_account">Tài khoản</string>
+
+    <string name="sell_product_title">Đăng bán nông sản</string>
+    <string name="product_images">Hình ảnh sản phẩm</string>
+    <string name="max_5_images">TỐI ĐA 5 ẢNH</string>
+    <string name="click_to_upload">Nhấn để tải ảnh lên</string>
+    <string name="upload_subtext">PNG, JPG tối đa 10MB</string>
+
+    <string name="product_name">Tên nông sản</string>
+    <string name="product_name_hint">VD: Cà chua Đà Lạt</string>
+
+    <string name="category">Danh mục</string>
+    <string name="category_hint">Chọn danh mục sản phẩm</string>
+
+    <string name="price">Giá bán (VNĐ)</string>
+    <string name="price_hint">0</string>
+    <string name="currency">đ</string>
+
+    <string name="unit">Đơn vị tính</string>
+    <string name="unit_hint">kg, bó, quả...</string>
+
+    <string name="quantity">Số lượng hiện có</string>
+
+    <string name="description">Mô tả chi tiết</string>
+    <string name="description_hint">Mô tả về quy trình trồng trọt, chứng nhận an toàn, hoặc thông tin giao hàng...</string>
+
+    <string name="cert_title">Chứng nhận nông sản sạch</string>
+    <string name="cert_desc">Thêm các chứng nhận VietGAP, GlobalGAP để tăng độ uy tín và khả năng chốt đơn.</string>
+    <string name="add_cert">Thêm chứng chỉ +</string>
+
+    <string name="btn_sell">Đăng Bán</string>
+
+    <string name="product_rating_format">%1$s (%2$s Đánh giá)</string>
+    <string name="stock_format">Kho: %1$s %2$s</string>
+    <string name="sold_by_label">Bán bởi:</string>
+    <string name="view_shop_btn">Xem Shop</string>
+    <string name="product_desc_title">Mô tả sản phẩm</string>
+    <string name="shipping_fee_tag">PHÍ VẬN CHUYỂN: %1$s đ</string>
+    <string name="delivery_time_tag">GIAO HÀNG TRONG 2H</string>
+    <string name="add_to_cart_btn">Thêm vào giỏ hàng</string>
+    <string name="loading">Đang tải...</string>
+    <string name="library">Thư viện</string>
+    <string name="take_picture">Chụp ảnh</string>
+    <string name="search_noti">Nhập tên sản phẩm bạn muốn tìm...</string>
+    <string name="search_result_not_found">Không tìm thấy kết quả tìm kiếm</string>
+
+    <string name="cat_vegetables">Rau củ</string>
+    <string name="cat_fruits">Trái cây</string>
+    <string name="cat_meat">Thịt</string>
+    <string name="cat_seafood">Thủy hải sản</string>
+    <string name="cat_others">Sản phẩm khác</string>
+
+    <string name="category_dropdown_hint">Chọn danh mục sản phẩm</string>
+    <string name="cart_title">Giỏ hàng (%1$d)</string>
+    <string name="cart_review_harvest">Đơn hàng\nCủa bạn</string>
+    <string name="cart_organic_certified">CHỈ BÁN ĐỒ\nHỮU CƠ</string>
+    <string name="cart_grown_by">Cung cấp bởi  </string>
+    <string name="cart_remove">XÓA</string>
+
+    <string name="cart_order_summary">Tóm tắt đơn hàng</string>
+    <string name="cart_subtotal">Tạm tính (%1$d sản phẩm)</string>
+    <string name="cart_delivery_fee">Phí giao hàng</string>
+    <string name="cart_tax_exempt">Thuế nông nghiệp (Miễn phí)</string>
+    <string name="cart_total_payable">TỔNG THANH TOÁN</string>
+    <string name="cart_estimated_delivery">DỰ KIẾN GIAO: 2 NGÀY</string>
+    <string name="select_all">Chọn tất cả</string>
+    <string name="checkout">Thanh toán</string>
 </resources>
