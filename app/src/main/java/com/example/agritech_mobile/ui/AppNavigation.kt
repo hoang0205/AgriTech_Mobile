@@ -16,6 +16,7 @@ import com.example.agritech_mobile.ui.auth.VerifyEmailScreen
 import com.example.agritech_mobile.ui.dashboard.HomeScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
+import com.example.agritech_mobile.ui.main.MainScreen
 
 @Composable
 fun AppNavigation(
@@ -117,7 +118,7 @@ fun AppNavigation(
             },
             exitTransition = { fadeOut() }
         ) {
-            HomeScreen(
+            MainScreen(
                 onNavigateToDetail = { productId ->
                     navController.navigate("product_detail/$productId")
                 },

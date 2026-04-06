@@ -24,7 +24,19 @@ class TokenManager @Inject constructor(
 
     fun getRefreshToken(): String? = prefs.getString("REFRESH_TOKEN", null)
 
+    fun saveUserName(name: String) {
+        prefs.edit().putString("USER_NAME", name).apply()
+    }
+
+    fun getUserName(): String {
+        return prefs.getString("USER_NAME", "Khách") ?: "Khách"
+    }
+
     fun clearTokens() {
+        prefs.edit().clear().apply()
+    }
+
+    fun clearAll() {
         prefs.edit().clear().apply()
     }
 }

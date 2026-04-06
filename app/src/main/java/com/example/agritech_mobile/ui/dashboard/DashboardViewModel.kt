@@ -3,6 +3,7 @@ package com.example.agritech_mobile.ui.dashboard
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.agritech_mobile.data.local.TokenManager
 import com.example.agritech_mobile.data.remote.dto.ProductResponse
 import com.example.agritech_mobile.data.repository.ProductRepository
 import com.example.agritech_mobile.data.repository.UploadRepository
@@ -37,7 +38,8 @@ sealed class DashboardState {
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val repository: ProductRepository,
-    private val uploadRepository: UploadRepository
+    private val uploadRepository: UploadRepository,
+    private val tokenManager: TokenManager
 ) : ViewModel() {
     private val _dashboardState = MutableStateFlow<DashboardState>(DashboardState.Idle)
     val dashboardState: StateFlow<DashboardState> = _dashboardState.asStateFlow()
@@ -51,6 +53,9 @@ class DashboardViewModel @Inject constructor(
 
     private val _searchResults = MutableStateFlow<List<ProductResponse>>(emptyList())
     val searchResults: StateFlow<List<ProductResponse>> = _searchResults.asStateFlow()
+
+    private val _userName = MutableStateFlow(tokenManager.getUserName())
+    val userName: StateFlow<String> = _userName.asStateFlow()
 
     init {
         loadHomeData()

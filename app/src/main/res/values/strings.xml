@@ -116,4 +116,18 @@
     <string name="cat_others">Others</string>
 
     <string name="category_dropdown_hint">Select product category</string>
+    <string name="cart_title">My Cart (%1$d)</string>
+    <string name="cart_review_harvest">Review\nHarvest</string>
+    <string name="cart_organic_certified">ORGANIC CERTIFIED\nONLY</string>
+    <string name="cart_grown_by">Grown by  </string>
+    <string name="cart_remove">REMOVE</string>
+
+    <string name="cart_order_summary">Order Summary</string>
+    <string name="cart_subtotal">Subtotal (%1$d items)</string>
+    <string name="cart_delivery_fee">Flat Rate Delivery</string>
+    <string name="cart_tax_exempt">Agricultural Tax (Exempt)</string>
+    <string name="cart_total_payable">TOTAL PAYABLE</string>
+    <string name="cart_estimated_delivery">ESTIMATED DELIVERY: 2 DAYS</string>
+    <string name="select_all">Select all</string>
+    <string name="checkout">Check out</string>
 </resources>

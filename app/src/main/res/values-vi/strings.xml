@@ -118,4 +118,18 @@
     <string name="cat_others">Sản phẩm khác</string>
 
     <string name="category_dropdown_hint">Chọn danh mục sản phẩm</string>
+    <string name="cart_title">Giỏ hàng (%1$d)</string>
+    <string name="cart_review_harvest">Đơn hàng\nCủa bạn</string>
+    <string name="cart_organic_certified">CHỈ BÁN ĐỒ\nHỮU CƠ</string>
+    <string name="cart_grown_by">Cung cấp bởi  </string>
+    <string name="cart_remove">XÓA</string>
+
+    <string name="cart_order_summary">Tóm tắt đơn hàng</string>
+    <string name="cart_subtotal">Tạm tính (%1$d sản phẩm)</string>
+    <string name="cart_delivery_fee">Phí giao hàng</string>
+    <string name="cart_tax_exempt">Thuế nông nghiệp (Miễn phí)</string>
+    <string name="cart_total_payable">TỔNG THANH TOÁN</string>
+    <string name="cart_estimated_delivery">DỰ KIẾN GIAO: 2 NGÀY</string>
+    <string name="select_all">Chọn tất cả</string>
+    <string name="checkout">Thanh toán</string>
 </resources>

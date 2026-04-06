@@ -9,13 +9,17 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -25,8 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -34,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
+import com.example.agritech_mobile.ui.cart.CartViewModel
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 
 data class ProductDetailUiState(
@@ -54,14 +61,16 @@ data class ProductDetailUiState(
     val shippingFee: String = "15.000",
     val isFavorite: Boolean = false,
     val isLoading: Boolean = false,
-    val imageUrls: List<String> = emptyList() // Chứa danh sách link ảnh
+    val imageUrls: List<String> = emptyList(),
+    val quantity: Double = 1.0
 )
 
 @Composable
 fun ProductDetailScreen(
     onBackClick: () -> Unit = {},
     productId: String = "",
-    viewModel: DashboardViewModel = hiltViewModel()
+    viewModel: DashboardViewModel = hiltViewModel(),
+    cartViewModel: CartViewModel = hiltViewModel()
 ) {
     var uiState by remember { mutableStateOf(ProductDetailUiState()) }
     val dashboardState by viewModel.dashboardState.collectAsState()
@@ -88,13 +97,15 @@ fun ProductDetailScreen(
                     category = productRes.category,
                     description = productRes.description,
                     sellerName = productRes.farmerName,
-                    imageUrls = productRes.imageUrls // Nhận mảng ảnh từ API
+                    stock = productRes.quantity.toString(),
+                    imageUrls = productRes.imageUrls,
                 )
             }
 
             else -> {}
         }
     }
+    val context = LocalContext.current
 
     ProductDetailContent(
         uiState = uiState,
@@ -102,7 +113,28 @@ fun ProductDetailScreen(
         onFavoriteClick = { uiState = uiState.copy(isFavorite = !uiState.isFavorite) },
         onViewShopClick = { /* TODO: Mở trang Shop */ },
         onChatClick = { /* TODO: Mở màn hình Chat */ },
-        onAddToCartClick = { /* TODO: Thêm vào giỏ hàng (Gọi API) */ }
+        onAddToCartClick = {
+            cartViewModel.addToCart(uiState.id, uiState.quantity)
+            Toast.makeText(
+                context,
+                "Đã thêm sản phẩm vào giỏ hàng",
+                Toast.LENGTH_SHORT
+            ).show()
+            onBackClick()
+        },
+        onIncreaseQuantity = {
+            uiState = uiState.copy(quantity = uiState.quantity + 1.0)
+        },
+        onDecreaseQuantity = {
+            if (uiState.quantity > 1.0) {
+                uiState = uiState.copy(quantity = uiState.quantity - 1.0)
+            }
+        },
+        onQuantityChange = { input ->
+            val filtered = input.filter { it.isDigit() || it == '.' }
+            val newQty = filtered.toDoubleOrNull() ?: 0.0
+            uiState = uiState.copy(quantity = newQty)
+        }
     )
 }
 
@@ -113,7 +145,10 @@ fun ProductDetailContent(
     onFavoriteClick: () -> Unit,
     onViewShopClick: () -> Unit,
     onChatClick: () -> Unit,
-    onAddToCartClick: () -> Unit
+    onAddToCartClick: () -> Unit,
+    onIncreaseQuantity: () -> Unit,
+    onDecreaseQuantity: () -> Unit,
+    onQuantityChange: (String) -> Unit
 ) {
     val primaryGreen = Color(0xFF1B5E20)
     val lightGreen = Color(0xFFE8F5E9)
@@ -124,8 +159,13 @@ fun ProductDetailContent(
     Scaffold(
         bottomBar = {
             ProductDetailBottomBar(
+                quantity = uiState.quantity,
+                unit = uiState.unit,
                 onChatClick = onChatClick,
-                onAddToCartClick = onAddToCartClick
+                onAddToCartClick = onAddToCartClick,
+                onIncreaseQuantity = onIncreaseQuantity,
+                onDecreaseQuantity = onDecreaseQuantity,
+                onQuantityChange = onQuantityChange
             )
         }
     ) { paddingValues ->
@@ -176,7 +216,8 @@ fun ProductDetailContent(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 repeat(uiState.imageUrls.size) { iteration ->
-                                    val color = if (pagerState.currentPage == iteration) primaryGreen else Color.LightGray
+                                    val color =
+                                        if (pagerState.currentPage == iteration) primaryGreen else Color.LightGray
                                     Box(
                                         modifier = Modifier
                                             .padding(2.dp)
@@ -188,7 +229,10 @@ fun ProductDetailContent(
                             }
                         }
                     } else {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text("Sản phẩm không có hình ảnh", color = Color.White)
                         }
                     }
@@ -217,22 +261,22 @@ fun ProductDetailContent(
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        Icon(
-                            Icons.Default.Star,
-                            contentDescription = null,
-                            tint = textDark,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = stringResource(
-                                R.string.product_rating_format,
-                                uiState.rating,
-                                uiState.reviewCount
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = textDark
-                        )
+//                        Icon(
+//                            Icons.Default.Star,
+//                            contentDescription = null,
+//                            tint = textDark,
+//                            modifier = Modifier.size(16.dp)
+//                        )
+//                        Spacer(modifier = Modifier.width(4.dp))
+//                        Text(
+//                            text = stringResource(
+//                                R.string.product_rating_format,
+//                                uiState.rating,
+//                                uiState.reviewCount
+//                            ),
+//                            style = MaterialTheme.typography.bodyMedium,
+//                            color = textDark
+//                        )
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -300,20 +344,20 @@ fun ProductDetailContent(
                                 color = textDark
                             )
                         }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFE0E0E0))
-                                .clickable { onViewShopClick() }
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.view_shop_btn),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = textDark,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+//                        Box(
+//                            modifier = Modifier
+//                                .clip(RoundedCornerShape(8.dp))
+//                                .background(Color(0xFFE0E0E0))
+//                                .clickable { onViewShopClick() }
+//                                .padding(horizontal = 16.dp, vertical = 8.dp)
+//                        ) {
+//                            Text(
+//                                text = stringResource(R.string.view_shop_btn),
+//                                style = MaterialTheme.typography.labelMedium,
+//                                color = textDark,
+//                                fontWeight = FontWeight.Bold
+//                            )
+//                        }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
@@ -342,74 +386,74 @@ fun ProductDetailContent(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    Column {
-                        val chunks = uiState.features.chunked(2)
-                        chunks.forEach { rowItems ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 12.dp)
-                            ) {
-                                rowItems.forEach { feature ->
-                                    Row(
-                                        modifier = Modifier.weight(1f),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            Icons.Default.CheckCircle,
-                                            contentDescription = null,
-                                            tint = primaryGreen,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = feature,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = textDark,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                                if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
+//                    Column {
+//                        val chunks = uiState.features.chunked(2)
+//                        chunks.forEach { rowItems ->
+//                            Row(
+//                                modifier = Modifier
+//                                    .fillMaxWidth()
+//                                    .padding(bottom = 12.dp)
+//                            ) {
+//                                rowItems.forEach { feature ->
+//                                    Row(
+//                                        modifier = Modifier.weight(1f),
+//                                        verticalAlignment = Alignment.CenterVertically
+//                                    ) {
+//                                        Icon(
+//                                            Icons.Default.CheckCircle,
+//                                            contentDescription = null,
+//                                            tint = primaryGreen,
+//                                            modifier = Modifier.size(16.dp)
+//                                        )
+//                                        Spacer(modifier = Modifier.width(8.dp))
+//                                        Text(
+//                                            text = feature,
+//                                            style = MaterialTheme.typography.bodySmall,
+//                                            color = textDark,
+//                                            maxLines = 1,
+//                                            overflow = TextOverflow.Ellipsis
+//                                        )
+//                                    }
+//                                }
+//                                if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
+//                            }
+//                        }
+//                    }
 
                     Spacer(modifier = Modifier.height(24.dp))
-
-                    Column {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFFC8E6C9))
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = stringResource(
-                                    R.string.shipping_fee_tag,
-                                    uiState.shippingFee
-                                ),
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                color = primaryGreen
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(lightGreen)
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.delivery_time_tag),
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                color = primaryGreen
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(32.dp))
+//
+//                    Column {
+//                        Box(
+//                            modifier = Modifier
+//                                .clip(RoundedCornerShape(6.dp))
+//                                .background(Color(0xFFC8E6C9))
+//                                .padding(horizontal = 12.dp, vertical = 8.dp)
+//                        ) {
+//                            Text(
+//                                text = stringResource(
+//                                    R.string.shipping_fee_tag,
+//                                    uiState.shippingFee
+//                                ),
+//                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+//                                color = primaryGreen
+//                            )
+//                        }
+//                        Spacer(modifier = Modifier.height(8.dp))
+//                        Box(
+//                            modifier = Modifier
+//                                .clip(RoundedCornerShape(6.dp))
+//                                .background(lightGreen)
+//                                .padding(horizontal = 12.dp, vertical = 8.dp)
+//                        ) {
+//                            Text(
+//                                text = stringResource(R.string.delivery_time_tag),
+//                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+//                                color = primaryGreen
+//                            )
+//                        }
+//                    }
+//
+//                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
 
@@ -457,9 +501,20 @@ fun ProductDetailContent(
 
 @Composable
 fun ProductDetailBottomBar(
+    quantity: Double,
+    unit: String,
     onChatClick: () -> Unit,
-    onAddToCartClick: () -> Unit
+    onAddToCartClick: () -> Unit,
+    onIncreaseQuantity: () -> Unit,
+    onDecreaseQuantity: () -> Unit,
+    onQuantityChange: (String) -> Unit
 ) {
+    val displayQuantity = if (quantity % 1.0 == 0.0) {
+        quantity.toLong().toString()
+    } else {
+        quantity.toString()
+    }
+
     Surface(
         shadowElevation = 16.dp,
         color = Color.White,
@@ -472,22 +527,82 @@ fun ProductDetailBottomBar(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
+//            Box(
+//                modifier = Modifier
+//                    .size(52.dp)
+//                    .clip(RoundedCornerShape(12.dp))
+//                    .background(Color(0xFFF5F5F5))
+//                    .clickable { onChatClick() },
+//                contentAlignment = Alignment.Center
+//            ) {
+//                Icon(
+//                    Icons.Default.ChatBubbleOutline,
+//                    contentDescription = "Chat",
+//                    tint = Color(0xFF1B5E20)
+//                )
+//            }
+//
+//            Spacer(modifier = Modifier.width(12.dp))
+
+            Row(
                 modifier = Modifier
-                    .size(52.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFFF5F5F5))
-                    .clickable { onChatClick() },
-                contentAlignment = Alignment.Center
+                    .height(52.dp)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Default.ChatBubbleOutline,
-                    contentDescription = "Chat",
-                    tint = Color(0xFF1B5E20)
+                IconButton(onClick = onDecreaseQuantity, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Remove,
+                        contentDescription = "Decrease",
+                        tint = Color(0xFF212121),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                BasicTextField(
+                    value = displayQuantity,
+                    onValueChange = { onQuantityChange(it) },
+                    modifier = Modifier
+                        .width(IntrinsicSize.Min)
+                        .widthIn(min = 40.dp),
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color(0xFF212121),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    ),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal
+                    ),
+                    singleLine = true,
+                    decorationBox = { innerTextField ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            innerTextField()
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
+                    }
                 )
+                Text(
+                    text = unit,
+                    fontSize = 14.sp,
+                    color = Color.Black,
+                    maxLines = 1,
+                    fontWeight = FontWeight.Bold
+                )
+
+                IconButton(onClick = onIncreaseQuantity, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Increase",
+                        tint = Color(0xFF212121),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Button(
                 onClick = onAddToCartClick,
@@ -495,18 +610,23 @@ fun ProductDetailBottomBar(
                     .weight(1f)
                     .height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20)),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(0.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     Icon(
                         Icons.Default.ShoppingCart,
                         contentDescription = null,
-                        tint = Color.White
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.add_to_cart_btn),
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -515,10 +635,29 @@ fun ProductDetailBottomBar(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+@Preview(showBackground = true, showSystemUi = true, device = "spec:width=411dp,height=1200dp,dpi=420")
 @Composable
 fun ProductDetailScreenPreview() {
     AgritechTheme {
-        ProductDetailScreen()
+        ProductDetailContent(
+            uiState = ProductDetailUiState(
+                name = "Heirloom Rainbow Carrots",
+                price = "45000",
+                unit = "kg",
+                category = "RAU CỦ",
+                sellerName = "Meadowbrook Farms",
+                description = "Cà rốt cầu vồng hữu cơ, trồng theo chuẩn organic không sử dụng thuốc trừ sâu hóa học.",
+                imageUrls = listOf("https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=600&auto=format&fit=crop"),
+                quantity = 1.5
+            ),
+            onBackClick = {},
+            onFavoriteClick = {},
+            onViewShopClick = {},
+            onChatClick = {},
+            onAddToCartClick = {},
+            onIncreaseQuantity = {},
+            onDecreaseQuantity = {},
+            onQuantityChange = {}
+        )
     }
 }
