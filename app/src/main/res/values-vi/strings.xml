@@ -55,7 +55,7 @@
     <string name="resend">Gửi lại</string>
 
     <string name="greeting_user">Xin chào, %1$s!</string>
-    <string name="search_placeholder">Tìm kiếm nông sản, rau củ...</string>
+    <string name="search_placeholder">Tìm kiếm sản phẩm</string>
     <string name="category_title">Danh mục</string>
     <string name="new_products_title">Sản phẩm mới</string>
     <string name="see_all">Xem tất cả</string>
@@ -132,4 +132,27 @@
     <string name="cart_estimated_delivery">DỰ KIẾN GIAO: 2 NGÀY</string>
     <string name="select_all">Chọn tất cả</string>
     <string name="checkout">Thanh toán</string>
+
+    <string name="checkout_title">Thanh toán</string>
+
+    <string name="checkout_shipping_address">Địa chỉ giao hàng</string>
+    <string name="checkout_default_address">Địa chỉ mặc định</string>
+    <string name="checkout_change">Thay đổi</string>
+
+    <string name="checkout_order_summary">Tóm tắt đơn hàng</string>
+    <string name="checkout_items_count">%1$d SẢN PHẨM</string>
+
+    <string name="checkout_payment_method">Phương thức thanh toán</string>
+    <string name="checkout_cod">Thanh toán khi nhận hàng</string>
+    <string name="checkout_e_wallet">Ví điện tử</string>
+    <string name="checkout_e_wallet_desc">Momo / ZaloPay</string>
+    <string name="checkout_bank_transfer">Chuyển khoản ngân hàng</string>
+    <string name="checkout_bank_transfer_desc">Chuyển khoản 24/7</string>
+
+    <string name="checkout_subtotal">Tạm tính</string>
+    <string name="checkout_shipping_fee">Phí vận chuyển</string>
+    <string name="checkout_discount">Khuyến mãi</string>
+    <string name="checkout_total_amount">Tổng thanh toán</string>
+
+    <string name="checkout_place_order">Đặt hàng</string>
 </resources>

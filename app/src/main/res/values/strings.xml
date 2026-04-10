@@ -130,4 +130,27 @@
     <string name="cart_estimated_delivery">ESTIMATED DELIVERY: 2 DAYS</string>
     <string name="select_all">Select all</string>
     <string name="checkout">Check out</string>
+
+    <string name="checkout_title">Thanh toán</string>
+
+    <string name="checkout_shipping_address">Địa chỉ giao hàng</string>
+    <string name="checkout_default_address">Địa chỉ mặc định</string>
+    <string name="checkout_change">Thay đổi</string>
+
+    <string name="checkout_order_summary">Tóm tắt đơn hàng</string>
+    <string name="checkout_items_count">%1$d SẢN PHẨM</string>
+
+    <string name="checkout_payment_method">Phương thức thanh toán</string>
+    <string name="checkout_cod">Thanh toán khi nhận hàng</string>
+    <string name="checkout_e_wallet">Ví điện tử</string>
+    <string name="checkout_e_wallet_desc">Momo / ZaloPay</string>
+    <string name="checkout_bank_transfer">Chuyển khoản ngân hàng</string>
+    <string name="checkout_bank_transfer_desc">Chuyển khoản 24/7</string>
+
+    <string name="checkout_subtotal">Tạm tính</string>
+    <string name="checkout_shipping_fee">Phí vận chuyển</string>
+    <string name="checkout_discount">Khuyến mãi</string>
+    <string name="checkout_total_amount">Tổng thanh toán</string>
+
+    <string name="checkout_place_order">Đặt hàng</string>
 </resources>

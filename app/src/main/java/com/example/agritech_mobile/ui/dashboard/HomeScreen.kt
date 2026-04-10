@@ -351,7 +351,7 @@ fun HomeSearchBar(
         placeholder = {
             Text(
                 stringResource(R.string.search_placeholder),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
         leadingIcon = {

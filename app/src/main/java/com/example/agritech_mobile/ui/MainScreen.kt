@@ -31,7 +31,8 @@ import com.example.agritech_mobile.ui.dashboard.HomeScreen
 @Composable
 fun MainScreen(
     onNavigateToDetail: (String) -> Unit,
-    onNavigateToCreateProduct: () -> Unit
+    onNavigateToCreateProduct: () -> Unit,
+    onNavigateToCheckout: (String) -> Unit
 ) {
     var currentTab by rememberSaveable { mutableStateOf("HOME") }
 
@@ -63,7 +64,10 @@ fun MainScreen(
                     ) { Text("Màn hình Đơn hàng") }
                 }
 
-                "CART" -> CartScreen()
+                "CART" -> CartScreen(
+                    onNavigateToCheckout = onNavigateToCheckout
+                )
+
                 "ACCOUNT" -> {
                     // TODO:
                     Box(
