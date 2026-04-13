@@ -25,7 +25,7 @@ data class OrderItem(
 data class OrderResponse(
     val orderId: String,
     val orderDate: String,
-    val buyName: String,
+    val buyerName: String,
     val buyerPhone: String,
     val buyerId: String,
     val shippingAddress: String,

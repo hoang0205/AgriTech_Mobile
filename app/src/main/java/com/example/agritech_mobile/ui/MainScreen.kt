@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.example.agritech_mobile.R
 import com.example.agritech_mobile.ui.cart.CartScreen
 import com.example.agritech_mobile.ui.dashboard.HomeScreen
+import com.example.agritech_mobile.ui.order.SellerOrdersScreen
 
 @Composable
 fun MainScreen(
@@ -57,11 +58,7 @@ fun MainScreen(
                 )
 
                 "ORDERS" -> {
-                    // TODO:
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) { Text("Màn hình Đơn hàng") }
+                    SellerOrdersScreen()
                 }
 
                 "CART" -> CartScreen(

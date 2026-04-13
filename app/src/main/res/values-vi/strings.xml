@@ -155,4 +155,18 @@
     <string name="checkout_total_amount">Tổng thanh toán</string>
 
     <string name="checkout_place_order">Đặt hàng</string>
+    <string name="no_order">Không có đơn hàng nào.</string>
+    <string name="pending">Chờ xác nhận</string>
+    <string name="confirmed">Đang xử lý</string>
+    <string name="shipping">Đang giao hàng</string>
+    <string name="completed">Hoàn thành</string>
+    <string name="cancelled">Đã hủy</string>
+    <string name="end_order">Hết đơn hàng</string>
+    <string name="cancel">Hủy đơn</string>
+    <string name="but_pending">Xác nhận</string>
+    <string name="but_confirm">Giao hàng</string>
+    <string name="but_shipping">Hoàn thành</string>
+    <string name="order_title">Quản lí đơn hàng</string>
+    <string name="total_amount">Tổng thanh toán</string>
+    <string name="new_order">Mới</string>
 </resources>
