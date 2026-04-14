@@ -27,11 +27,13 @@ import androidx.compose.ui.unit.dp
 import com.example.agritech_mobile.R
 import com.example.agritech_mobile.ui.cart.CartScreen
 import com.example.agritech_mobile.ui.dashboard.HomeScreen
+import com.example.agritech_mobile.ui.order.SellerOrdersScreen
 
 @Composable
 fun MainScreen(
     onNavigateToDetail: (String) -> Unit,
-    onNavigateToCreateProduct: () -> Unit
+    onNavigateToCreateProduct: () -> Unit,
+    onNavigateToCheckout: (String) -> Unit
 ) {
     var currentTab by rememberSaveable { mutableStateOf("HOME") }
 
@@ -56,14 +58,13 @@ fun MainScreen(
                 )
 
                 "ORDERS" -> {
-                    // TODO:
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) { Text("Màn hình Đơn hàng") }
+                    SellerOrdersScreen()
                 }
 
-                "CART" -> CartScreen()
+                "CART" -> CartScreen(
+                    onNavigateToCheckout = onNavigateToCheckout
+                )
+
                 "ACCOUNT" -> {
                     // TODO:
                     Box(

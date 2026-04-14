@@ -13,10 +13,13 @@ import com.example.agritech_mobile.ui.auth.LoginScreen
 import com.example.agritech_mobile.ui.auth.ResetPasswordScreen
 import com.example.agritech_mobile.ui.auth.SignUpScreen
 import com.example.agritech_mobile.ui.auth.VerifyEmailScreen
+import com.example.agritech_mobile.ui.checkout.CheckoutScreen
 import com.example.agritech_mobile.ui.dashboard.HomeScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.main.MainScreen
+import com.example.agritech_mobile.ui.order.AddressSelectionScreen
+import com.example.agritech_mobile.ui.user.AddAddressScreen
 
 @Composable
 fun AppNavigation(
@@ -124,6 +127,9 @@ fun AppNavigation(
                 },
                 onNavigateToCreateProduct = {
                     navController.navigate("create_product")
+                },
+                onNavigateToCheckout = { selectedIds ->
+                    navController.navigate("checkout/$selectedIds")
                 }
             )
         }
@@ -159,6 +165,71 @@ fun AppNavigation(
         ) {
             SellProductScreen(
                 onBackClick = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            route = "checkout/{selectedIds}",
+            arguments = listOf(
+                navArgument("selectedIds") { type = NavType.StringType }
+            ),
+            enterTransition = {
+                slideInHorizontally(
+                    initialOffsetX = { 1000 },
+                    animationSpec = tween(400)
+                ) + fadeIn()
+            },
+            exitTransition = {
+                slideOutHorizontally(
+                    targetOffsetX = { -1000 },
+                    animationSpec = tween(400)
+                ) + fadeOut()
+            },
+            popEnterTransition = {
+                slideInHorizontally(
+                    initialOffsetX = { -1000 },
+                    animationSpec = tween(400)
+                ) + fadeIn()
+            },
+            popExitTransition = {
+                slideOutHorizontally(
+                    targetOffsetX = { 1000 },
+                    animationSpec = tween(400)
+                ) + fadeOut()
+            }
+        ) { backStackEntry ->
+            val idsString = backStackEntry.arguments?.getString("selectedIds") ?: ""
+            val selectedCartItemIds = idsString.split(",").filter { it.isNotEmpty() }
+
+            CheckoutScreen(
+                selectedCartItemIds = selectedCartItemIds,
+                onBackClick = { navController.popBackStack() },
+                onPlaceOrderSuccess = {
+                    navController.popBackStack("main_screen", inclusive = false)
+                },
+                onNavigateToAddressSelection = {
+                    navController.navigate("address_selection")
+                }
+            )
+        }
+        composable("address_selection") {
+            AddressSelectionScreen(
+                onBackClick = { navController.popBackStack() },
+                onAddNewClick = { navController.navigate("add_address") },
+                onConfirmClick = { selectedAddress ->
+                    // TODO:
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("add_address") {
+            AddAddressScreen(
+                onBackClick = { navController.popBackStack() },
+                onSaveClick = {
+                    // TODO:
+                    navController.popBackStack()
+                }
             )
         }
     }

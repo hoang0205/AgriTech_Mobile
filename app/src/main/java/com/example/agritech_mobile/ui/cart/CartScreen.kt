@@ -35,9 +35,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
 import com.example.agritech_mobile.ui.theme.AgritechTheme
+import java.text.DecimalFormat
 
 data class CartItem(
     val id: String,
+    val productId: String,
     val name: String,
     val price: Double,
     val unit: String,
@@ -50,7 +52,8 @@ data class CartItem(
 
 @Composable
 fun CartScreen(
-    cartViewModel: CartViewModel = hiltViewModel()
+    cartViewModel: CartViewModel = hiltViewModel(),
+    onNavigateToCheckout: (String) -> Unit
 ) {
     val context = LocalContext.current
     val cartState by cartViewModel.cartState.collectAsState()
@@ -74,6 +77,7 @@ fun CartScreen(
                     val oldItem = cartItems.find { it.id == res.cartItemId }
                     CartItem(
                         id = res.cartItemId,
+                        productId = res.productId,
                         name = res.productName,
                         price = res.price,
                         unit = res.unit,
@@ -122,7 +126,14 @@ fun CartScreen(
             )
         },
         onRemove = { itemId -> cartViewModel.deleteCartItem(itemId) },
-        onCheckout = { }
+        onCheckout = {
+            val selectedItems = cartItems.filter { it.isSelected }
+            val selectedCartItemIds = selectedItems.joinToString(",") { it.id }
+
+            if (selectedCartItemIds.isNotEmpty()) {
+                onNavigateToCheckout(selectedCartItemIds)
+            }
+        }
     )
 }
 
@@ -139,7 +150,7 @@ fun CartContent(
 ) {
     val selectedItems = cartItems.filter { it.isSelected }
     val subtotal = selectedItems.sumOf { it.price * it.quantity }
-    val deliveryFee = if (selectedItems.isEmpty()) 0.0 else 8.50
+    val deliveryFee = if (selectedItems.isEmpty()) 0.0 else 25000.0
     val tax = 0.00
     val total = subtotal + deliveryFee + tax
 
@@ -293,6 +304,9 @@ fun CartItemCard(
         item.quantity.toString()
     }
 
+    val formatter = DecimalFormat("#,###")
+    val formattedPrice = formatter.format(item.price).replace(',', '.')
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -337,34 +351,13 @@ fun CartItemCard(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "${String.format("%.2f", item.price)} VND/${item.unit}",
+                            text = "$formattedPrice đ / ${item.unit}",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.primary,
                             textAlign = TextAlign.Right
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Outlined.Eco,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = stringResource(R.string.cart_grown_by),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = item.farmer,
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -437,6 +430,8 @@ fun OrderSummaryCard(
     isButtonEnabled: Boolean,
     onCheckout: () -> Unit
 ) {
+    val formatter = DecimalFormat("#,###")
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -455,17 +450,17 @@ fun OrderSummaryCard(
 
             SummaryRow(
                 stringResource(R.string.cart_subtotal, itemCount),
-                "${String.format("%.2f", subtotal)} VND"
+                "${formatter.format(subtotal).replace(',', '.')} đ"
             )
             Spacer(modifier = Modifier.height(12.dp))
             SummaryRow(
                 stringResource(R.string.cart_delivery_fee),
-                "${String.format("%.2f", deliveryFee)} VND"
+                "${formatter.format(deliveryFee).replace(',', '.')} đ"
             )
             Spacer(modifier = Modifier.height(12.dp))
             SummaryRow(
                 stringResource(R.string.cart_tax_exempt),
-                "${String.format("%.2f", tax)} VND",
+                "${formatter.format(tax).replace(',', '.')} đ",
                 isValueGreen = true
             )
 
@@ -488,8 +483,8 @@ fun OrderSummaryCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${String.format("%.2f", total)} VND",
-                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold),
+                        text = "${formatter.format(total).replace(',', '.')} đ",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -500,7 +495,10 @@ fun OrderSummaryCard(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text(text = stringResource(R.string.checkout), fontWeight = FontWeight.Bold)
+                    Text(
+                        text = stringResource(R.string.checkout),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -523,7 +521,12 @@ fun SummaryRow(label: String, value: String, isValueGreen: Boolean = false) {
     }
 }
 
-@Preview(showBackground = true, locale = "vi")
+@Preview(
+    showBackground = true,
+    showSystemUi = true,
+    locale = "vi",
+    device = "spec:width=411dp,height=1200dp,dpi=420"
+)
 @Composable
 fun CartScreenPreview() {
     AgritechTheme {
@@ -531,8 +534,9 @@ fun CartScreenPreview() {
             cartItems = listOf(
                 CartItem(
                     id = "1",
-                    name = "Heirloom Rainbow Carrots",
-                    price = 4.5,
+                    productId = "p1",
+                    name = "Cà rốt cầu vồng Đà Lạt",
+                    price = 45000.0,
                     unit = "kg",
                     farmer = "Meadowbrook Farms",
                     farmerId = "f1",
@@ -542,8 +546,9 @@ fun CartScreenPreview() {
                 ),
                 CartItem(
                     id = "2",
-                    name = "Russet Earth-Bound Potatoes",
-                    price = 12.0,
+                    productId = "p2",
+                    name = "Khoai tây vàng vụ đông",
+                    price = 120000.0,
                     unit = "5kg",
                     farmer = "Green Valley Coop",
                     farmerId = "f2",
