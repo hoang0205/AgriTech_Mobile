@@ -1,6 +1,7 @@
 package com.example.agritech_mobile.data.remote
 
 import com.example.agritech_mobile.data.remote.dto.CheckOutRequest
+import com.example.agritech_mobile.data.remote.dto.OrderBuyerResponse
 import com.example.agritech_mobile.data.remote.dto.OrderMessageResponse
 import com.example.agritech_mobile.data.remote.dto.OrderResponse
 import com.example.agritech_mobile.data.remote.dto.StatusRequest
@@ -26,4 +27,8 @@ interface OrderApiService {
 
     @GET("api/orders/seller")
     suspend fun getSellerOrders(): Response<List<OrderResponse>>
+
+    @GET("api/orders/my-orders")
+    suspend fun getBuyerOrders(): Response<List<OrderBuyerResponse>>
+
 }

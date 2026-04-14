@@ -156,7 +156,7 @@
     <string name="no_order">There is no order yet.</string>
     <string name="pending">Pending</string>
     <string name="confirmed">Confirmed</string>
-    <string name="shipping">SHIPPING</string>
+    <string name="shipping">Shipping</string>
     <string name="completed">Completed</string>
     <string name="cancelled">Cancelled</string>
     <string name="end_order">End of order</string>

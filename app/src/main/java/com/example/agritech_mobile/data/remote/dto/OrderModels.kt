@@ -1,5 +1,8 @@
 package com.example.agritech_mobile.data.remote.dto
 
+import com.example.agritech_mobile.ui.dashboard.Product
+import com.example.agritech_mobile.ui.order.ShippingAddress
+
 data class CheckOutRequest(
     val shippingAddress: String,
     val phoneNumber: String,
@@ -22,6 +25,16 @@ data class OrderItem(
     val thumbnail: String
 )
 
+data class OrderBuyerItem(
+    val productId: String,
+    val productName: String,
+    val farmerName: String,
+    val quantity: Double,
+    val unit: String,
+    val price: Double,
+    val thumbnail: String
+)
+
 data class OrderResponse(
     val orderId: String,
     val orderDate: String,
@@ -32,4 +45,13 @@ data class OrderResponse(
     val status: String,
     val orderItems: List<OrderItem>,
     val totalRevenueFromThisOrder: Double
+)
+
+data class OrderBuyerResponse(
+    val orderId: String,
+    val orderDate: String,
+    val status: String,
+    val shippingAddress: ShippingAddress,
+    val totalAmount: Double,
+    val orderItems: List<OrderBuyerItem>
 )

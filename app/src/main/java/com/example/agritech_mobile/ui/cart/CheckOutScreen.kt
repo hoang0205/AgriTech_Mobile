@@ -71,6 +71,7 @@ fun CheckoutScreen(
     selectedCartItemIds: List<String>,
     onBackClick: () -> Unit,
     onPlaceOrderSuccess: () -> Unit,
+    onNavigateToAddressSelection: () -> Unit,
     viewModel: OrderViewModel = hiltViewModel(),
     cartViewModel: CartViewModel = hiltViewModel()
 ) {
@@ -153,7 +154,7 @@ fun CheckoutScreen(
         CheckoutContent(
             uiState = uiState,
             onBackClick = onBackClick,
-            onChangeAddressClick = { /* TODO: Đổi địa chỉ */ },
+            onChangeAddressClick = onNavigateToAddressSelection,
             onPaymentMethodSelect = { method ->
                 uiState = uiState.copy(selectedPaymentMethod = method)
             },

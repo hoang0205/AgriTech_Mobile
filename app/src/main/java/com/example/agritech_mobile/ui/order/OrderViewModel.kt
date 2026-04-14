@@ -2,6 +2,7 @@ package com.example.agritech_mobile.ui.order
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.agritech_mobile.data.remote.dto.OrderBuyerResponse
 import com.example.agritech_mobile.data.remote.dto.OrderItem
 import com.example.agritech_mobile.data.remote.dto.OrderResponse
 import com.example.agritech_mobile.data.repository.OrderRepository
@@ -16,6 +17,8 @@ sealed class OrderState {
     object Idle : OrderState()
     object Loading : OrderState()
     data class OrderItemSuccess(val items: List<OrderResponse>) : OrderState()
+
+    data class OrderBuyerItemSuccess(val items: List<OrderBuyerResponse>) : OrderState()
     data class Success(val message: String) : OrderState()
     data class Error(val error: String) : OrderState()
 }
@@ -61,5 +64,21 @@ class OrderViewModel @Inject constructor(
                 _orderState.value = OrderState.Error(exception.message ?: "Lỗi hệ thống")
             }
         }
+    }
+
+    fun getBuyerOrders() {
+        _orderState.value = OrderState.Loading
+        viewModelScope.launch {
+            val result = repository.getBuyerOrders()
+            result.onSuccess { items ->
+                _orderState.value = OrderState.OrderBuyerItemSuccess(items)
+                }.onFailure { exception ->
+                _orderState.value = OrderState.Error(exception.message ?: "Lỗi hệ thống")
+            }
+        }
+    }
+
+    fun resetState() {
+        _orderState.value = OrderState.Idle
     }
 }

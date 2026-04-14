@@ -18,6 +18,8 @@ import com.example.agritech_mobile.ui.dashboard.HomeScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.main.MainScreen
+import com.example.agritech_mobile.ui.order.AddressSelectionScreen
+import com.example.agritech_mobile.ui.user.AddAddressScreen
 
 @Composable
 fun AppNavigation(
@@ -204,6 +206,29 @@ fun AppNavigation(
                 onBackClick = { navController.popBackStack() },
                 onPlaceOrderSuccess = {
                     navController.popBackStack("main_screen", inclusive = false)
+                },
+                onNavigateToAddressSelection = {
+                    navController.navigate("address_selection")
+                }
+            )
+        }
+        composable("address_selection") {
+            AddressSelectionScreen(
+                onBackClick = { navController.popBackStack() },
+                onAddNewClick = { navController.navigate("add_address") },
+                onConfirmClick = { selectedAddress ->
+                    // TODO:
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("add_address") {
+            AddAddressScreen(
+                onBackClick = { navController.popBackStack() },
+                onSaveClick = {
+                    // TODO:
+                    navController.popBackStack()
                 }
             )
         }
