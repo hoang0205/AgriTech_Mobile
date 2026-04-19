@@ -20,6 +20,8 @@ import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.main.MainScreen
 import com.example.agritech_mobile.ui.order.AddressSelectionScreen
 import com.example.agritech_mobile.ui.user.AddAddressScreen
+import kotlin.text.get
+import kotlin.text.set
 
 @Composable
 fun AppNavigation(
@@ -201,23 +203,37 @@ fun AppNavigation(
             val idsString = backStackEntry.arguments?.getString("selectedIds") ?: ""
             val selectedCartItemIds = idsString.split(",").filter { it.isNotEmpty() }
 
+            val selectedAddressId = backStackEntry.savedStateHandle.get<String>("selectedAddressId")
+
             CheckoutScreen(
                 selectedCartItemIds = selectedCartItemIds,
+                selectedAddressId = selectedAddressId,
                 onBackClick = { navController.popBackStack() },
                 onPlaceOrderSuccess = {
                     navController.popBackStack("main_screen", inclusive = false)
                 },
-                onNavigateToAddressSelection = {
+                onNavigateToAddressSelection = { currentAddressId ->
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "currentAddressId",
+                        currentAddressId
+                    )
                     navController.navigate("address_selection")
                 }
             )
         }
-        composable("address_selection") {
+        composable("address_selection") { backStackEntry ->
+            val currentAddressId = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("currentAddressId")
             AddressSelectionScreen(
+                currentSelectedAddressId = currentAddressId,
                 onBackClick = { navController.popBackStack() },
                 onAddNewClick = { navController.navigate("add_address") },
                 onConfirmClick = { selectedAddress ->
-                    // TODO:
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("selectedAddressId", selectedAddress.id)
+
                     navController.popBackStack()
                 }
             )
@@ -226,8 +242,7 @@ fun AppNavigation(
         composable("add_address") {
             AddAddressScreen(
                 onBackClick = { navController.popBackStack() },
-                onSaveClick = {
-                    // TODO:
+                onSaveSuccess = { // ĐỔI THÀNH onSaveSuccess
                     navController.popBackStack()
                 }
             )

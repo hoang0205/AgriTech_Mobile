@@ -7,6 +7,7 @@ import com.example.agritech_mobile.data.remote.CartApiService
 import com.example.agritech_mobile.data.remote.OrderApiService
 import com.example.agritech_mobile.data.remote.ProductApiService
 import com.example.agritech_mobile.data.remote.UploadApiService
+import com.example.agritech_mobile.data.remote.UserApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,7 +22,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "http://192.168.1.30:2507/"
+    private const val BASE_URL = "http://192.168.1.15:2507/"
 
     @Provides
     @Singleton
@@ -75,5 +76,11 @@ object NetworkModule {
     @Singleton
     fun provideOrderApiService(retrofit: Retrofit): OrderApiService {
         return retrofit.create(OrderApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserApiService(retrofit: Retrofit): UserApiService {
+        return retrofit.create(UserApiService::class.java)
     }
 }

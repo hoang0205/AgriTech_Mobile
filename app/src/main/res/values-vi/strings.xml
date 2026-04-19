@@ -136,7 +136,7 @@
     <string name="checkout_title">Thanh toán</string>
 
     <string name="checkout_shipping_address">Địa chỉ giao hàng</string>
-    <string name="checkout_default_address">Địa chỉ mặc định</string>
+    <string name="checkout_default_address">Địa chỉ</string>
     <string name="checkout_change">Thay đổi</string>
 
     <string name="checkout_order_summary">Tóm tắt đơn hàng</string>
@@ -169,4 +169,45 @@
     <string name="order_title">Quản lí đơn hàng</string>
     <string name="total_amount">Tổng thanh toán</string>
     <string name="new_order">Mới</string>
+    <string name="address_selection_title">Chọn địa chỉ nhận hàng</string>
+    <string name="address_selection_banner_title">Giao hàng nhanh từ nông trại</string>
+    <string name="address_selection_banner_subtitle">Đảm bảo độ tươi ngon trong 24h</string>
+    <string name="address_selection_confirm">Xác nhận</string>
+    <string name="address_selection_add_new">Thêm địa chỉ mới</string>
+    <string name="address_selection_saved_addresses">ĐỊA CHỈ ĐÃ LƯU</string>
+    <string name="address_selection_default_badge">MẶC ĐỊNH</string>
+
+    <string name="add_address_topbar_title">Thêm địa chỉ</string>
+    <string name="add_address_save">Lưu địa chỉ</string>
+    <string name="add_address_header">Thông tin giao hàng</string>
+    <string name="add_address_description">Vui lòng cung cấp địa chỉ chính xác để đơn hàng được vận chuyển tốt nhất.</string>
+    <string name="add_address_fullname">Họ và tên</string>
+    <string name="add_address_phone">Số điện thoại</string>
+    <string name="add_address_city">Tỉnh/Thành phố</string>
+    <string name="add_address_district">Quận/Huyện</string>
+    <string name="add_address_ward">Phường/Xã</string>
+    <string name="add_address_detail">Địa chỉ chi tiết</string>
+    <string name="add_address_detail_placeholder">Số nhà, tên đường, tòa nhà...</string>
+    <string name="add_address_set_default">Đặt làm địa chỉ mặc định</string>
+    <string name="add_address_set_default_desc">Sử dụng địa chỉ này cho các đơn hàng sau.</string>
+    <string name="add_address_my_location">Định vị của tôi</string>
+
+    <string name="profile_title">Farmer Profile</string>
+    <string name="profile_app_name">AgriTech</string>
+    <string name="profile_badge_premium">PREMIUM PRODUCER</string>
+    <string name="profile_orders_title">Đơn hàng của tôi</string>
+    <string name="profile_orders_see_all">Xem tất cả ></string>
+
+    <string name="profile_settings_title">CÀI ĐẶT TÀI KHOẢN</string>
+    <string name="profile_menu_address">Sổ địa chỉ</string>
+    <string name="profile_menu_payment">Phương thức thanh toán</string>
+    <string name="profile_menu_password">Đổi mật khẩu</string>
+    <string name="profile_menu_help">Trung tâm trợ giúp</string>
+    <string name="profile_logout">Đăng xuất</string>
+
+    <string name="order_status_pending">Chờ xác nhận</string>
+    <string name="order_status_confirmed">Đang xử lý</string>
+    <string name="order_status_shipping">Đang giao</string>
+    <string name="order_status_completed">Hoàn thành</string>
+    <string name="order_status_cancelled">Đã hủy</string>
 </resources>

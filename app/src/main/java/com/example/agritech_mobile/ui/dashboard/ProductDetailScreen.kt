@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
+import com.example.agritech_mobile.ui.cart.CartState
 import com.example.agritech_mobile.ui.cart.CartViewModel
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 
@@ -74,6 +75,9 @@ fun ProductDetailScreen(
 ) {
     var uiState by remember { mutableStateOf(ProductDetailUiState()) }
     val dashboardState by viewModel.dashboardState.collectAsState()
+    val cartState by cartViewModel.cartState.collectAsState()
+    var showAddToCartError by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
 
     LaunchedEffect(productId) {
         viewModel.getProductById(productId)
@@ -105,22 +109,53 @@ fun ProductDetailScreen(
             else -> {}
         }
     }
+    var hasHandledCartSuccess by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    LaunchedEffect(cartState) {
+        when (val state = cartState) {
+            is CartState.ActionSuccess -> {
+                if (!hasHandledCartSuccess) {
+                    hasHandledCartSuccess = true
+                    Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                    onBackClick()
+                }
+            }
+
+            is CartState.Error -> {
+                errorMessage = state.error
+                showAddToCartError = true
+            }
+
+            is CartState.Loading -> {
+                hasHandledCartSuccess = false
+            }
+
+            else -> {}
+        }
+    }
+
+    if (showAddToCartError) {
+        AlertDialog(
+            onDismissRequest = { showAddToCartError = false },
+            title = { Text("Lỗi thêm vào giỏ hàng") },
+            text = { Text(errorMessage) },
+            confirmButton = {
+                Button(onClick = { showAddToCartError = false }) {
+                    Text("Đóng")
+                }
+            }
+        )
+    }
 
     ProductDetailContent(
         uiState = uiState,
         onBackClick = onBackClick,
         onFavoriteClick = { uiState = uiState.copy(isFavorite = !uiState.isFavorite) },
-        onViewShopClick = { /* TODO: Mở trang Shop */ },
-        onChatClick = { /* TODO: Mở màn hình Chat */ },
+        onViewShopClick = { /* TODO*/ },
+        onChatClick = { /* TODO */ },
         onAddToCartClick = {
             cartViewModel.addToCart(uiState.id, uiState.quantity)
-            Toast.makeText(
-                context,
-                "Đã thêm sản phẩm vào giỏ hàng",
-                Toast.LENGTH_SHORT
-            ).show()
-            onBackClick()
         },
         onIncreaseQuantity = {
             uiState = uiState.copy(quantity = uiState.quantity + 1.0)

@@ -39,6 +39,8 @@ import com.example.agritech_mobile.ui.cart.CartViewModel
 import com.example.agritech_mobile.ui.order.OrderState
 import com.example.agritech_mobile.ui.order.OrderViewModel
 import com.example.agritech_mobile.ui.theme.AgritechTheme
+import com.example.agritech_mobile.ui.user.AddressState
+import com.example.agritech_mobile.ui.user.UserViewModel
 import java.text.DecimalFormat
 
 data class CheckoutItem(
@@ -69,25 +71,28 @@ data class CheckoutUiState(
 @Composable
 fun CheckoutScreen(
     selectedCartItemIds: List<String>,
+    selectedAddressId: String? = null,
     onBackClick: () -> Unit,
     onPlaceOrderSuccess: () -> Unit,
-    onNavigateToAddressSelection: () -> Unit,
+    onNavigateToAddressSelection: (String?) -> Unit,
     viewModel: OrderViewModel = hiltViewModel(),
-    cartViewModel: CartViewModel = hiltViewModel()
+    cartViewModel: CartViewModel = hiltViewModel(),
+    userViewModel: UserViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
 
     val orderState by viewModel.orderState.collectAsState()
     val cartState by cartViewModel.cartState.collectAsState()
+    val addressState by userViewModel.addressState.collectAsState()
 
     var isLoading by remember { mutableStateOf(false) }
 
     var uiState by remember {
         mutableStateOf(
             CheckoutUiState(
-                userName = "Khánh Ly",
-                phone = "036 363 2030",
-                address = "18 ngõ 219 đường Nguyễn Ngọc Vũ",
+                userName = "Đang tải...",
+                phone = "",
+                address = "",
                 items = emptyList(),
                 subtotal = 0.0,
                 shippingFee = 0.0,
@@ -100,6 +105,7 @@ fun CheckoutScreen(
 
     LaunchedEffect(Unit) {
         cartViewModel.loadCartItems()
+        userViewModel.getUserAddresses()
     }
 
     LaunchedEffect(cartState) {
@@ -134,6 +140,32 @@ fun CheckoutScreen(
         }
     }
 
+    LaunchedEffect(addressState, selectedAddressId) {
+        if (addressState is AddressState.Success) {
+            val addresses = (addressState as AddressState.Success).addresses
+
+            val displayAddress = if (!selectedAddressId.isNullOrEmpty()) {
+                addresses.find { it.id == selectedAddressId }
+            } else {
+                addresses.find { it.isDefault } ?: addresses.firstOrNull()
+            }
+
+            if (displayAddress != null) {
+                uiState = uiState.copy(
+                    userName = displayAddress.receiverName ?: "Khách hàng",
+                    phone = displayAddress.phoneNumber ?: "Chưa có SĐT",
+                    address = displayAddress.addressDetail ?: "Chưa có địa chỉ"
+                )
+            } else {
+                uiState = uiState.copy(
+                    userName = "Chưa có địa chỉ",
+                    phone = "",
+                    address = "Vui lòng thêm địa chỉ giao hàng"
+                )
+            }
+        }
+    }
+
     LaunchedEffect(orderState) {
         when (val state = orderState) {
             is OrderState.Loading -> isLoading = true
@@ -142,10 +174,12 @@ fun CheckoutScreen(
                 Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
                 onPlaceOrderSuccess()
             }
+
             is OrderState.Error -> {
                 isLoading = false
                 Toast.makeText(context, state.error, Toast.LENGTH_LONG).show()
             }
+
             else -> isLoading = false
         }
     }
@@ -154,7 +188,15 @@ fun CheckoutScreen(
         CheckoutContent(
             uiState = uiState,
             onBackClick = onBackClick,
-            onChangeAddressClick = onNavigateToAddressSelection,
+            onChangeAddressClick = {
+                if (addressState is AddressState.Success) {
+                    val addresses = (addressState as AddressState.Success).addresses
+                    val currentId = addresses.find { it.receiverName == uiState.userName }?.id
+                    onNavigateToAddressSelection(currentId)
+                } else {
+                    onNavigateToAddressSelection(null)
+                }
+            },
             onPaymentMethodSelect = { method ->
                 uiState = uiState.copy(selectedPaymentMethod = method)
             },

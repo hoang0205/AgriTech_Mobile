@@ -28,6 +28,7 @@ import com.example.agritech_mobile.R
 import com.example.agritech_mobile.ui.cart.CartScreen
 import com.example.agritech_mobile.ui.dashboard.HomeScreen
 import com.example.agritech_mobile.ui.order.SellerOrdersScreen
+import com.example.agritech_mobile.ui.user.ProfileScreen
 
 @Composable
 fun MainScreen(
@@ -66,11 +67,12 @@ fun MainScreen(
                 )
 
                 "ACCOUNT" -> {
-                    // TODO:
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) { Text("Màn hình Tài khoản") }
+                    ProfileScreen(
+                        onBackClick = { /* TODO */ },
+                        onNavigateToAddress = { /* TODO */ },
+                        onNavigateToOrders = { status -> /* TODO */ },
+                        onLogoutClick = { /* TODO */ }
+                    )
                 }
             }
         }

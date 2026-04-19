@@ -74,7 +74,6 @@ class CartViewModel @Inject constructor(
             val result = repository.addToCart(productId, quantity)
             result.onSuccess { response ->
                 _cartState.value = CartState.ActionSuccess(response.message)
-                loadCartItems()
             }.onFailure { exception ->
                 _cartState.value = CartState.Error(exception.message ?: "Lỗi hệ thống")
             }

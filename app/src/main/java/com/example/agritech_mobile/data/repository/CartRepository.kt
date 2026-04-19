@@ -40,12 +40,28 @@ class CartRepository @Inject constructor(
                     Result.failure(Exception("Phản hồi từ server bị rỗng!"))
                 }
             } else {
-                Result.failure(Exception("Lỗi từ server: ${response.code()}"))
+                try {
+                    val errorBody = response.errorBody()?.string()
+                    val errorMessage = if (!errorBody.isNullOrEmpty()) {
+                        try {
+                            val jsonObject = org.json.JSONObject(errorBody)
+                            jsonObject.optString("message", "Lỗi từ server: ${response.code()}")
+                        } catch (e: Exception) {
+                            errorBody
+                        }
+                    } else {
+                        "Lỗi từ server: ${response.code()}"
+                    }
+                    Result.failure(Exception(errorMessage))
+                } catch (e: Exception) {
+                    Result.failure(Exception("Lỗi từ server: ${response.code()}"))
+                }
             }
         } catch (e: Exception) {
             Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
         }
     }
+
 
     suspend fun updateQuantity(cartItemId: String, quantity: Double): Result<CartMessageResponse> {
         return try {

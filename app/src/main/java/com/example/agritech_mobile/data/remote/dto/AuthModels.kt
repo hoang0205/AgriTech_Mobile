@@ -7,7 +7,9 @@ data class LoginRequest(
 
 data class LoginResponse(
     val accessToken: String,
-    val refreshToken: String
+    val refreshToken: String,
+    val fullName: String,
+    val avatarUrl: String,
 )
 
 data class RegisterResponse(

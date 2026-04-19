@@ -120,6 +120,10 @@ fun SellerOrdersScreen(
                 } ?: emptyList()
             }
 
+            is OrderState.OrderBuyerItemSuccess -> {
+                isLoading = false
+            }
+
             is OrderState.Success -> {
                 isLoading = false
                 Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()

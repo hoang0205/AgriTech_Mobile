@@ -134,7 +134,7 @@
     <string name="checkout_title">Thanh toán</string>
 
     <string name="checkout_shipping_address">Địa chỉ giao hàng</string>
-    <string name="checkout_default_address">Địa chỉ mặc định</string>
+    <string name="checkout_default_address">Địa chỉ</string>
     <string name="checkout_change">Thay đổi</string>
 
     <string name="checkout_order_summary">Tóm tắt đơn hàng</string>
@@ -167,4 +167,45 @@
     <string name="order_title">Order management</string>
     <string name="total_amount">Total amount</string>
     <string name="new_order">New</string>
+    <string name="address_selection_title">Select Shipping Address</string>
+    <string name="address_selection_banner_title">Fast farm-to-table delivery</string>
+    <string name="address_selection_banner_subtitle">Guaranteed freshness within 24h</string>
+    <string name="address_selection_confirm">Confirm</string>
+    <string name="address_selection_add_new">Add new address</string>
+    <string name="address_selection_saved_addresses">SAVED ADDRESSES</string>
+    <string name="address_selection_default_badge">DEFAULT</string>
+
+    <string name="add_address_topbar_title">Checkout</string>
+    <string name="add_address_save">Save Address</string>
+    <string name="add_address_header">Shipping Information</string>
+    <string name="add_address_description">Please provide an accurate address for the best shipping experience.</string>
+    <string name="add_address_fullname">Full Name</string>
+    <string name="add_address_phone">Phone Number</string>
+    <string name="add_address_city">Province/City</string>
+    <string name="add_address_district">District</string>
+    <string name="add_address_ward">Ward/Commune</string>
+    <string name="add_address_detail">Detailed Address</string>
+    <string name="add_address_detail_placeholder">House number, street name, building...</string>
+    <string name="add_address_set_default">Set as default address</string>
+    <string name="add_address_set_default_desc">Use this address for future orders.</string>
+    <string name="add_address_my_location">My Location</string>
+
+    <string name="profile_title">Farmer Profile</string>
+    <string name="profile_app_name">AgriTech</string>
+    <string name="profile_badge_premium">PREMIUM PRODUCER</string>
+    <string name="profile_orders_title">My Orders</string>
+    <string name="profile_orders_see_all">See all ></string>
+
+    <string name="profile_settings_title">ACCOUNT SETTINGS</string>
+    <string name="profile_menu_address">Address Book</string>
+    <string name="profile_menu_payment">Payment Methods</string>
+    <string name="profile_menu_password">Change Password</string>
+    <string name="profile_menu_help">Help Center</string>
+    <string name="profile_logout">Log Out</string>
+
+    <string name="order_status_pending">Pending</string>
+    <string name="order_status_confirmed">Confirmed</string>
+    <string name="order_status_shipping">Shipping</string>
+    <string name="order_status_completed">Completed</string>
+    <string name="order_status_cancelled">Cancelled</string>
 </resources>

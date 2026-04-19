@@ -1,7 +1,7 @@
 package com.example.agritech_mobile.data.remote.dto
 
+import android.R
 import com.example.agritech_mobile.ui.dashboard.Product
-import com.example.agritech_mobile.ui.order.ShippingAddress
 
 data class CheckOutRequest(
     val shippingAddress: String,
@@ -51,7 +51,7 @@ data class OrderBuyerResponse(
     val orderId: String,
     val orderDate: String,
     val status: String,
-    val shippingAddress: ShippingAddress,
+    val shippingAddress: String,
     val totalAmount: Double,
     val orderItems: List<OrderBuyerItem>
 )
