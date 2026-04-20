@@ -32,6 +32,14 @@ class TokenManager @Inject constructor(
         return prefs.getString("USER_NAME", "Khách") ?: "Khách"
     }
 
+    fun saveAvatarUrl(url: String) {
+        prefs.edit().putString("AVATAR_URL", url).apply()
+    }
+
+    fun getAvatarUrl(): String {
+        return prefs.getString("AVATAR_URL", "") ?: ""
+    }
+
     fun clearTokens() {
         prefs.edit().clear().apply()
     }

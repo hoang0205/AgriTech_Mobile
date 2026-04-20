@@ -208,4 +208,31 @@
     <string name="order_status_shipping">Shipping</string>
     <string name="order_status_completed">Completed</string>
     <string name="order_status_cancelled">Cancelled</string>
+    <string name="common_loading">Loading...</string>
+    <string name="common_loading_data">Loading data...</string>
+    <string name="common_save">Save</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_update">Update</string>
+    <string name="common_error_empty_fields">Confirm Password</string>
+    <string name="common_default_customer">Customer</string>
+
+    <string name="profile_edit_dialog_title">Update Profile</string>
+    <string name="profile_edit_take_photo">Camera</string>
+    <string name="profile_edit_choose_gallery">Gallery</string>
+    <string name="profile_edit_fullname_label">Full Name</string>
+
+    <string name="profile_change_pwd_title">Change Password</string>
+    <string name="profile_change_pwd_current">Current Password</string>
+    <string name="profile_change_pwd_new">New Password</string>
+    <string name="profile_change_pwd_confirm">Confirm New Password</string>
+    <string name="profile_change_pwd_error_mismatch">Passwords do not match!</string>
+
+    <string name="add_address_success">Address added successfully</string>
+
+    <string name="checkout_unit_price">Unit price:</string>
+    <string name="checkout_default_product">Product</string>
+    <string name="checkout_error_no_address">Please select a shipping address</string>
+    <string name="checkout_no_phone">No phone number</string>
+    <string name="checkout_no_address">No address provided</string>
+    <string name="checkout_prompt_add_address">Please add a shipping address</string>
 </resources>

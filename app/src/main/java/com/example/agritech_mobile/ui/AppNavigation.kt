@@ -1,7 +1,8 @@
+package com.example.agritech_mobile.ui
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,14 +15,11 @@ import com.example.agritech_mobile.ui.auth.ResetPasswordScreen
 import com.example.agritech_mobile.ui.auth.SignUpScreen
 import com.example.agritech_mobile.ui.auth.VerifyEmailScreen
 import com.example.agritech_mobile.ui.checkout.CheckoutScreen
-import com.example.agritech_mobile.ui.dashboard.HomeScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.main.MainScreen
 import com.example.agritech_mobile.ui.order.AddressSelectionScreen
 import com.example.agritech_mobile.ui.user.AddAddressScreen
-import kotlin.text.get
-import kotlin.text.set
 
 @Composable
 fun AppNavigation(
@@ -116,10 +114,7 @@ fun AppNavigation(
         composable(
             route = "main_screen",
             enterTransition = {
-                scaleIn(
-                    initialScale = 0.8f,
-                    animationSpec = tween(300)
-                ) + fadeIn(animationSpec = tween(300))
+                scaleIn(initialScale = 0.8f, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300))
             },
             exitTransition = { fadeOut() }
         ) {
@@ -132,6 +127,11 @@ fun AppNavigation(
                 },
                 onNavigateToCheckout = { selectedIds ->
                     navController.navigate("checkout/$selectedIds")
+                },
+                onLogoutSuccess = {
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
@@ -242,7 +242,7 @@ fun AppNavigation(
         composable("add_address") {
             AddAddressScreen(
                 onBackClick = { navController.popBackStack() },
-                onSaveSuccess = { // ĐỔI THÀNH onSaveSuccess
+                onSaveSuccess = {
                     navController.popBackStack()
                 }
             )

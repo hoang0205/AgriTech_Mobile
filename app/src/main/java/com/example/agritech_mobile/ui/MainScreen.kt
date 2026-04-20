@@ -34,7 +34,8 @@ import com.example.agritech_mobile.ui.user.ProfileScreen
 fun MainScreen(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToCreateProduct: () -> Unit,
-    onNavigateToCheckout: (String) -> Unit
+    onNavigateToCheckout: (String) -> Unit,
+    onLogoutSuccess: () -> Unit
 ) {
     var currentTab by rememberSaveable { mutableStateOf("HOME") }
 
@@ -68,10 +69,9 @@ fun MainScreen(
 
                 "ACCOUNT" -> {
                     ProfileScreen(
-                        onBackClick = { /* TODO */ },
-                        onNavigateToAddress = { /* TODO */ },
+                        onNavigateToAddress = { /* TODO: */ },
                         onNavigateToOrders = { status -> /* TODO */ },
-                        onLogoutClick = { /* TODO */ }
+                        onLogoutClick = onLogoutSuccess
                     )
                 }
             }

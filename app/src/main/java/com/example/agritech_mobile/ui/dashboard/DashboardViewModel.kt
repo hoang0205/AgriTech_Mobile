@@ -57,6 +57,9 @@ class DashboardViewModel @Inject constructor(
     private val _userName = MutableStateFlow(tokenManager.getUserName())
     val userName: StateFlow<String> = _userName.asStateFlow()
 
+    private val _userAvatar = MutableStateFlow(tokenManager.getAvatarUrl())
+    val userAvatar: StateFlow<String> = _userAvatar.asStateFlow()
+
     init {
         loadHomeData()
         viewModelScope.launch {

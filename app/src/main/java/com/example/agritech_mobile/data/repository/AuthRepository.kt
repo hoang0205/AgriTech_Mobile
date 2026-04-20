@@ -6,6 +6,7 @@ import com.example.agritech_mobile.data.remote.dto.ErrorResponse
 import com.example.agritech_mobile.data.remote.dto.ForgotPasswordRequest
 import com.example.agritech_mobile.data.remote.dto.LoginRequest
 import com.example.agritech_mobile.data.remote.dto.LoginResponse
+import com.example.agritech_mobile.data.remote.dto.LogoutRequest
 import com.example.agritech_mobile.data.remote.dto.MessageResponse
 import com.example.agritech_mobile.data.remote.dto.RegisterRequest
 import com.example.agritech_mobile.data.remote.dto.RegisterResponse
@@ -143,6 +144,21 @@ class AuthRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
+        }
+    }
+
+    suspend fun logout(accessToken: String): Result<MessageResponse> {
+        return try {
+            val request = LogoutRequest(accessToken)
+            val response = apiService.logout(request)
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Lỗi đăng xuất từ Server: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Lỗi kết nối: ${e.localizedMessage}"))
         }
     }
 }

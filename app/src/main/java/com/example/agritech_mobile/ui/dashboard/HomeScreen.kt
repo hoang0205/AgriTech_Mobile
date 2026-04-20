@@ -53,6 +53,7 @@ data class Product(
 data class CategoryItem(val name: String, val titleRes: Int, val icon: Int)
 data class HomeUiState(
     val userName: String = "",
+    val userAvatar: String = "",
     val searchQuery: String = "",
     val categories: List<CategoryItem> = emptyList(),
     val newProducts: List<Product> = emptyList(),
@@ -75,6 +76,7 @@ fun HomeScreen(
     var uiState by remember { mutableStateOf(HomeUiState()) }
 
     val userName by viewModel.userName.collectAsStateWithLifecycle()
+    val userAvatar by viewModel.userAvatar.collectAsStateWithLifecycle()
 
     val finalSearchResults = searchResultsRes.map { res ->
         Product(
@@ -96,7 +98,7 @@ fun HomeScreen(
     )
 
     LaunchedEffect(Unit) {
-        uiState = uiState.copy(categories = defaultCategories, userName = userName)
+        uiState = uiState.copy(categories = defaultCategories, userName = userName, userAvatar = userAvatar)
         viewModel.loadHomeData()
     }
 
@@ -197,7 +199,7 @@ fun HomeContent(
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut()
         ) {
-            HomeHeader(userName = uiState.userName)
+            HomeHeader(userName = uiState.userName, userAvatar = uiState.userAvatar)
         }
 
         HomeSearchBar(
@@ -425,7 +427,7 @@ fun TextSuggestionItem(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun HomeHeader(userName: String) {
+fun HomeHeader(userName: String, userAvatar: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -439,11 +441,20 @@ fun HomeHeader(userName: String) {
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (userAvatar.isNotBlank()) {
+                AsyncImage(
+                    model = userAvatar,
+                    contentDescription = "Avatar",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         Spacer(modifier = Modifier.width(12.dp))
         Text(

@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.androidx.foundation.layout)
     implementation("androidx.activity:activity-compose:1.10.0")
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.ui.text)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -2,9 +2,11 @@ package com.example.agritech_mobile.ui.user
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.agritech_mobile.data.local.TokenManager
 import com.example.agritech_mobile.data.remote.dto.ProvinceResponse
 import com.example.agritech_mobile.data.remote.dto.ShippingDetails
 import com.example.agritech_mobile.data.remote.dto.WardResponse
+import com.example.agritech_mobile.data.repository.AuthRepository
 import com.example.agritech_mobile.data.repository.UploadRepository
 import com.example.agritech_mobile.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,7 +40,9 @@ sealed class UserProfileState {
 @HiltViewModel
 class UserViewModel @Inject constructor(
     private val userRepository: UserRepository,
-    private val uploadRepository: UploadRepository
+    private val uploadRepository: UploadRepository,
+    private val authRepository: AuthRepository,
+    private val tokenManager: TokenManager
 ) : ViewModel() {
 
     private val _addressState = MutableStateFlow<AddressState>(AddressState.Idle)
@@ -184,6 +188,23 @@ class UserViewModel @Inject constructor(
             }.onFailure { exception ->
                 _userState.value = UserState.Error(exception.message ?: "Lỗi cập nhật thông tin")
             }
+        }
+    }
+
+    fun performLogout(onNavigateToLogin: () -> Unit) {
+        viewModelScope.launch {
+            val token = tokenManager.getAccessToken()
+
+            if (!token.isNullOrEmpty()) {
+                try {
+                    authRepository.logout(token)
+                } catch (e: Exception) {
+                }
+            }
+
+            tokenManager.clearAll()
+
+            onNavigateToLogin()
         }
     }
 }

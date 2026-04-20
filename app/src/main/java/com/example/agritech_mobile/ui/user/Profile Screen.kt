@@ -39,6 +39,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -53,7 +55,6 @@ import com.example.agritech_mobile.ui.theme.AgritechTheme
 
 @Composable
 fun ProfileScreen(
-    onBackClick: () -> Unit,
     onNavigateToAddress: () -> Unit,
     onNavigateToOrders: (String) -> Unit,
     onLogoutClick: () -> Unit,
@@ -64,6 +65,7 @@ fun ProfileScreen(
     val profileState by userViewModel.profileState.collectAsState()
 
     var showEditDialog by remember { mutableStateOf(false) }
+    var showPasswordDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(userState) {
         when (userState) {
@@ -85,8 +87,8 @@ fun ProfileScreen(
 
     val name = when (profileState) {
         is UserProfileState.Success -> (profileState as UserProfileState.Success).fullName
-        is UserProfileState.Loading -> "Đang tải..."
-        else -> "Khách hàng"
+        is UserProfileState.Loading -> stringResource(R.string.common_loading)
+        else -> stringResource(R.string.common_default_customer)
     }
 
     val imageUrl = when (profileState) {
@@ -102,17 +104,21 @@ fun ProfileScreen(
         ProfileContent(
             name = name,
             imageUrl = imageUrl,
-            onBackClick = onBackClick,
             onNavigateToAddress = onNavigateToAddress,
             onNavigateToOrders = onNavigateToOrders,
-            onLogoutClick = onLogoutClick,
-            onEditClick = { showEditDialog = true }
+            onLogoutClick = {
+                userViewModel.performLogout(
+                    onNavigateToLogin = { onLogoutClick() }
+                )
+            },
+            onEditClick = { showEditDialog = true },
+            onChangePasswordClick = { showPasswordDialog = true }
         )
 
         if (showEditDialog) {
             EditProfileDialog(
                 context = context,
-                currentName = if (name == "Đang tải...") "" else name,
+                currentName = if (name == stringResource(R.string.common_loading)) "" else name,
                 currentAvatarUrl = imageUrl,
                 onDismiss = { showEditDialog = false },
                 onSave = { newName, newImagePart ->
@@ -125,6 +131,17 @@ fun ProfileScreen(
                 }
             )
         }
+
+        if (showPasswordDialog) {
+            ChangePasswordDialog(
+                onDismiss = { showPasswordDialog = false },
+                onSave = { current, new, confirm ->
+                    userViewModel.updatePassword(current, new, confirm)
+                    showPasswordDialog = false
+                }
+            )
+        }
+
 
         if (userState is UserState.Loading) {
             Box(
@@ -169,7 +186,7 @@ fun EditProfileDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "Cập nhật thông tin",
+                stringResource(R.string.profile_edit_dialog_title),
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1B5E20)
             )
@@ -221,7 +238,10 @@ fun EditProfileDialog(
                             tint = Color(0xFF1B5E20)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Chụp ảnh", color = Color(0xFF1B5E20))
+                        Text(
+                            stringResource(R.string.profile_edit_take_photo),
+                            color = Color(0xFF1B5E20)
+                        )
                     }
                     TextButton(
                         onClick = {
@@ -234,7 +254,10 @@ fun EditProfileDialog(
                             tint = Color(0xFF1B5E20)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Thư viện", color = Color(0xFF1B5E20))
+                        Text(
+                            stringResource(R.string.profile_edit_choose_gallery),
+                            color = Color(0xFF1B5E20)
+                        )
                     }
                 }
 
@@ -243,7 +266,10 @@ fun EditProfileDialog(
                 OutlinedTextField(
                     value = newName,
                     onValueChange = { newName = it },
-                    label = { Text("Họ và tên") },
+                    label = {
+                        Text(
+                            stringResource(R.string.profile_edit_fullname_label)
+                        ) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -258,11 +284,132 @@ fun EditProfileDialog(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20))
             ) {
-                Text("Lưu")
+                Text(stringResource(R.string.common_save))
             }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) { Text("Hủy", color = Color(0xFF1B5E20)) }
+            OutlinedButton(onClick = onDismiss) {
+                Text(
+                    stringResource(R.string.common_cancel),
+                    color = Color(0xFF1B5E20)
+                )
+            }
+        },
+        containerColor = Color.White
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChangePasswordDialog(
+    onDismiss: () -> Unit,
+    onSave: (String, String, String) -> Unit
+) {
+    val context = LocalContext.current
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+
+    var currentPasswordVisible by remember { mutableStateOf(false) }
+    var newPasswordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.profile_change_pwd_title),
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1B5E20)
+            )
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = currentPassword,
+                    onValueChange = { currentPassword = it },
+                    label = {
+                        Text(stringResource(R.string.profile_change_pwd_current))
+                            },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = if (currentPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image =
+                            if (currentPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { currentPasswordVisible = !currentPasswordVisible }) {
+                            Icon(imageVector = image, contentDescription = null)
+                        }
+                    }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = {
+                        Text(stringResource(R.string.profile_change_pwd_new))
+                            },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = if (newPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image =
+                            if (newPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { newPasswordVisible = !newPasswordVisible }) {
+                            Icon(imageVector = image, contentDescription = null)
+                        }
+                    }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = {
+                        Text(
+                            stringResource(R.string.common_error_empty_fields)
+                        ) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image =
+                            if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                            Icon(imageVector = image, contentDescription = null)
+                        }
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (currentPassword.isBlank() || newPassword.isBlank() || confirmPassword.isBlank()) {
+                        Toast.makeText(context, "Vui lòng nhập đủ thông tin", Toast.LENGTH_SHORT)
+                            .show()
+                        return@Button
+                    }
+                    if (newPassword != confirmPassword) {
+                        Toast.makeText(context, "Mật khẩu xác nhận không khớp!", Toast.LENGTH_SHORT)
+                            .show()
+                        return@Button
+                    }
+                    onSave(currentPassword, newPassword, confirmPassword)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20))
+            ) {
+                Text(stringResource(R.string.common_update))
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text(
+                    stringResource(R.string.common_cancel),
+                    color = Color(0xFF1B5E20)
+                )
+            }
         },
         containerColor = Color.White
     )
@@ -272,16 +419,16 @@ fun EditProfileDialog(
 fun ProfileContent(
     name: String,
     imageUrl: String,
-    onBackClick: () -> Unit,
     onNavigateToAddress: () -> Unit,
     onNavigateToOrders: (String) -> Unit,
     onLogoutClick: () -> Unit,
-    onEditClick: () -> Unit
+    onEditClick: () -> Unit,
+    onChangePasswordClick: () -> Unit
 ) {
     Scaffold(
         containerColor = Color(0xFFF8FAF9),
         contentWindowInsets = WindowInsets(0.dp),
-        topBar = { ProfileTopBar(onBackClick) }
+        topBar = { ProfileTopBar() }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -295,7 +442,7 @@ fun ProfileContent(
             ProfileHeader(
                 name = name,
                 imageUrl = imageUrl,
-                onEditClick = onEditClick // Truyền hàm xuống
+                onEditClick = onEditClick
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -304,7 +451,10 @@ fun ProfileContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            AccountSettingsSection(onNavigateToAddress = onNavigateToAddress)
+            AccountSettingsSection(
+                onNavigateToAddress = onNavigateToAddress,
+                onChangePasswordClick = onChangePasswordClick
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -339,34 +489,21 @@ fun ProfileContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileTopBar(onBackClick: () -> Unit) {
+fun ProfileTopBar() {
     TopAppBar(
         title = {
             Text(
                 text = stringResource(R.string.profile_title),
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1B5E20),
-                fontSize = 18.sp
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color(0xFF1B5E20)
-                )
-            }
-        },
-        actions = {
-            Text(
-                text = stringResource(R.string.profile_app_name),
-                fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF1B5E20),
                 fontSize = 18.sp,
-                modifier = Modifier.padding(end = 16.dp)
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 20.dp)
             )
         },
+        actions = {},
         windowInsets = WindowInsets(0.dp),
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
     )
@@ -431,21 +568,21 @@ fun ProfileHeader(name: String, imageUrl: String, onEditClick: () -> Unit) {
 
     Spacer(modifier = Modifier.height(16.dp))
     Text(name, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF212121))
-    Spacer(modifier = Modifier.height(4.dp))
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFE8F5E9))
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Text(
-            stringResource(R.string.profile_badge_premium),
-            color = Color(0xFF2E7D32),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
-        )
-    }
+//    Spacer(modifier = Modifier.height(4.dp))
+//    Box(
+//        modifier = Modifier
+//            .clip(RoundedCornerShape(16.dp))
+//            .background(Color(0xFFE8F5E9))
+//            .padding(horizontal = 12.dp, vertical = 6.dp)
+//    ) {
+//        Text(
+//            stringResource(R.string.profile_badge_premium),
+//            color = Color(0xFF2E7D32),
+//            fontSize = 12.sp,
+//            fontWeight = FontWeight.Bold,
+//            letterSpacing = 1.sp
+//        )
+//    }
 }
 
 @Composable
@@ -564,7 +701,10 @@ fun OrderStatusItem(icon: ImageVector, label: String, badgeCount: Int, onClick: 
 }
 
 @Composable
-fun AccountSettingsSection(onNavigateToAddress: () -> Unit) {
+fun AccountSettingsSection(
+    onNavigateToAddress: () -> Unit,
+    onChangePasswordClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -607,7 +747,8 @@ fun AccountSettingsSection(onNavigateToAddress: () -> Unit) {
                 SettingsMenuItem(
                     Icons.Default.Lock,
                     stringResource(R.string.profile_menu_password),
-                    {})
+                    onClick = onChangePasswordClick
+                )
                 HorizontalDivider(
                     color = Color(0xFFF0F0F0),
                     thickness = 1.dp,
@@ -667,11 +808,11 @@ fun ProfileScreenPreview() {
         ProfileContent(
             name = "Preview User",
             imageUrl = "https://images.unsplash.com/photo-1595956553066-fe24a8c33395?q=80&w=400",
-            onBackClick = {},
             onNavigateToAddress = {},
             onNavigateToOrders = {},
             onLogoutClick = {},
-            onEditClick = {}
+            onEditClick = {},
+            onChangePasswordClick = {}
         )
     }
 }
