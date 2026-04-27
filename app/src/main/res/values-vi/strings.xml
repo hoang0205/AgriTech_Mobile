@@ -237,4 +237,10 @@
     <string name="checkout_no_phone">Chưa có SĐT</string>
     <string name="checkout_no_address">Chưa có địa chỉ</string>
     <string name="checkout_prompt_add_address">Vui lòng thêm địa chỉ giao hàng</string>
+
+    <string name="buyer_order_title">Đơn mua của tôi</string>
+    <string name="buyer_order_empty">Chưa có đơn hàng nào</string>
+    <string name="buyer_order_total">Thành tiền</string>
+    <string name="buyer_order_cancel_btn">Hủy đơn hàng</string>
+    <string name="buyer_order_shop_default">Cửa hàng</string>
 </resources>

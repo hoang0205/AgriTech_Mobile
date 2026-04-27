@@ -35,7 +35,8 @@ fun MainScreen(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToCreateProduct: () -> Unit,
     onNavigateToCheckout: (String) -> Unit,
-    onLogoutSuccess: () -> Unit
+    onLogoutSuccess: () -> Unit,
+    onNavigateToBuyerOrders: (String) -> Unit
 ) {
     var currentTab by rememberSaveable { mutableStateOf("HOME") }
 
@@ -70,7 +71,7 @@ fun MainScreen(
                 "ACCOUNT" -> {
                     ProfileScreen(
                         onNavigateToAddress = { /* TODO: */ },
-                        onNavigateToOrders = { status -> /* TODO */ },
+                        onNavigateToOrders = { status -> onNavigateToBuyerOrders(status) },
                         onLogoutClick = onLogoutSuccess
                     )
                 }

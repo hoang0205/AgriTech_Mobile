@@ -235,4 +235,10 @@
     <string name="checkout_no_phone">No phone number</string>
     <string name="checkout_no_address">No address provided</string>
     <string name="checkout_prompt_add_address">Please add a shipping address</string>
+
+    <string name="buyer_order_title">My Purchases</string>
+    <string name="buyer_order_empty">No orders yet</string>
+    <string name="buyer_order_total">Total amount</string>
+    <string name="buyer_order_cancel_btn">Cancel Order</string>
+    <string name="buyer_order_shop_default">Store</string>
 </resources>

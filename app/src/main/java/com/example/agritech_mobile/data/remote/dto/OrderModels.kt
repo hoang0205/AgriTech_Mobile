@@ -53,5 +53,5 @@ data class OrderBuyerResponse(
     val status: String,
     val shippingAddress: String,
     val totalAmount: Double,
-    val orderItems: List<OrderBuyerItem>
+    val items: List<OrderBuyerItem>
 )

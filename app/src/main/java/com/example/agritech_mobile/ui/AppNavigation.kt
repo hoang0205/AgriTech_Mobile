@@ -19,6 +19,7 @@ import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.main.MainScreen
 import com.example.agritech_mobile.ui.order.AddressSelectionScreen
+import com.example.agritech_mobile.ui.order.BuyerOrdersScreen
 import com.example.agritech_mobile.ui.user.AddAddressScreen
 
 @Composable
@@ -113,9 +114,7 @@ fun AppNavigation(
 
         composable(
             route = "main_screen",
-            enterTransition = {
-                scaleIn(initialScale = 0.8f, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300))
-            },
+            enterTransition = { scaleIn(initialScale = 0.8f, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300)) },
             exitTransition = { fadeOut() }
         ) {
             MainScreen(
@@ -132,6 +131,9 @@ fun AppNavigation(
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onNavigateToBuyerOrders = { status ->
+                    navController.navigate("buyer_orders/$status")
                 }
             )
         }
@@ -245,6 +247,18 @@ fun AppNavigation(
                 onSaveSuccess = {
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable(
+            route = "buyer_orders/{initialStatus}",
+            arguments = listOf(navArgument("initialStatus") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val initialStatus = backStackEntry.arguments?.getString("initialStatus") ?: "ALL"
+
+            BuyerOrdersScreen(
+                initialStatus = initialStatus,
+                onBackClick = { navController.popBackStack() }
             )
         }
     }
