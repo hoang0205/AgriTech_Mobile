@@ -35,6 +35,7 @@ import com.example.agritech_mobile.R
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
+import kotlin.text.get
 
 data class BuyerOrderItem(
     val id: String,
@@ -193,7 +194,9 @@ fun BuyerOrdersContent(
                             .clip(RoundedCornerShape(20.dp))
                             .background(if (isSelected) Color(0xFF1B5E20) else Color(0xFFF5F5F5))
                             .clickable {
-                                coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
                             }
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {

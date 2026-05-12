@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.agritech_mobile.data.local.TokenManager
 import com.example.agritech_mobile.data.remote.dto.ProductResponse
+import com.example.agritech_mobile.data.repository.AiRepository
 import com.example.agritech_mobile.data.repository.ProductRepository
 import com.example.agritech_mobile.data.repository.UploadRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -39,7 +40,8 @@ sealed class DashboardState {
 class DashboardViewModel @Inject constructor(
     private val repository: ProductRepository,
     private val uploadRepository: UploadRepository,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val aiRepository: AiRepository
 ) : ViewModel() {
     private val _dashboardState = MutableStateFlow<DashboardState>(DashboardState.Idle)
     val dashboardState: StateFlow<DashboardState> = _dashboardState.asStateFlow()
@@ -54,11 +56,8 @@ class DashboardViewModel @Inject constructor(
     private val _searchResults = MutableStateFlow<List<ProductResponse>>(emptyList())
     val searchResults: StateFlow<List<ProductResponse>> = _searchResults.asStateFlow()
 
-    private val _userName = MutableStateFlow(tokenManager.getUserName())
-    val userName: StateFlow<String> = _userName.asStateFlow()
-
-    private val _userAvatar = MutableStateFlow(tokenManager.getAvatarUrl())
-    val userAvatar: StateFlow<String> = _userAvatar.asStateFlow()
+    val userName: StateFlow<String> = tokenManager.userNameFlow
+    val userAvatar: StateFlow<String> = tokenManager.avatarUrlFlow
 
     init {
         loadHomeData()
@@ -237,6 +236,97 @@ class DashboardViewModel @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    fun getPricePrediction(productName: String, onResult: (String?, String) -> Unit) {
+        viewModelScope.launch {
+            val result = aiRepository.predictPrice(productName)
+            result.onSuccess { response ->
+                if (response.success && response.price != null) {
+
+                    val cleanString = response.price.replace(".", "").replace(",", "")
+
+                    val numberRegex = "\\d+".toRegex()
+                    val numbers = numberRegex.findAll(cleanString)
+                        .mapNotNull { it.value.toDoubleOrNull() }
+                        .toList()
+
+                    if (numbers.size >= 2) {
+                        val min = numbers[0]
+                        val max = numbers[1]
+                        val average = ((min + max) / 2).toLong().toString()
+
+                        val msg = "AI gợi ý: ${response.price}. Đã tự điền mức giá trung bình!"
+                        onResult(average, msg)
+
+                    } else if (numbers.size == 1) {
+                        val price = numbers[0].toLong().toString()
+                        onResult(price, "AI đã gợi ý giá thành công!")
+
+                    } else {
+                        onResult(null, "AI không tìm thấy mức giá cụ thể!")
+                    }
+                } else {
+                    onResult(null, "AI không nhận diện được giá!")
+                }
+            }.onFailure {
+                onResult(null, "Lỗi kết nối đến máy chủ AI!")
+            }
+        }
+    }
+
+    fun verifyImageWithAI(imagePart: okhttp3.MultipartBody.Part, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                Log.d("AI_IMAGE_DEBUG", "1. Bắt đầu up ảnh lên server...")
+
+                val uploadResult = uploadRepository.uploadImages(listOf(imagePart))
+                val url = uploadResult.getOrNull()?.firstOrNull()
+
+                if (url != null) {
+                    Log.d("AI_IMAGE_DEBUG", "2. Up ảnh thành công! Link URL: $url")
+                    Log.d("AI_IMAGE_DEBUG", "3. Bắt đầu gửi link cho AI nhận diện...")
+
+                    val aiResult = aiRepository.predictImage(url)
+
+                    aiResult.onSuccess { response ->
+                        Log.d("AI_IMAGE_DEBUG", "4. AI TRẢ VỀ: success=${response.success}, label='${response.label}', confidence=${response.confidence}")
+
+                        if (response.success && response.label != null) {
+                            val validKeywords = listOf("Fruit", "Vegetable", "Meat", "Seafood", "Other")
+
+                            val isAgricultural = validKeywords.any { keyword ->
+                                response.label.contains(keyword, ignoreCase = true)
+                            }
+
+                            val isConfident = (response.confidence ?: 0.0) > 0.2
+
+                            Log.d("AI_IMAGE_DEBUG", "5. Phân tích: Có chứa từ khóa nông sản = $isAgricultural | Đủ độ tin cậy = $isConfident")
+
+                            if (isAgricultural && isConfident) {
+                                Log.d("AI_IMAGE_DEBUG", "=> KẾT LUẬN: Ảnh hợp lệ")
+                                onResult(true)
+                            } else {
+                                Log.d("AI_IMAGE_DEBUG", "=> KẾT LUẬN: Ảnh rác")
+                                onResult(false)
+                            }
+                        } else {
+                            Log.e("AI_IMAGE_DEBUG", "=> LỖI: Server AI trả về label null hoặc success = false")
+                            onResult(false)
+                        }
+                    }.onFailure { error ->
+                        Log.e("AI_IMAGE_DEBUG", "=> LỖI MẠNG CHẠM AI: ${error.localizedMessage}")
+                        onResult(false)
+                    }
+                } else {
+                    Log.e("AI_IMAGE_DEBUG", "=> LỖI: Up ảnh thất bại, không lấy được link URL")
+                    onResult(false)
+                }
+            } catch (e: Exception) {
+                Log.e("AI_IMAGE_DEBUG", "=> CRASH HỆ THỐNG: ${e.localizedMessage}")
+                onResult(false)
+            }
         }
     }
 }

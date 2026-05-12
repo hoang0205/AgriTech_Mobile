@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
@@ -48,8 +47,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
+import com.example.agritech_mobile.data.remote.dto.OrderStatusCountResponse
 import com.example.agritech_mobile.di.bitmapToUri
 import com.example.agritech_mobile.di.uriToMultipartBodyPart
+import com.example.agritech_mobile.ui.order.OrderViewModel
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 
 
@@ -58,14 +59,21 @@ fun ProfileScreen(
     onNavigateToAddress: () -> Unit,
     onNavigateToOrders: (String) -> Unit,
     onLogoutClick: () -> Unit,
-    userViewModel: UserViewModel = hiltViewModel()
+    userViewModel: UserViewModel = hiltViewModel(),
+    orderViewModel: OrderViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val userState by userViewModel.userState.collectAsState()
     val profileState by userViewModel.profileState.collectAsState()
 
+    val orderCounts by orderViewModel.orderCounts.collectAsState()
+
     var showEditDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        orderViewModel.loadOrderCounts()
+    }
 
     LaunchedEffect(userState) {
         when (userState) {
@@ -73,17 +81,18 @@ fun ProfileScreen(
                 val message = (userState as UserState.Success).message
                 if (message.isNotBlank()) {
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    userViewModel.clearUserState()
                 }
             }
-
             is UserState.Error -> {
                 Toast.makeText(context, (userState as UserState.Error).message, Toast.LENGTH_SHORT)
                     .show()
+                userViewModel.clearUserState()
             }
-
             else -> {}
         }
     }
+
 
     val name = when (profileState) {
         is UserProfileState.Success -> (profileState as UserProfileState.Success).fullName
@@ -112,7 +121,8 @@ fun ProfileScreen(
                 )
             },
             onEditClick = { showEditDialog = true },
-            onChangePasswordClick = { showPasswordDialog = true }
+            onChangePasswordClick = { showPasswordDialog = true },
+            orderCounts = orderCounts
         )
 
         if (showEditDialog) {
@@ -423,7 +433,8 @@ fun ProfileContent(
     onNavigateToOrders: (String) -> Unit,
     onLogoutClick: () -> Unit,
     onEditClick: () -> Unit,
-    onChangePasswordClick: () -> Unit
+    onChangePasswordClick: () -> Unit,
+    orderCounts: OrderStatusCountResponse = OrderStatusCountResponse()
 ) {
     Scaffold(
         containerColor = Color(0xFFF8FAF9),
@@ -447,7 +458,10 @@ fun ProfileContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            MyOrdersSection(onNavigateToOrders = onNavigateToOrders)
+            MyOrdersSection(
+                onNavigateToOrders = onNavigateToOrders,
+                orderCounts = orderCounts
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -586,7 +600,10 @@ fun ProfileHeader(name: String, imageUrl: String, onEditClick: () -> Unit) {
 }
 
 @Composable
-fun MyOrdersSection(onNavigateToOrders: (String) -> Unit) {
+fun MyOrdersSection(
+    onNavigateToOrders: (String) -> Unit,
+    orderCounts: OrderStatusCountResponse
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -624,28 +641,33 @@ fun MyOrdersSection(onNavigateToOrders: (String) -> Unit) {
                 OrderStatusItem(
                     Icons.Default.PendingActions,
                     stringResource(R.string.order_status_pending),
-                    2,
-                    { onNavigateToOrders("PENDING") })
+                    badgeCount = orderCounts.pending.toInt(),
+                    { onNavigateToOrders("PENDING") }
+                )
                 OrderStatusItem(
                     Icons.Default.Inventory,
                     stringResource(R.string.order_status_confirmed),
-                    0,
-                    { onNavigateToOrders("CONFIRMED") })
+                    badgeCount = orderCounts.confirmed.toInt(),
+                    { onNavigateToOrders("CONFIRMED") }
+                )
                 OrderStatusItem(
                     Icons.Default.LocalShipping,
                     stringResource(R.string.order_status_shipping),
-                    0,
-                    { onNavigateToOrders("SHIPPING") })
+                    badgeCount = orderCounts.shipping.toInt(),
+                    { onNavigateToOrders("SHIPPING") }
+                )
                 OrderStatusItem(
                     Icons.Default.CheckCircle,
                     stringResource(R.string.order_status_completed),
-                    0,
-                    { onNavigateToOrders("COMPLETED") })
+                    badgeCount = orderCounts.completed.toInt(),
+                    { onNavigateToOrders("COMPLETED") }
+                )
                 OrderStatusItem(
                     Icons.Default.Cancel,
                     stringResource(R.string.order_status_cancelled),
-                    0,
-                    { onNavigateToOrders("CANCELLED") })
+                    badgeCount = orderCounts.cancelled.toInt(),
+                    { onNavigateToOrders("CANCELLED") }
+                )
             }
         }
     }
@@ -812,7 +834,8 @@ fun ProfileScreenPreview() {
             onNavigateToOrders = {},
             onLogoutClick = {},
             onEditClick = {},
-            onChangePasswordClick = {}
+            onChangePasswordClick = {},
+            orderCounts = OrderStatusCountResponse(pending = 2, shipping = 5)
         )
     }
 }

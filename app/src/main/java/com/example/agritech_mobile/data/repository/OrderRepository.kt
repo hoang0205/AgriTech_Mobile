@@ -5,6 +5,7 @@ import com.example.agritech_mobile.data.remote.dto.CheckOutRequest
 import com.example.agritech_mobile.data.remote.dto.OrderBuyerResponse
 import com.example.agritech_mobile.data.remote.dto.OrderMessageResponse
 import com.example.agritech_mobile.data.remote.dto.OrderResponse
+import com.example.agritech_mobile.data.remote.dto.OrderStatusCountResponse
 import com.example.agritech_mobile.data.remote.dto.StatusRequest
 import okhttp3.Address
 import javax.inject.Inject
@@ -72,9 +73,27 @@ class OrderRepository @Inject constructor(
         }
     }
 
-    suspend fun getBuyerOrders(): Result<List<OrderBuyerResponse>> {
+    suspend fun getBuyerOrders(status: String? = null): Result<List<OrderBuyerResponse>> {
         return try {
-            val response = orderApiService.getBuyerOrders()
+            val response = orderApiService.getBuyerOrders(status)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Phản hồi từ server bị rỗng!"))
+                }
+            } else {
+                Result.failure(Exception("Lỗi từ server: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
+        }
+    }
+
+    suspend fun getOrderStatusCounts(): Result<OrderStatusCountResponse> {
+        return try {
+            val response = orderApiService.getOrderStatusCounts()
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {

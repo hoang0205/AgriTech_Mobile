@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.agritech_mobile.data.remote.dto.OrderBuyerResponse
 import com.example.agritech_mobile.data.remote.dto.OrderItem
 import com.example.agritech_mobile.data.remote.dto.OrderResponse
+import com.example.agritech_mobile.data.remote.dto.OrderStatusCountResponse
 import com.example.agritech_mobile.data.repository.OrderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,9 @@ class OrderViewModel @Inject constructor(
 ) : ViewModel() {
     private val _orderState = MutableStateFlow<OrderState>(OrderState.Idle)
     val orderState: StateFlow<OrderState> = _orderState.asStateFlow()
+
+    private val _orderCounts = MutableStateFlow(OrderStatusCountResponse())
+    val orderCounts: StateFlow<OrderStatusCountResponse> = _orderCounts.asStateFlow()
 
     fun checkout(shippingAddress: String, phoneNumber: String, selectedCartItemIds: List<String>) {
         _orderState.value = OrderState.Loading
@@ -66,14 +70,25 @@ class OrderViewModel @Inject constructor(
         }
     }
 
-    fun getBuyerOrders() {
+    fun getBuyerOrders(status: String ? = null) {
         _orderState.value = OrderState.Loading
         viewModelScope.launch {
-            val result = repository.getBuyerOrders()
+            val result = repository.getBuyerOrders(status)
             result.onSuccess { items ->
                 _orderState.value = OrderState.OrderBuyerItemSuccess(items)
                 }.onFailure { exception ->
                 _orderState.value = OrderState.Error(exception.message ?: "Lỗi hệ thống")
+            }
+        }
+    }
+
+    fun loadOrderCounts() {
+        viewModelScope.launch {
+            val result = repository.getOrderStatusCounts()
+            result.onSuccess { counts ->
+                _orderCounts.value = counts
+            }.onFailure {
+                _orderCounts.value = OrderStatusCountResponse()
             }
         }
     }

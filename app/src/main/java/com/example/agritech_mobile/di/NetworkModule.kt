@@ -2,6 +2,7 @@ package com.example.agritech_mobile.di
 
 import android.content.Context
 import coil.ImageLoader
+import com.example.agritech_mobile.data.remote.AiApiService
 import com.example.agritech_mobile.data.remote.AuthApiService
 import com.example.agritech_mobile.data.remote.CartApiService
 import com.example.agritech_mobile.data.remote.OrderApiService
@@ -22,8 +23,11 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "http://192.168.1.24:2507/"
+//    private const val BASE_URL = "https://agritech-wtqr.onrender.com/"
 
+    private const val BASE_URL = "http://192.168.1.128:2507/"
+
+    private const val BASE_AI_URL = "http://192.168.1.128:8000/"
     @Provides
     @Singleton
     fun provideOkHttpClient(
@@ -82,5 +86,15 @@ object NetworkModule {
     @Singleton
     fun provideUserApiService(retrofit: Retrofit): UserApiService {
         return retrofit.create(UserApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAiApiService(): AiApiService {
+        val aiRetrofit = Retrofit.Builder()
+            .baseUrl(BASE_AI_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        return aiRetrofit.create(AiApiService::class.java)
     }
 }

@@ -183,6 +183,8 @@ class UserViewModel @Inject constructor(
 
             val result = userRepository.updateUserProfile(fullName, finalAvatarUrl)
             result.onSuccess {
+                tokenManager.saveAvatarUrl(finalAvatarUrl)
+                tokenManager.saveUserName(fullName)
                 _userState.value = UserState.Success("Cập nhật thông tin thành công")
                 getUser()
             }.onFailure { exception ->
@@ -206,5 +208,9 @@ class UserViewModel @Inject constructor(
 
             onNavigateToLogin()
         }
+    }
+
+    fun clearUserState() {
+        _userState.value = UserState.Idle
     }
 }
