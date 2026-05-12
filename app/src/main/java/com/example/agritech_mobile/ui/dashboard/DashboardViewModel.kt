@@ -300,7 +300,7 @@ class DashboardViewModel @Inject constructor(
                                 response.label.contains(keyword, ignoreCase = true)
                             }
 
-                            val isConfident = (response.confidence ?: 0.0) > 0.2
+                            val isConfident = (response.confidence ?: 0.0) > 0.70
 
                             Log.d("AI_IMAGE_DEBUG", "5. Phân tích: Có chứa từ khóa nông sản = $isAgricultural | Đủ độ tin cậy = $isConfident")
 
