@@ -1,19 +1,18 @@
 package com.example.agritech_mobile.data.repository
 
 import com.example.agritech_mobile.data.remote.AiApiService
-import com.example.agritech_mobile.data.remote.dto.PredictImageRequest
 import com.example.agritech_mobile.data.remote.dto.PredictImageResponse
 import com.example.agritech_mobile.data.remote.dto.PricePredictionRequest
 import com.example.agritech_mobile.data.remote.dto.PricePredictionResponse
+import okhttp3.MultipartBody
 import javax.inject.Inject
 
 class AiRepository @Inject constructor(
     private val aiApiService: AiApiService
 ) {
-    suspend fun predictImage(imageUrl: String): Result<PredictImageResponse> {
+    suspend fun predictImage(imagePart: MultipartBody.Part): Result<PredictImageResponse> {
         return try {
-            val request = PredictImageRequest(imageUrl)
-            val response = aiApiService.predictImage(request)
+            val response = aiApiService.predictImage(imagePart)
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
@@ -29,7 +28,7 @@ class AiRepository @Inject constructor(
         }
     }
 
-    suspend fun predictPrice(productName: String): Result<PricePredictionResponse> { // Sửa kiểu trả về
+    suspend fun predictPrice(productName: String): Result<PricePredictionResponse> {
         return try {
             val request = PricePredictionRequest(productName)
             val response = aiApiService.predictPrice(request)

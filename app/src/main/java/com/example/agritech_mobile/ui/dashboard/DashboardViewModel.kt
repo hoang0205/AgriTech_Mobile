@@ -188,7 +188,6 @@ class DashboardViewModel @Inject constructor(
             )
         }
     }
-
     fun getProductById(productId: String) {
         _dashboardState.value = DashboardState.Loading
         viewModelScope.launch {
@@ -276,57 +275,55 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    fun verifyImageWithAI(imagePart: okhttp3.MultipartBody.Part, onResult: (Boolean) -> Unit) {
+    fun verifyImageWithAI(imagePart: okhttp3.MultipartBody.Part, onResult: (isValid: Boolean, category: String?) -> Unit) {
         viewModelScope.launch {
             try {
-                Log.d("AI_IMAGE_DEBUG", "1. Bắt đầu up ảnh lên server...")
+                Log.d("AI_IMAGE_DEBUG", "1. Gửi ảnh trực tiếp cho AI nhận diện...")
 
-                val uploadResult = uploadRepository.uploadImages(listOf(imagePart))
-                val url = uploadResult.getOrNull()?.firstOrNull()
+                val aiResult = aiRepository.predictImage(imagePart)
 
-                if (url != null) {
-                    Log.d("AI_IMAGE_DEBUG", "2. Up ảnh thành công! Link URL: $url")
-                    Log.d("AI_IMAGE_DEBUG", "3. Bắt đầu gửi link cho AI nhận diện...")
+                aiResult.onSuccess { response ->
+                    Log.d("AI_IMAGE_DEBUG", "2. AI TRẢ VỀ: success=${response.success}, label='${response.label}', confidence=${response.confidence}")
 
-                    val aiResult = aiRepository.predictImage(url)
-
-                    aiResult.onSuccess { response ->
-                        Log.d("AI_IMAGE_DEBUG", "4. AI TRẢ VỀ: success=${response.success}, label='${response.label}', confidence=${response.confidence}")
-
-                        if (response.success && response.label != null) {
-                            val validKeywords = listOf("Fruit", "Vegetable", "Meat", "Seafood", "Other")
-
-                            val isAgricultural = validKeywords.any { keyword ->
-                                response.label.contains(keyword, ignoreCase = true)
-                            }
-
-                            val isConfident = (response.confidence ?: 0.0) > 0.70
-
-                            Log.d("AI_IMAGE_DEBUG", "5. Phân tích: Có chứa từ khóa nông sản = $isAgricultural | Đủ độ tin cậy = $isConfident")
-
-                            if (isAgricultural && isConfident) {
-                                Log.d("AI_IMAGE_DEBUG", "=> KẾT LUẬN: Ảnh hợp lệ")
-                                onResult(true)
-                            } else {
-                                Log.d("AI_IMAGE_DEBUG", "=> KẾT LUẬN: Ảnh rác")
-                                onResult(false)
-                            }
-                        } else {
-                            Log.e("AI_IMAGE_DEBUG", "=> LỖI: Server AI trả về label null hoặc success = false")
-                            onResult(false)
+                    if (response.success && response.label != null) {
+                        val validKeywords = listOf("Fruit", "Vegetable", "Meat", "Seafood", "Other")
+                        val isAgricultural = validKeywords.any { keyword ->
+                            response.label.contains(keyword, ignoreCase = true)
                         }
-                    }.onFailure { error ->
-                        Log.e("AI_IMAGE_DEBUG", "=> LỖI MẠNG CHẠM AI: ${error.localizedMessage}")
-                        onResult(false)
+                        val isConfident = (response.confidence ?: 0.0) > 0.70
+
+                        Log.d("AI_IMAGE_DEBUG", "3. Phân tích: Có từ khóa = $isAgricultural | Đủ độ tin cậy = $isConfident")
+
+                        if (isAgricultural && isConfident) {
+                            Log.d("AI_IMAGE_DEBUG", "=> KẾT LUẬN: Ảnh hợp lệ")
+                            val detectedCategory = extractCategory(response.label)
+                            onResult(true, detectedCategory)
+                        } else {
+                            Log.d("AI_IMAGE_DEBUG", "=> KẾT LUẬN: Ảnh rác")
+                            onResult(false, null)
+                        }
+                    } else {
+                        Log.e("AI_IMAGE_DEBUG", "=> LỖI: AI trả về label null hoặc success = false")
+                        onResult(false, null)
                     }
-                } else {
-                    Log.e("AI_IMAGE_DEBUG", "=> LỖI: Up ảnh thất bại, không lấy được link URL")
-                    onResult(false)
+                }.onFailure { error ->
+                    Log.e("AI_IMAGE_DEBUG", "=> LỖI MẠNG: ${error.localizedMessage}")
+                    onResult(false, null)
                 }
             } catch (e: Exception) {
-                Log.e("AI_IMAGE_DEBUG", "=> CRASH HỆ THỐNG: ${e.localizedMessage}")
-                onResult(false)
+                Log.e("AI_IMAGE_DEBUG", "=> CRASH: ${e.localizedMessage}")
+                onResult(false, null)
             }
+        }
+    }
+
+    private fun extractCategory(label: String): String {
+        return when {
+            label.contains("Fruit", ignoreCase = true) -> "Trái cây"
+            label.contains("Vegetable", ignoreCase = true) -> "Rau củ"
+            label.contains("Meat", ignoreCase = true) -> "Thịt"
+            label.contains("Seafood", ignoreCase = true) -> "Thủy hải sản"
+            else -> "Khác"
         }
     }
 }

@@ -58,7 +58,8 @@ data class HomeUiState(
     val categories: List<CategoryItem> = emptyList(),
     val newProducts: List<Product> = emptyList(),
     val suggestedProducts: List<Product> = emptyList(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val selectedCategory: String? = null
 )
 
 @Composable
@@ -90,16 +91,32 @@ fun HomeScreen(
     }
 
     val defaultCategories = listOf(
-        CategoryItem("Rau củ", R.string.cat_vegetables, R.drawable.vegetable_food_salad_lettuce_cabbage_svgrepo_com),
+        CategoryItem(
+            "Rau củ",
+            R.string.cat_vegetables,
+            R.drawable.vegetable_food_salad_lettuce_cabbage_svgrepo_com
+        ),
         CategoryItem("Trái cây", R.string.cat_fruits, R.drawable.fruit_fruits_grape_svgrepo_com),
         CategoryItem("Thịt", R.string.cat_meat, R.drawable.meat_svgrepo_com),
-        CategoryItem("Thủy hải sản", R.string.cat_seafood, R.drawable.seafood_prawn_shrimp_lobster_svgrepo_com),
+        CategoryItem(
+            "Thủy hải sản",
+            R.string.cat_seafood,
+            R.drawable.seafood_prawn_shrimp_lobster_svgrepo_com
+        ),
         CategoryItem("Khác", R.string.cat_others, R.drawable.food_delivery_bot_svgrepo_com),
     )
 
     LaunchedEffect(Unit) {
-        uiState = uiState.copy(categories = defaultCategories, userName = userName, userAvatar = userAvatar)
-        viewModel.loadHomeData()
+        if (uiState.categories.isEmpty()) {
+            uiState = uiState.copy(
+                categories = defaultCategories,
+                userName = userName,
+                userAvatar = userAvatar
+            )
+        }
+        if (uiState.newProducts.isEmpty() && uiState.suggestedProducts.isEmpty()) {
+            viewModel.loadHomeData()
+        }
     }
 
     LaunchedEffect(dashboardState) {
@@ -136,6 +153,26 @@ fun HomeScreen(
                 )
             }
 
+            is DashboardState.ProductListSuccess -> {
+                val state = dashboardState as DashboardState.ProductListSuccess
+                val mappedProducts = state.products.map { res ->
+                    Product(
+                        res.id,
+                        res.name,
+                        "${res.price.toLong()} đ",
+                        res.farmerName,
+                        false,
+                        false,
+                        res.imageUrls.firstOrNull() ?: ""
+                    )
+                }
+                uiState = uiState.copy(
+                    isLoading = false,
+                    suggestedProducts = mappedProducts
+                )
+                viewModel.resetState()
+            }
+
             is DashboardState.Error -> {
                 uiState = uiState.copy(isLoading = false)
                 Toast.makeText(
@@ -162,9 +199,16 @@ fun HomeScreen(
             uiState = uiState.copy(searchQuery = queryToSearch)
             viewModel.executeSearch(queryToSearch)
         },
-        onCategoryClick = { category -> viewModel.getProductsByCategory(category.name) },
+        onCategoryClick = { category ->
+            uiState = uiState.copy(selectedCategory = category.name)
+            viewModel.getProductsByCategory(category.name)
+        },
         onProductClick = { product -> onNavigateToDetail(product.id) },
-        onSeeAllClick = { viewModel.getProducts() }
+        onSeeAllClick = {
+            uiState = uiState.copy(selectedCategory = null)
+            viewModel.getProducts()
+        },
+        onResetCategoryClick = {}
     )
 }
 
@@ -177,7 +221,9 @@ fun HomeContent(
     onExecuteSearch: (String) -> Unit,
     onCategoryClick: (CategoryItem) -> Unit,
     onProductClick: (Product) -> Unit,
-    onSeeAllClick: () -> Unit
+    onSeeAllClick: () -> Unit,
+    onResetCategory: () -> Unit = {},
+    onResetCategoryClick: () -> Unit = {}
 ) {
     var isSearchMode by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -228,20 +274,104 @@ fun HomeContent(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
-                    items(searchResults.chunked(2)) { rowProducts ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    item {
+                        SectionTitle(title = stringResource(R.string.category_title))
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(bottom = 24.dp)
                         ) {
-                            for (product in rowProducts) {
-                                SuggestedProductCard(
-                                    product = product,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onProductClick(product) })
+                            items(uiState.categories) { category ->
+                                CategoryChip(
+                                    category = category,
+                                    isSelected = uiState.selectedCategory == category.name,  // ← THÊM
+                                    onClick = { onCategoryClick(category) }
+                                )
                             }
-                            if (rowProducts.size == 1) Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+
+                    if (uiState.selectedCategory == null) {
+                        item {
+                            SectionTitle(
+                                title = stringResource(R.string.new_products_title),
+                                actionText = stringResource(R.string.see_all),
+                                onActionClick = onSeeAllClick
+                            )
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 20.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.padding(bottom = 32.dp)
+                            ) {
+                                items(uiState.newProducts) { product ->
+                                    NewProductCard(
+                                        product = product,
+                                        onClick = { onProductClick(product) })
+                                }
+                            }
+                        }
+                        item { SectionTitle(title = stringResource(R.string.suggested_title)) }
+                        items(uiState.suggestedProducts.chunked(2)) { rowProducts ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                for (product in rowProducts) {
+                                    SuggestedProductCard(
+                                        product = product,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { onProductClick(product) }
+                                    )
+                                }
+                                if (rowProducts.size == 1) Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    } else {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${uiState.selectedCategory} (${uiState.suggestedProducts.size})",
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                TextButton(onClick = {
+                                    onSeeAllClick()
+                                }) {
+                                    Text(
+                                        text = "Quay lại",
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.clickable {
+                                            onSeeAllClick()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        items(uiState.suggestedProducts.chunked(2)) { rowProducts ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                for (product in rowProducts) {
+                                    SuggestedProductCard(
+                                        product = product,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { onProductClick(product) }
+                                    )
+                                }
+                                if (rowProducts.size == 1) Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -291,41 +421,92 @@ fun HomeContent(
                         items(uiState.categories) { category ->
                             CategoryChip(
                                 category = category,
-                                onClick = { onCategoryClick(category) })
+                                isSelected = uiState.selectedCategory == category.name,  // ← THÊM
+                                onClick = { onCategoryClick(category) }
+                            )
                         }
                     }
                 }
-                item {
-                    SectionTitle(
-                        title = stringResource(R.string.new_products_title),
-                        actionText = stringResource(R.string.see_all),
-                        onActionClick = onSeeAllClick
-                    )
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(bottom = 32.dp)
-                    ) {
-                        items(uiState.newProducts) { product ->
-                            NewProductCard(product = product, onClick = { onProductClick(product) })
+
+                if (uiState.selectedCategory == null) {
+                    item {
+                        SectionTitle(
+                            title = stringResource(R.string.new_products_title),
+                            actionText = stringResource(R.string.see_all),
+                            onActionClick = onSeeAllClick
+                        )
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(bottom = 32.dp)
+                        ) {
+                            items(uiState.newProducts) { product ->
+                                NewProductCard(
+                                    product = product,
+                                    onClick = { onProductClick(product) })
+                            }
                         }
                     }
-                }
-                item { SectionTitle(title = stringResource(R.string.suggested_title)) }
-                items(uiState.suggestedProducts.chunked(2)) { rowProducts ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        for (product in rowProducts) {
-                            SuggestedProductCard(
-                                product = product,
-                                modifier = Modifier.weight(1f),
-                                onClick = { onProductClick(product) })
+                    item { SectionTitle(title = stringResource(R.string.suggested_title)) }
+                    items(uiState.suggestedProducts.chunked(2)) { rowProducts ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            for (product in rowProducts) {
+                                SuggestedProductCard(
+                                    product = product,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onProductClick(product) }
+                                )
+                            }
+                            if (rowProducts.size == 1) Spacer(modifier = Modifier.weight(1f))
                         }
-                        if (rowProducts.size == 1) Spacer(modifier = Modifier.weight(1f))
+                    }
+                } else {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${uiState.selectedCategory} (${uiState.suggestedProducts.size})",
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            TextButton(onClick = onSeeAllClick) {
+                                Text(
+                                    text = "Quay lại",
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.clickable {
+                                        onSeeAllClick()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    items(uiState.suggestedProducts.chunked(2)) { rowProducts ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            for (product in rowProducts) {
+                                SuggestedProductCard(
+                                    product = product,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onProductClick(product) }
+                                )
+                            }
+                            if (rowProducts.size == 1) Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -490,7 +671,7 @@ fun SectionTitle(title: String, actionText: String? = null, onActionClick: (() -
         if (actionText != null && onActionClick != null) {
             Text(
                 text = actionText,
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clickable { onActionClick() })
         }
@@ -498,11 +679,18 @@ fun SectionTitle(title: String, actionText: String? = null, onActionClick: (() -
 }
 
 @Composable
-fun CategoryChip(category: CategoryItem, onClick: () -> Unit) {
+fun CategoryChip(
+    category: CategoryItem,
+    isSelected: Boolean = false,
+    onClick: () -> Unit
+) {
+    val primaryGreen = Color(0xFF1E7032)
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(
+                if (isSelected) primaryGreen else MaterialTheme.colorScheme.surface  // ← THAY ĐỔI
+            )
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -510,14 +698,14 @@ fun CategoryChip(category: CategoryItem, onClick: () -> Unit) {
         Icon(
             painter = painterResource(id = category.icon),
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = if (isSelected) Color.White else MaterialTheme.colorScheme.primary,  // ← THAY ĐỔI
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = stringResource(category.titleRes),
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface  // ← THAY ĐỔI
         )
     }
 }
@@ -659,7 +847,8 @@ fun HomeScreenPreview() {
             onExecuteSearch = {},
             onCategoryClick = {},
             onProductClick = {},
-            onSeeAllClick = {}
+            onSeeAllClick = {},
+            onResetCategory = {}
         )
     }
 }

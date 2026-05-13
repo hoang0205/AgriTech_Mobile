@@ -104,15 +104,20 @@ fun SellProductScreen(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5)
     ) { uris ->
         if (uris.isNotEmpty()) {
-            val newImages = (uiState.images + uris).take(5)
-            uiState = uiState.copy(images = newImages)
-
             uris.forEach { uri ->
-                val part = uriToMultipartBodyPart(context, uri, "files")
+                val part = uriToMultipartBodyPart(context, uri, "file")
                 if (part != null) {
-                    viewModel.verifyImageWithAI(part) { isOk ->
-                        if (!isOk) {
-                            uiState = uiState.copy(invalidImages = uiState.invalidImages + uri)
+                    viewModel.verifyImageWithAI(part) { isValid, detectedCategory ->
+                        if (isValid) {
+                            val newImages = (uiState.images + uri).take(5)
+                            uiState = uiState.copy(images = newImages)
+
+                            if (detectedCategory != null && uiState.category.isBlank()) {
+                                uiState = uiState.copy(category = detectedCategory)
+                                Toast.makeText(context, "AI phát hiện: $detectedCategory", Toast.LENGTH_LONG).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "Ảnh không hợp lệ, vui lòng chọn ảnh khác", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -126,14 +131,19 @@ fun SellProductScreen(
         if (bitmap != null) {
             val uri = bitmapToUri(context, bitmap)
             if (uri != null) {
-                val newImages = (uiState.images + uri).take(5)
-                uiState = uiState.copy(images = newImages)
-
-                val part = uriToMultipartBodyPart(context, uri, "files")
+                val part = uriToMultipartBodyPart(context, uri, "file")
                 if (part != null) {
-                    viewModel.verifyImageWithAI(part) { isOk ->
-                        if (!isOk) {
-                            uiState = uiState.copy(invalidImages = uiState.invalidImages + uri)
+                    viewModel.verifyImageWithAI(part) { isValid, detectedCategory ->
+                        if (isValid) {
+                            val newImages = (uiState.images + uri).take(5)
+                            uiState = uiState.copy(images = newImages)
+
+                            if (detectedCategory != null && uiState.category.isBlank()) {
+                                uiState = uiState.copy(category = detectedCategory)
+                                Toast.makeText(context, "AI phát hiện: $detectedCategory", Toast.LENGTH_LONG).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "Ảnh không hợp lệ, vui lòng chụp lại", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
