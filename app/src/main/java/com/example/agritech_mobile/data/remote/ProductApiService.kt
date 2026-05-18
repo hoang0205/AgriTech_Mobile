@@ -40,6 +40,11 @@ interface ProductApiService {
         @Query("limit") limit: Int = 10
     ): Response<List<ProductResponse>>
 
+    @GET("api/products/recommendations")
+    suspend fun getRecommendations(
+        @Query("limit") limit: Int = 10
+    ): Response<List<ProductResponse>>
+
     @GET("api/products/category/{category}")
     suspend fun getProductsByCategory(
         @Path("category") category: String,

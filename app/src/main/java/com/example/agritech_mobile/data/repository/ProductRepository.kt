@@ -37,7 +37,8 @@ class ProductRepository @Inject constructor(
         description: String,
         imageUrls: List<String>
     ): Result<ProductResponse> {
-        val productRequest = ProductRequest(name, category, price, quantity, unit, description, imageUrls)
+        val productRequest =
+            ProductRequest(name, category, price, quantity, unit, description, imageUrls)
         return try {
             Log.d("CreateProduct", "Sending imageUrls: $imageUrls")
 
@@ -100,6 +101,24 @@ class ProductRepository @Inject constructor(
     suspend fun getRandomProducts(): Result<List<ProductResponse>> {
         return try {
             val response = apiService.getRandomProducts()
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Phản hồi từ server bị rỗng!"))
+                }
+            } else {
+                Result.failure(Exception("Lỗi từ server: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
+        }
+    }
+
+    suspend fun getRecommendations(): Result<List<ProductResponse>> {
+        return try {
+            val response = apiService.getRecommendations()
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {

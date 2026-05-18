@@ -272,110 +272,27 @@ fun HomeContent(
             } else if (searchResults.isNotEmpty()) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
                 ) {
-                    item {
-                        SectionTitle(title = stringResource(R.string.category_title))
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.padding(bottom = 24.dp)
+                    items(searchResults.chunked(2)) { rowProducts ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            items(uiState.categories) { category ->
-                                CategoryChip(
-                                    category = category,
-                                    isSelected = uiState.selectedCategory == category.name,  // ← THÊM
-                                    onClick = { onCategoryClick(category) }
+                            for (product in rowProducts) {
+                                SuggestedProductCard(
+                                    product = product,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onProductClick(product) }
                                 )
                             }
-                        }
-                    }
-
-                    if (uiState.selectedCategory == null) {
-                        item {
-                            SectionTitle(
-                                title = stringResource(R.string.new_products_title),
-                                actionText = stringResource(R.string.see_all),
-                                onActionClick = onSeeAllClick
-                            )
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 20.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                modifier = Modifier.padding(bottom = 32.dp)
-                            ) {
-                                items(uiState.newProducts) { product ->
-                                    NewProductCard(
-                                        product = product,
-                                        onClick = { onProductClick(product) })
-                                }
-                            }
-                        }
-                        item { SectionTitle(title = stringResource(R.string.suggested_title)) }
-                        items(uiState.suggestedProducts.chunked(2)) { rowProducts ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                for (product in rowProducts) {
-                                    SuggestedProductCard(
-                                        product = product,
-                                        modifier = Modifier.weight(1f),
-                                        onClick = { onProductClick(product) }
-                                    )
-                                }
-                                if (rowProducts.size == 1) Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    } else {
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "${uiState.selectedCategory} (${uiState.suggestedProducts.size})",
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                TextButton(onClick = {
-                                    onSeeAllClick()
-                                }) {
-                                    Text(
-                                        text = "Quay lại",
-                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.clickable {
-                                            onSeeAllClick()
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        items(uiState.suggestedProducts.chunked(2)) { rowProducts ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                for (product in rowProducts) {
-                                    SuggestedProductCard(
-                                        product = product,
-                                        modifier = Modifier.weight(1f),
-                                        onClick = { onProductClick(product) }
-                                    )
-                                }
-                                if (rowProducts.size == 1) Spacer(modifier = Modifier.weight(1f))
-                            }
+                            if (rowProducts.size == 1) Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
-            } else if (textSuggestions.isNotEmpty()) {
+            }else if (textSuggestions.isNotEmpty()) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -421,7 +338,7 @@ fun HomeContent(
                         items(uiState.categories) { category ->
                             CategoryChip(
                                 category = category,
-                                isSelected = uiState.selectedCategory == category.name,  // ← THÊM
+                                isSelected = uiState.selectedCategory == category.name,
                                 onClick = { onCategoryClick(category) }
                             )
                         }
@@ -668,13 +585,13 @@ fun SectionTitle(title: String, actionText: String? = null, onActionClick: (() -
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onBackground
         )
-        if (actionText != null && onActionClick != null) {
-            Text(
-                text = actionText,
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable { onActionClick() })
-        }
+//        if (actionText != null && onActionClick != null) {
+//            Text(
+//                text = actionText,
+//                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+//                color = MaterialTheme.colorScheme.primary,
+//                modifier = Modifier.clickable { onActionClick() })
+//        }
     }
 }
 

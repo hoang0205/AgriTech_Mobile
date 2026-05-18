@@ -104,7 +104,7 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val newProductsDeferred = async { repository.getProducts() }
-                val randomProductsDeferred = async { repository.getRandomProducts() }
+                val randomProductsDeferred = async { repository.getRecommendations() }
                 val newProductsResult = newProductsDeferred.await()
                 val randomProductsResult = randomProductsDeferred.await()
                 val newProducts = newProductsResult.getOrNull()?.content ?: emptyList()
@@ -286,11 +286,14 @@ class DashboardViewModel @Inject constructor(
                     Log.d("AI_IMAGE_DEBUG", "2. AI TRẢ VỀ: success=${response.success}, label='${response.label}', confidence=${response.confidence}")
 
                     if (response.success && response.label != null) {
-                        val validKeywords = listOf("Fruit", "Vegetable", "Meat", "Seafood", "Other")
+                        val validKeywords = listOf(
+                            "Fruit", "Vegetable", "Meat", "Seafood", "Other",
+                            "rice", "grain", "coffee", "nut", "seed"  // ← Thêm keywords mới
+                        )
                         val isAgricultural = validKeywords.any { keyword ->
                             response.label.contains(keyword, ignoreCase = true)
                         }
-                        val isConfident = (response.confidence ?: 0.0) > 0.70
+                        val isConfident = (response.confidence ?: 0.0) > 0.50
 
                         Log.d("AI_IMAGE_DEBUG", "3. Phân tích: Có từ khóa = $isAgricultural | Đủ độ tin cậy = $isConfident")
 
@@ -323,7 +326,12 @@ class DashboardViewModel @Inject constructor(
             label.contains("Vegetable", ignoreCase = true) -> "Rau củ"
             label.contains("Meat", ignoreCase = true) -> "Thịt"
             label.contains("Seafood", ignoreCase = true) -> "Thủy hải sản"
-            else -> "Khác"
+            label.contains("rice", ignoreCase = true) -> "Sản phẩm khác"
+            label.contains("grain", ignoreCase = true) -> "Sản phẩm khác"
+            label.contains("coffee", ignoreCase = true) -> "Sản phẩm khác"
+            label.contains("nut", ignoreCase = true) -> "Sản phẩm khác"
+            label.contains("seed", ignoreCase = true) -> "Sản phẩm khác"
+            else -> "Sản phẩm khác"
         }
     }
 }

@@ -252,6 +252,8 @@ fun CartContent(
 
 @Composable
 fun CartTopBar(itemCount: Int) {
+
+    val userAvatar by hiltViewModel<CartViewModel>().userAvatar.collectAsState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -265,11 +267,20 @@ fun CartTopBar(itemCount: Int) {
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (userAvatar.isNotBlank()) {
+                AsyncImage(
+                    model = userAvatar,
+                    contentDescription = "Avatar",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         Spacer(modifier = Modifier.width(12.dp))
         Text(
@@ -457,12 +468,12 @@ fun OrderSummaryCard(
                 stringResource(R.string.cart_delivery_fee),
                 "${formatter.format(deliveryFee).replace(',', '.')} đ"
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            SummaryRow(
-                stringResource(R.string.cart_tax_exempt),
-                "${formatter.format(tax).replace(',', '.')} đ",
-                isValueGreen = true
-            )
+//            Spacer(modifier = Modifier.height(12.dp))
+//            SummaryRow(
+//                stringResource(R.string.cart_tax_exempt),
+//                "${formatter.format(tax).replace(',', '.')} đ",
+//                isValueGreen = true
+//            )
 
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
@@ -560,9 +571,9 @@ fun CartScreenPreview() {
             isLoading = false,
             onShopCheckedChange = { _, _ -> },
             onItemCheckedChange = { _, _ -> },
-            onIncrease = {},
-            onDecrease = {},
-            onRemove = {},
+            onIncrease = { _ -> },
+            onDecrease = { _ -> },
+            onRemove = { _ -> },
             onCheckout = {}
         )
     }

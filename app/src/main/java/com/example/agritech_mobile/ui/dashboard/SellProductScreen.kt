@@ -658,48 +658,48 @@ fun SellProductContent(
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(lightGreen)
-                    .padding(16.dp)
-            ) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Verified, contentDescription = null, tint = primaryGreen)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.cert_title),
-                            fontWeight = FontWeight.Bold,
-                            color = primaryGreen
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.cert_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = primaryGreen,
-                        lineHeight = 18.sp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.White)
-                            .clickable { onAddCertClick() }
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.add_cert),
-                            color = primaryGreen,
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(100.dp))
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .clip(RoundedCornerShape(12.dp))
+//                    .background(lightGreen)
+//                    .padding(16.dp)
+//            ) {
+//                Column {
+//                    Row(verticalAlignment = Alignment.CenterVertically) {
+//                        Icon(Icons.Default.Verified, contentDescription = null, tint = primaryGreen)
+//                        Spacer(modifier = Modifier.width(8.dp))
+//                        Text(
+//                            text = stringResource(R.string.cert_title),
+//                            fontWeight = FontWeight.Bold,
+//                            color = primaryGreen
+//                        )
+//                    }
+//                    Spacer(modifier = Modifier.height(8.dp))
+//                    Text(
+//                        text = stringResource(R.string.cert_desc),
+//                        style = MaterialTheme.typography.bodySmall,
+//                        color = primaryGreen,
+//                        lineHeight = 18.sp
+//                    )
+//                    Spacer(modifier = Modifier.height(12.dp))
+//                    Box(
+//                        modifier = Modifier
+//                            .clip(RoundedCornerShape(6.dp))
+//                            .background(Color.White)
+//                            .clickable { onAddCertClick() }
+//                            .padding(horizontal = 12.dp, vertical = 8.dp)
+//                    ) {
+//                        Text(
+//                            text = stringResource(R.string.add_cert),
+//                            color = primaryGreen,
+//                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+//                        )
+//                    }
+//                }
+//            }
+//
+//            Spacer(modifier = Modifier.height(100.dp))
         }
         val isFormValid = uiState.images.isNotEmpty() &&
                 uiState.invalidImages.isEmpty() &&
