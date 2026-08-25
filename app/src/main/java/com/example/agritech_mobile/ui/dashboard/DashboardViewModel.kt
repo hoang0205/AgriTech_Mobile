@@ -1,12 +1,16 @@
 package com.example.agritech_mobile.ui.dashboard
 
 import android.util.Log
+import android.util.Log.e
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.agritech_mobile.data.local.TokenManager
 import com.example.agritech_mobile.data.remote.dto.ProductResponse
+import com.example.agritech_mobile.data.remote.dto.ReviewModelsResponse
+import com.example.agritech_mobile.data.remote.dto.ReviewSummaryResponse
 import com.example.agritech_mobile.data.repository.AiRepository
 import com.example.agritech_mobile.data.repository.ProductRepository
+import com.example.agritech_mobile.data.repository.ReviewRepository
 import com.example.agritech_mobile.data.repository.UploadRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -41,7 +45,8 @@ class DashboardViewModel @Inject constructor(
     private val repository: ProductRepository,
     private val uploadRepository: UploadRepository,
     private val tokenManager: TokenManager,
-    private val aiRepository: AiRepository
+    private val aiRepository: AiRepository,
+    private val reviewRepository: ReviewRepository
 ) : ViewModel() {
     private val _dashboardState = MutableStateFlow<DashboardState>(DashboardState.Idle)
     val dashboardState: StateFlow<DashboardState> = _dashboardState.asStateFlow()
@@ -58,6 +63,12 @@ class DashboardViewModel @Inject constructor(
 
     val userName: StateFlow<String> = tokenManager.userNameFlow
     val userAvatar: StateFlow<String> = tokenManager.avatarUrlFlow
+
+    private val _reviews = MutableStateFlow<List<ReviewModelsResponse>>(emptyList())
+    val reviews: StateFlow<List<ReviewModelsResponse>> = _reviews.asStateFlow()
+
+    private val _reviewSummary = MutableStateFlow<ReviewSummaryResponse?>(null)
+    val reviewSummary: StateFlow<ReviewSummaryResponse?> = _reviewSummary.asStateFlow()
 
     init {
         loadHomeData()
@@ -188,6 +199,7 @@ class DashboardViewModel @Inject constructor(
             )
         }
     }
+
     fun getProductById(productId: String) {
         _dashboardState.value = DashboardState.Loading
         viewModelScope.launch {
@@ -275,7 +287,10 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    fun verifyImageWithAI(imagePart: okhttp3.MultipartBody.Part, onResult: (isValid: Boolean, category: String?) -> Unit) {
+    fun verifyImageWithAI(
+        imagePart: okhttp3.MultipartBody.Part,
+        onResult: (isValid: Boolean, category: String?) -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 Log.d("AI_IMAGE_DEBUG", "1. Gửi ảnh trực tiếp cho AI nhận diện...")
@@ -283,7 +298,10 @@ class DashboardViewModel @Inject constructor(
                 val aiResult = aiRepository.predictImage(imagePart)
 
                 aiResult.onSuccess { response ->
-                    Log.d("AI_IMAGE_DEBUG", "2. AI TRẢ VỀ: success=${response.success}, label='${response.label}', confidence=${response.confidence}")
+                    Log.d(
+                        "AI_IMAGE_DEBUG",
+                        "2. AI TRẢ VỀ: success=${response.success}, label='${response.label}', confidence=${response.confidence}"
+                    )
 
                     if (response.success && response.label != null) {
                         val validKeywords = listOf(
@@ -295,7 +313,10 @@ class DashboardViewModel @Inject constructor(
                         }
                         val isConfident = (response.confidence ?: 0.0) > 0.50
 
-                        Log.d("AI_IMAGE_DEBUG", "3. Phân tích: Có từ khóa = $isAgricultural | Đủ độ tin cậy = $isConfident")
+                        Log.d(
+                            "AI_IMAGE_DEBUG",
+                            "3. Phân tích: Có từ khóa = $isAgricultural | Đủ độ tin cậy = $isConfident"
+                        )
 
                         if (isAgricultural && isConfident) {
                             Log.d("AI_IMAGE_DEBUG", "=> KẾT LUẬN: Ảnh hợp lệ")
@@ -332,6 +353,36 @@ class DashboardViewModel @Inject constructor(
             label.contains("nut", ignoreCase = true) -> "Sản phẩm khác"
             label.contains("seed", ignoreCase = true) -> "Sản phẩm khác"
             else -> "Sản phẩm khác"
+        }
+    }
+
+    fun getProductReviews(productId: String) {
+        viewModelScope.launch {
+            val result = reviewRepository.getReviewsByProductId(productId)
+            result.onSuccess { reviewList ->
+                Log.d("DEBUG_ANH_REVIEW", "Tổng số đánh giá: ${reviewList.size}")
+                reviewList.forEachIndexed { index, review ->
+                    Log.d("DEBUG_ANH_REVIEW", "Review [$index] - Tên: ${review.userId}")
+                    Log.d("DEBUG_ANH_REVIEW", "Review [$index] - List ảnh: ${review.imageUrls}")
+                    Log.d("DEBUG_ANH_REVIEW", "Review [$index] - Size mảng ảnh: ${review.imageUrls?.size}")
+                }
+                _reviews.value = reviewList
+            }.onFailure { e ->
+                _reviews.value = emptyList()
+            }
+        }
+    }
+
+    fun getReviewSummary(productId: String) {
+        viewModelScope.launch {
+            val result = reviewRepository.getReviewSummaryByProductId(productId)
+            result.onSuccess { summary ->
+                _reviewSummary.value = summary
+                Log.d("DEBUG_REVIEW_SUMMARY", "Lấy thống kê thành công: $summary")
+            }.onFailure { e ->
+                _reviewSummary.value = null
+                Log.e("DEBUG_REVIEW_SUMMARY", "Lỗi lấy thống kê: ${e.message}")
+            }
         }
     }
 }

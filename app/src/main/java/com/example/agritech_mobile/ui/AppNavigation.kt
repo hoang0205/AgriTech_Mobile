@@ -19,8 +19,9 @@ import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.main.MainScreen
 import com.example.agritech_mobile.ui.order.AddressSelectionScreen
-import com.example.agritech_mobile.ui.order.BuyerOrdersScreen
+import com.example.agritech_mobile.ui.user.BuyerOrdersScreen
 import com.example.agritech_mobile.ui.user.AddAddressScreen
+import com.example.agritech_mobile.ui.user.ReviewProductScreen
 
 @Composable
 fun AppNavigation(
@@ -114,7 +115,11 @@ fun AppNavigation(
 
         composable(
             route = "main_screen",
-            enterTransition = { scaleIn(initialScale = 0.8f, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300)) },
+            enterTransition = {
+                scaleIn(initialScale = 0.8f, animationSpec = tween(300)) + fadeIn(
+                    animationSpec = tween(300)
+                )
+            },
             exitTransition = { fadeOut() }
         ) {
             MainScreen(
@@ -258,7 +263,36 @@ fun AppNavigation(
 
             BuyerOrdersScreen(
                 initialStatus = initialStatus,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onReviewClick = { productId, productName, productImageUrl, shopName ->
+                    navController.currentBackStackEntry?.savedStateHandle?.apply {
+                        set("productName", productName)
+                        set("productImageUrl", productImageUrl)
+                        set("shopName", shopName)
+                    }
+                    navController.navigate("review_screen/$productId")
+                }
+            )
+        }
+
+        composable(
+            route = "review_screen/{productId}",
+            arguments = listOf(navArgument("productId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId") ?: ""
+
+            val previousBackStack = navController.previousBackStackEntry
+            val productName = previousBackStack?.savedStateHandle?.get<String>("productName") ?: ""
+            val productImageUrl = previousBackStack?.savedStateHandle?.get<String>("productImageUrl") ?: ""
+            val shopName = previousBackStack?.savedStateHandle?.get<String>("shopName") ?: ""
+
+            ReviewProductScreen(
+                productID = productId,
+                productName = productName,
+                productImageUrl = productImageUrl,
+                shopName = shopName,
+                onBackClick = { navController.popBackStack() },
+                onReviewSuccess = { navController.popBackStack() }
             )
         }
     }

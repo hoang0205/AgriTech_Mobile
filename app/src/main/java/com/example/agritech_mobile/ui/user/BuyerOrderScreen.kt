@@ -1,4 +1,4 @@
-package com.example.agritech_mobile.ui.order
+package com.example.agritech_mobile.ui.user
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,10 +31,13 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
+import com.example.agritech_mobile.ui.order.EndOfListIndicator
+import com.example.agritech_mobile.ui.order.OrderState
+import com.example.agritech_mobile.ui.order.OrderStatus
+import com.example.agritech_mobile.ui.order.OrderViewModel
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
-import kotlin.text.get
 
 data class BuyerOrderItem(
     val id: String,
@@ -60,7 +62,8 @@ data class BuyerOrder(
 fun BuyerOrdersScreen(
     initialStatus: String = "ALL",
     onBackClick: () -> Unit,
-    viewModel: OrderViewModel = hiltViewModel()
+    viewModel: OrderViewModel = hiltViewModel(),
+    onReviewClick: (productId: String, productName: String, productImageUrl: String, shopName: String) -> Unit
 ) {
     val context = LocalContext.current
     val orderState by viewModel.orderState.collectAsState()
@@ -138,7 +141,8 @@ fun BuyerOrdersScreen(
             onBackClick = onBackClick,
             onCancelOrder = { orderId ->
                 viewModel.updateOrderStatus(orderId, OrderStatus.CANCELLED.name)
-            }
+            },
+            onReviewClick = onReviewClick
         )
 
         if (isLoading && orders.isEmpty()) {
@@ -159,7 +163,8 @@ fun BuyerOrdersContent(
     orders: List<BuyerOrder>,
     initialStatus: String,
     onBackClick: () -> Unit,
-    onCancelOrder: (String) -> Unit
+    onCancelOrder: (String) -> Unit,
+    onReviewClick: (productId: String, productName: String, productImageUrl: String, shopName: String) -> Unit
 ) {
     val formatter = DecimalFormat("#,###")
     val tabs = OrderStatus.values()
@@ -231,7 +236,8 @@ fun BuyerOrdersContent(
                             BuyerOrderCard(
                                 order = order,
                                 formatter = formatter,
-                                onCancelClick = { onCancelOrder(order.orderId) }
+                                onCancelClick = { onCancelOrder(order.orderId) },
+                                onReviewClick = onReviewClick
                             )
                         }
                     }
@@ -270,7 +276,8 @@ fun BuyerOrdersTopBar(onBackClick: () -> Unit) {
 fun BuyerOrderCard(
     order: BuyerOrder,
     formatter: DecimalFormat,
-    onCancelClick: () -> Unit
+    onCancelClick: () -> Unit,
+    onReviewClick: (productId: String, productName: String, productImageUrl: String, shopName: String) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -298,33 +305,62 @@ fun BuyerOrderCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             order.items.forEach { item ->
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(bottom = 12.dp)
                 ) {
-                    AsyncImage(
-                        model = item.imageUrl,
-                        contentDescription = item.name,
-                        modifier = Modifier
-                            .size(60.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = item.name,
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF212121)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = item.imageUrl,
+                            contentDescription = item.name,
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = item.quantityDesc,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF757575)
-                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = item.name,
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFF212121)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = item.quantityDesc,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF757575)
+                            )
+                        }
+                    }
+
+                    if (order.status == OrderStatus.COMPLETED) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    onReviewClick(item.id, item.name, item.imageUrl, order.shopName)
+                                },
+                                modifier = Modifier.height(32.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                                border = BorderStroke(1.dp, Color(0xFF1B5E20)),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "Đánh giá",
+                                    color = Color(0xFF1B5E20),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -352,7 +388,7 @@ fun BuyerOrderCard(
             if (order.status == OrderStatus.PENDING) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = {},
+                    onClick = onCancelClick,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
@@ -423,9 +459,10 @@ fun BuyerOrdersScreenPreview() {
 
         BuyerOrdersContent(
             orders = mockOrders,
-            initialStatus = "PENDING",
+            initialStatus = "COMPLETED",
             onBackClick = {},
-            onCancelOrder = {}
+            onCancelOrder = {},
+            onReviewClick = { _, _, _, _ -> }
         )
     }
 }

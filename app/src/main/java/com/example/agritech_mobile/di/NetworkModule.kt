@@ -7,6 +7,7 @@ import com.example.agritech_mobile.data.remote.AuthApiService
 import com.example.agritech_mobile.data.remote.CartApiService
 import com.example.agritech_mobile.data.remote.OrderApiService
 import com.example.agritech_mobile.data.remote.ProductApiService
+import com.example.agritech_mobile.data.remote.ReviewApiService
 import com.example.agritech_mobile.data.remote.UploadApiService
 import com.example.agritech_mobile.data.remote.UserApiService
 import dagger.Module
@@ -25,9 +26,9 @@ object NetworkModule {
 
 //    private const val BASE_URL = "https://agritech-wtqr.onrender.com/"
 
-    private const val BASE_URL = "http://192.168.1.169:2507/"
+    private const val BASE_URL = "http://192.168.1.233:2507/"
 
-    private const val BASE_AI_URL = "http://192.168.1.169:8000/"
+    private const val BASE_AI_URL = "http://10.10.10.213:8000/"
     @Provides
     @Singleton
     fun provideOkHttpClient(
@@ -86,6 +87,12 @@ object NetworkModule {
     @Singleton
     fun provideUserApiService(retrofit: Retrofit): UserApiService {
         return retrofit.create(UserApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideReviewService(retrofit: Retrofit): ReviewApiService {
+        return retrofit.create(ReviewApiService::class.java)
     }
 
     @Provides
