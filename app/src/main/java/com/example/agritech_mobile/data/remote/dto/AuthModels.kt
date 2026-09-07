@@ -10,6 +10,7 @@ data class LoginResponse(
     val refreshToken: String,
     val fullName: String,
     val avatarUrl: String? = null,
+    val firebaseToken: String? = null
 )
 
 data class RegisterResponse(

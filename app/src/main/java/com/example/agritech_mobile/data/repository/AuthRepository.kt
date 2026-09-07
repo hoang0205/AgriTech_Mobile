@@ -12,9 +12,11 @@ import com.example.agritech_mobile.data.remote.dto.RegisterRequest
 import com.example.agritech_mobile.data.remote.dto.RegisterResponse
 import com.example.agritech_mobile.data.remote.dto.ResetPasswordRequest
 import com.example.agritech_mobile.data.remote.dto.VerifyEmail
+import com.google.firebase.auth.FirebaseAuth
 import okhttp3.Response
 import javax.inject.Inject
 import com.google.gson.Gson
+import kotlinx.coroutines.tasks.await
 
 class AuthRepository @Inject constructor(
     private val apiService: AuthApiService
@@ -24,7 +26,18 @@ class AuthRepository @Inject constructor(
             val response = apiService.login(LoginRequest(phone, password))
 
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+                val loginResponse = response.body()!!
+
+                loginResponse.firebaseToken?.let { token ->
+                    try {
+                        FirebaseAuth.getInstance().signInWithCustomToken(token).await()
+                        Log.d("AuthRepository", "Firebase Auth thành công: ${FirebaseAuth.getInstance().currentUser?.uid}")
+                    } catch (e: Exception) {
+                        Log.e("AuthRepository", "Firebase Auth thất bại: ${e.localizedMessage}")
+                    }
+                }
+
+                Result.success(loginResponse)
             } else {
                 val errorJson = response.errorBody()?.string()
                 val errorObj = try {
