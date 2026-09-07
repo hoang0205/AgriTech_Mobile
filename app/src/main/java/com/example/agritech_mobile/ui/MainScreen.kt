@@ -1,6 +1,7 @@
 package com.example.agritech_mobile.ui.main
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -17,39 +18,126 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.agritech_mobile.R
 import com.example.agritech_mobile.ui.cart.CartScreen
 import com.example.agritech_mobile.ui.dashboard.HomeScreen
 import com.example.agritech_mobile.ui.order.SellerOrdersScreen
+import com.example.agritech_mobile.ui.user.ProfileScreen
+import com.example.agritech_mobile.ui.BottomNavItem
+import com.example.agritech_mobile.ui.GooeyBottomNavigation
+import com.example.agritech_mobile.ui.BubbleBottomBar
+import kotlin.math.roundToInt
 
 @Composable
 fun MainScreen(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToCreateProduct: () -> Unit,
-    onNavigateToCheckout: (String) -> Unit
+    onNavigateToCheckout: (String) -> Unit,
+    onLogoutSuccess: () -> Unit,
+    onNavigateToBuyerOrders: (String) -> Unit
 ) {
-    var currentTab by rememberSaveable { mutableStateOf("HOME") }
+    var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
+
+    val bottomBarHeight = 130.dp
+    val bottomBarHeightPx = with(LocalDensity.current) { bottomBarHeight.toPx() }
+    var bottomBarOffsetHeightPx by remember { mutableFloatStateOf(0f) }
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                val newOffset = bottomBarOffsetHeightPx - delta
+                bottomBarOffsetHeightPx = newOffset.coerceIn(0f, bottomBarHeightPx)
+                return Offset.Zero
+            }
+        }
+    }
+
+    val navItems = listOf(
+        BottomNavItem(stringResource(R.string.nav_home), Icons.Default.Home),
+        BottomNavItem(stringResource(R.string.nav_orders), Icons.Outlined.ReceiptLong),
+        BottomNavItem(stringResource(R.string.nav_cart), Icons.Outlined.ShoppingCart),
+        BottomNavItem(stringResource(R.string.nav_account), Icons.Outlined.AccountCircle)
+    )
+
+    val currentTab = when (selectedIndex) {
+        0 -> "HOME"
+        1 -> "ORDERS"
+        2 -> "CART"
+        3 -> "ACCOUNT"
+        else -> "HOME"
+    }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(nestedScrollConnection),
         bottomBar = {
-            AgritechBottomNavigation(
-                currentTab = currentTab,
-                onTabSelected = { selectedTab -> currentTab = selectedTab },
-                onCreateProductClick = onNavigateToCreateProduct
-            )
+            Row(
+                modifier = Modifier
+                    .offset { IntOffset(x = 0, y = bottomBarOffsetHeightPx.roundToInt()) }
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                BubbleBottomBar(
+                    items = navItems.map { it.icon },
+                    selectedIndex = selectedIndex,
+                    pillColor = androidx.compose.ui.graphics.Color.White,
+                    activeIconColor = MaterialTheme.colorScheme.primary,
+                    inactiveIconColor = androidx.compose.ui.graphics.Color.Gray.copy(alpha = 0.6f),
+                    modifier = Modifier.weight(1f),
+                    onItemSelected = { index -> selectedIndex = index }
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .graphicsLayer {
+                            shadowElevation = 4.dp.toPx()
+                            shape = androidx.compose.foundation.shape.CircleShape
+                            clip = true
+                        }
+                        .background(androidx.compose.ui.graphics.Color.White)
+                        .border(
+                            width = 1.2.dp,
+                            color = androidx.compose.ui.graphics.Color.LightGray.copy(alpha = 0.4f),
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        )
+                        .clickable { onNavigateToCreateProduct() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Create",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = 0.dp
+                )
         ) {
             when (currentTab) {
                 "HOME" -> HomeScreen(
@@ -57,141 +145,18 @@ fun MainScreen(
                     onNavigateToCreateProduct = onNavigateToCreateProduct
                 )
 
-                "ORDERS" -> {
-                    SellerOrdersScreen()
-                }
+                "ORDERS" -> SellerOrdersScreen()
 
                 "CART" -> CartScreen(
                     onNavigateToCheckout = onNavigateToCheckout
                 )
 
-                "ACCOUNT" -> {
-                    // TODO:
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) { Text("Màn hình Tài khoản") }
-                }
-            }
-        }
-    }
-}
-
-
-@Composable
-fun AgritechBottomNavigation(
-    currentTab: String,
-    onTabSelected: (String) -> Unit,
-    onCreateProductClick: () -> Unit
-) {
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-        Surface(
-            color = MaterialTheme.colorScheme.background,
-            shadowElevation = 16.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(65.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BottomNavItem(
-                    icon = Icons.Default.Home,
-                    label = stringResource(R.string.nav_home),
-                    isSelected = currentTab == "HOME",
-                    onClick = { onTabSelected("HOME") },
-                    modifier = Modifier.weight(1f)
-                )
-                BottomNavItem(
-                    icon = Icons.Outlined.ReceiptLong,
-                    label = stringResource(R.string.nav_orders),
-                    isSelected = currentTab == "ORDERS",
-                    onClick = { onTabSelected("ORDERS") },
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(60.dp))
-                BottomNavItem(
-                    icon = Icons.Outlined.ShoppingCart,
-                    label = stringResource(R.string.nav_cart),
-                    isSelected = currentTab == "CART",
-                    onClick = { onTabSelected("CART") },
-                    modifier = Modifier.weight(1f)
-                )
-                BottomNavItem(
-                    icon = Icons.Outlined.AccountCircle,
-                    label = stringResource(R.string.nav_account),
-                    isSelected = currentTab == "ACCOUNT",
-                    onClick = { onTabSelected("ACCOUNT") },
-                    modifier = Modifier.weight(1f)
+                "ACCOUNT" -> ProfileScreen(
+                    onNavigateToAddress = { /* TODO: */ },
+                    onNavigateToOrders = { status -> onNavigateToBuyerOrders(status) },
+                    onLogoutClick = onLogoutSuccess
                 )
             }
-        }
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.offset(y = (-15).dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-                    .clickable { onCreateProductClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Create",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-        }
-    }
-}
-
-@Composable
-fun BottomNavItem(
-    icon: ImageVector,
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray
-    val formattedLabel = label.lowercase().split(" ")
-        .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
-
-    Box(
-        modifier = modifier
-            .fillMaxHeight()
-            .padding(vertical = 4.dp, horizontal = 2.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.wrapContentWidth(unbounded = true)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = color,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = formattedLabel,
-                fontSize = with(LocalDensity.current) { 10.dp.toSp() },
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = color,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Visible
-            )
         }
     }
 }

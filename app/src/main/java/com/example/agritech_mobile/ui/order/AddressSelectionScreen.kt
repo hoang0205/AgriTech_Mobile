@@ -1,5 +1,6 @@
 package com.example.agritech_mobile.ui.order
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,7 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -19,78 +19,105 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.agritech_mobile.R
+import com.example.agritech_mobile.data.remote.dto.ShippingDetails
 import com.example.agritech_mobile.ui.theme.AgritechTheme
-
-data class ShippingAddress(
-    val id: String,
-    val name: String,
-    val phone: String,
-    val address: String,
-    val isDefault: Boolean = false
-)
+import com.example.agritech_mobile.ui.user.AddressState
+import com.example.agritech_mobile.ui.user.UserViewModel
 
 @Composable
 fun AddressSelectionScreen(
+    currentSelectedAddressId: String? = null,
     onBackClick: () -> Unit,
     onAddNewClick: () -> Unit,
-    onConfirmClick: (ShippingAddress) -> Unit
+    onConfirmClick: (ShippingDetails) -> Unit,
+    viewModel: UserViewModel = hiltViewModel()
 ) {
-    // Dummy Data
-    val addresses = remember {
-        listOf(
-            ShippingAddress(
-                "1",
-                "Nguyễn Văn A",
-                "0901234567",
-                "123 Lê Lợi, Phường Bến Nghé, Quận 1, TP. HCM",
-                true
-            ),
-            ShippingAddress(
-                "2",
-                "Trần Thị B",
-                "0988776655",
-                "456 Võ Văn Kiệt, Phường Cô Giang, Quận 1, TP. HCM",
-                false
-            ),
-            ShippingAddress(
-                "3",
-                "Lê Hoàng Nam",
-                "0912334455",
-                "789 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. HCM",
-                false
-            )
-        )
+    val context = LocalContext.current
+    val addressState by viewModel.addressState.collectAsState()
+
+    var addresses by remember { mutableStateOf<List<ShippingDetails>>(emptyList()) }
+    var selectedAddressId by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.getUserAddresses()
     }
 
-    var selectedAddressId by remember {
-        mutableStateOf(
-            addresses.firstOrNull { it.isDefault }?.id ?: ""
-        )
-    }
-
-    AddressSelectionContent(
-        addresses = addresses,
-        selectedAddressId = selectedAddressId,
-        onAddressSelect = { selectedAddressId = it },
-        onBackClick = onBackClick,
-        onAddNewClick = onAddNewClick,
-        onConfirmClick = {
-            val selected = addresses.find { it.id == selectedAddressId }
-            if (selected != null) onConfirmClick(selected)
+    LaunchedEffect(currentSelectedAddressId) {
+        if (!currentSelectedAddressId.isNullOrEmpty()) {
+            selectedAddressId = currentSelectedAddressId
         }
-    )
+    }
+
+
+    LaunchedEffect(addressState) {
+        when (val state = addressState) {
+            is AddressState.Loading -> {
+                isLoading = true
+            }
+
+            is AddressState.Success -> {
+                isLoading = false
+                addresses = state.addresses
+                if (selectedAddressId.isEmpty() && currentSelectedAddressId.isNullOrEmpty()) {
+                    selectedAddressId = addresses.firstOrNull { it.isDefault }?.id ?: ""
+                }
+                else if (selectedAddressId.isEmpty() && !currentSelectedAddressId.isNullOrEmpty()) {
+                    selectedAddressId = currentSelectedAddressId
+                }
+            }
+
+            is AddressState.Error -> {
+                isLoading = false
+                Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+            }
+
+            else -> isLoading = false
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        AddressSelectionContent(
+            addresses = addresses,
+            selectedAddressId = selectedAddressId,
+            onAddressSelect = { selectedAddressId = it },
+            onBackClick = onBackClick,
+            onAddNewClick = onAddNewClick,
+            onConfirmClick = {
+                val selected = addresses.find { it.id == selectedAddressId }
+                if (selected != null) {
+                    onConfirmClick(selected)
+                } else {
+                    Toast.makeText(context, "Vui lòng chọn 1 địa chỉ", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+
+        if (isLoading && addresses.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddressSelectionContent(
-    addresses: List<ShippingAddress>,
+    addresses: List<ShippingDetails>,
     selectedAddressId: String,
     onAddressSelect: (String) -> Unit,
     onBackClick: () -> Unit,
@@ -103,7 +130,7 @@ fun AddressSelectionContent(
             TopAppBar(
                 title = {
                     Text(
-                        "Chọn địa chỉ nhận hàng",
+                        stringResource(R.string.address_selection_title),
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1B5E20)
                     )
@@ -130,7 +157,11 @@ fun AddressSelectionContent(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Xác nhận", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    stringResource(R.string.address_selection_confirm),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
             }
         }
     ) { paddingValues ->
@@ -165,14 +196,14 @@ fun AddressSelectionContent(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        "Thêm địa chỉ mới",
+                        stringResource(R.string.address_selection_add_new),
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f)
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    "ĐỊA CHỈ ĐÃ LƯU",
+                    stringResource(R.string.address_selection_saved_addresses),
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.Gray,
                     fontWeight = FontWeight.Bold
@@ -195,10 +226,17 @@ fun AddressSelectionContent(
                     colors = CardDefaults.cardColors(containerColor = bgColor),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
-                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(address.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text(
+                                    text = address.receiverName ?: "",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
                                 if (address.isDefault) {
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Box(
@@ -208,7 +246,7 @@ fun AddressSelectionContent(
                                             .padding(horizontal = 6.dp, vertical = 2.dp)
                                     ) {
                                         Text(
-                                            "MẶC ĐỊNH",
+                                            stringResource(R.string.address_selection_default_badge),
                                             color = Color.White,
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold
@@ -217,10 +255,14 @@ fun AddressSelectionContent(
                                 }
                             }
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(address.phone, color = Color.DarkGray, fontSize = 14.sp)
+                            Text(
+                                text = address.phoneNumber ?: "",
+                                color = Color.DarkGray,
+                                fontSize = 14.sp
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                address.address,
+                                text = address.addressDetail ?: "",
                                 color = Color.Gray,
                                 fontSize = 14.sp,
                                 lineHeight = 20.sp
@@ -228,17 +270,17 @@ fun AddressSelectionContent(
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = { /* TODO: */ },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = "Edit",
-                                    tint = Color(0xFF81C784),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
+//                            IconButton(
+//                                onClick = { /* TODO: */ },
+//                                modifier = Modifier.size(32.dp)
+//                            ) {
+//                                Icon(
+//                                    Icons.Default.Edit,
+//                                    contentDescription = "Edit",
+//                                    tint = Color(0xFF81C784),
+//                                    modifier = Modifier.size(20.dp)
+//                                )
+//                            }
                             RadioButton(
                                 selected = isSelected,
                                 onClick = { onAddressSelect(address.id) },
@@ -255,8 +297,25 @@ fun AddressSelectionContent(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "vi")
 @Composable
 fun AddressSelectionPreview() {
-    AgritechTheme { AddressSelectionScreen({}, {}, {}) }
+    AgritechTheme {
+        AddressSelectionContent(
+            addresses = listOf(
+                ShippingDetails(
+                    "1",
+                    "Nguyễn Văn A",
+                    "0901234567",
+                    "123 Lê Lợi, Phường Bến Nghé, Quận 1, TP. HCM",
+                    true
+                )
+            ),
+            selectedAddressId = "1",
+            onAddressSelect = {},
+            onBackClick = {},
+            onAddNewClick = {},
+            onConfirmClick = {}
+        )
+    }
 }

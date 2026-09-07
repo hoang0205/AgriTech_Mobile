@@ -7,7 +7,10 @@ data class LoginRequest(
 
 data class LoginResponse(
     val accessToken: String,
-    val refreshToken: String
+    val refreshToken: String,
+    val fullName: String,
+    val avatarUrl: String? = null,
+    val firebaseToken: String? = null
 )
 
 data class RegisterResponse(
@@ -43,4 +46,8 @@ data class ResetPasswordRequest(
 data class MessageResponse(
     val message: String,
     val success: Boolean = true
+)
+
+data class LogoutRequest(
+    val accessToken: String,
 )

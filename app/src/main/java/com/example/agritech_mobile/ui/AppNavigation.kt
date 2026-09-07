@@ -1,7 +1,8 @@
+package com.example.agritech_mobile.ui
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,12 +15,13 @@ import com.example.agritech_mobile.ui.auth.ResetPasswordScreen
 import com.example.agritech_mobile.ui.auth.SignUpScreen
 import com.example.agritech_mobile.ui.auth.VerifyEmailScreen
 import com.example.agritech_mobile.ui.checkout.CheckoutScreen
-import com.example.agritech_mobile.ui.dashboard.HomeScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.main.MainScreen
 import com.example.agritech_mobile.ui.order.AddressSelectionScreen
+import com.example.agritech_mobile.ui.user.BuyerOrdersScreen
 import com.example.agritech_mobile.ui.user.AddAddressScreen
+import com.example.agritech_mobile.ui.user.ReviewProductScreen
 
 @Composable
 fun AppNavigation(
@@ -114,10 +116,9 @@ fun AppNavigation(
         composable(
             route = "main_screen",
             enterTransition = {
-                scaleIn(
-                    initialScale = 0.8f,
+                scaleIn(initialScale = 0.8f, animationSpec = tween(300)) + fadeIn(
                     animationSpec = tween(300)
-                ) + fadeIn(animationSpec = tween(300))
+                )
             },
             exitTransition = { fadeOut() }
         ) {
@@ -130,6 +131,14 @@ fun AppNavigation(
                 },
                 onNavigateToCheckout = { selectedIds ->
                     navController.navigate("checkout/$selectedIds")
+                },
+                onLogoutSuccess = {
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onNavigateToBuyerOrders = { status ->
+                    navController.navigate("buyer_orders/$status")
                 }
             )
         }
@@ -201,23 +210,37 @@ fun AppNavigation(
             val idsString = backStackEntry.arguments?.getString("selectedIds") ?: ""
             val selectedCartItemIds = idsString.split(",").filter { it.isNotEmpty() }
 
+            val selectedAddressId = backStackEntry.savedStateHandle.get<String>("selectedAddressId")
+
             CheckoutScreen(
                 selectedCartItemIds = selectedCartItemIds,
+                selectedAddressId = selectedAddressId,
                 onBackClick = { navController.popBackStack() },
                 onPlaceOrderSuccess = {
                     navController.popBackStack("main_screen", inclusive = false)
                 },
-                onNavigateToAddressSelection = {
+                onNavigateToAddressSelection = { currentAddressId ->
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "currentAddressId",
+                        currentAddressId
+                    )
                     navController.navigate("address_selection")
                 }
             )
         }
-        composable("address_selection") {
+        composable("address_selection") { backStackEntry ->
+            val currentAddressId = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("currentAddressId")
             AddressSelectionScreen(
+                currentSelectedAddressId = currentAddressId,
                 onBackClick = { navController.popBackStack() },
                 onAddNewClick = { navController.navigate("add_address") },
                 onConfirmClick = { selectedAddress ->
-                    // TODO:
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("selectedAddressId", selectedAddress.id)
+
                     navController.popBackStack()
                 }
             )
@@ -226,10 +249,50 @@ fun AppNavigation(
         composable("add_address") {
             AddAddressScreen(
                 onBackClick = { navController.popBackStack() },
-                onSaveClick = {
-                    // TODO:
+                onSaveSuccess = {
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable(
+            route = "buyer_orders/{initialStatus}",
+            arguments = listOf(navArgument("initialStatus") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val initialStatus = backStackEntry.arguments?.getString("initialStatus") ?: "ALL"
+
+            BuyerOrdersScreen(
+                initialStatus = initialStatus,
+                onBackClick = { navController.popBackStack() },
+                onReviewClick = { productId, productName, productImageUrl, shopName ->
+                    navController.currentBackStackEntry?.savedStateHandle?.apply {
+                        set("productName", productName)
+                        set("productImageUrl", productImageUrl)
+                        set("shopName", shopName)
+                    }
+                    navController.navigate("review_screen/$productId")
+                }
+            )
+        }
+
+        composable(
+            route = "review_screen/{productId}",
+            arguments = listOf(navArgument("productId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId") ?: ""
+
+            val previousBackStack = navController.previousBackStackEntry
+            val productName = previousBackStack?.savedStateHandle?.get<String>("productName") ?: ""
+            val productImageUrl = previousBackStack?.savedStateHandle?.get<String>("productImageUrl") ?: ""
+            val shopName = previousBackStack?.savedStateHandle?.get<String>("shopName") ?: ""
+
+            ReviewProductScreen(
+                productID = productId,
+                productName = productName,
+                productImageUrl = productImageUrl,
+                shopName = shopName,
+                onBackClick = { navController.popBackStack() },
+                onReviewSuccess = { navController.popBackStack() }
             )
         }
     }

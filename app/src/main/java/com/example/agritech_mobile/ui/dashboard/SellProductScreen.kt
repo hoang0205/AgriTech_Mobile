@@ -53,13 +53,15 @@ import com.example.agritech_mobile.ui.theme.AgritechTheme
 
 data class SellProductUiState(
     val images: List<Uri> = emptyList(),
+    val invalidImages: List<Uri> = emptyList(),
     val productName: String = "",
     val category: String = "",
     val price: String = "",
     val unit: String = "",
     val quantity: Int = 0,
     val description: String = "",
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val isPredictingPrice: Boolean = false
 )
 
 @Composable
@@ -102,8 +104,24 @@ fun SellProductScreen(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5)
     ) { uris ->
         if (uris.isNotEmpty()) {
-            val newImages = (uiState.images + uris).take(5)
-            uiState = uiState.copy(images = newImages)
+            uris.forEach { uri ->
+                val part = uriToMultipartBodyPart(context, uri, "file")
+                if (part != null) {
+                    viewModel.verifyImageWithAI(part) { isValid, detectedCategory ->
+                        if (isValid) {
+                            val newImages = (uiState.images + uri).take(5)
+                            uiState = uiState.copy(images = newImages)
+
+                            if (detectedCategory != null && uiState.category.isBlank()) {
+                                uiState = uiState.copy(category = detectedCategory)
+                                Toast.makeText(context, "AI phát hiện: $detectedCategory", Toast.LENGTH_LONG).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "Ảnh không hợp lệ, vui lòng chọn ảnh khác", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -113,8 +131,22 @@ fun SellProductScreen(
         if (bitmap != null) {
             val uri = bitmapToUri(context, bitmap)
             if (uri != null) {
-                val newImages = (uiState.images + uri).take(5)
-                uiState = uiState.copy(images = newImages)
+                val part = uriToMultipartBodyPart(context, uri, "file")
+                if (part != null) {
+                    viewModel.verifyImageWithAI(part) { isValid, detectedCategory ->
+                        if (isValid) {
+                            val newImages = (uiState.images + uri).take(5)
+                            uiState = uiState.copy(images = newImages)
+
+                            if (detectedCategory != null && uiState.category.isBlank()) {
+                                uiState = uiState.copy(category = detectedCategory)
+                                Toast.makeText(context, "AI phát hiện: $detectedCategory", Toast.LENGTH_LONG).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "Ảnh không hợp lệ, vui lòng chụp lại", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             }
         }
     }
@@ -191,13 +223,35 @@ fun SellProductScreen(
             cameraLauncher.launch(null)
         },
         onRemoveImage = { uriToRemove ->
-            uiState = uiState.copy(images = uiState.images - uriToRemove)
+            uiState = uiState.copy(
+                images = uiState.images - uriToRemove,
+                invalidImages = uiState.invalidImages - uriToRemove
+            )
         },
         onAddCertClick = { },
         onBackClick = onBackClick,
         onPublishClick = {
             if (!uiState.isLoading) {
                 handlePublish()
+            }
+        },
+        onPredictPriceClick = {
+            if (uiState.productName.isNotBlank()) {
+                uiState = uiState.copy(isPredictingPrice = true)
+
+                viewModel.getPricePrediction(uiState.productName) { predictedPrice, message ->
+                    uiState = uiState.copy(isPredictingPrice = false)
+
+                    if (predictedPrice != null) {
+                        uiState = uiState.copy(price = predictedPrice)
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+            } else {
+                Toast.makeText(context, "Vui lòng nhập tên sản phẩm trước!", Toast.LENGTH_SHORT).show()
             }
         }
     )
@@ -217,7 +271,8 @@ fun SellProductContent(
     onRemoveImage: (Uri) -> Unit,
     onAddCertClick: () -> Unit,
     onBackClick: () -> Unit,
-    onPublishClick: () -> Unit
+    onPublishClick: () -> Unit,
+    onPredictPriceClick: () -> Unit,
 ) {
     val backgroundColor = Color(0xFFFAFBFA)
     val primaryGreen = Color(0xFF1E7032)
@@ -358,6 +413,8 @@ fun SellProductContent(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(uiState.images) { uri ->
+                        val isInvalid = uiState.invalidImages.contains(uri)
+
                         Box(
                             modifier = Modifier
                                 .size(100.dp)
@@ -370,6 +427,23 @@ fun SellProductContent(
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
+
+                            if (isInvalid) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Red.copy(alpha = 0.4f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Lỗi",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                            }
+                            
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
@@ -444,6 +518,14 @@ fun SellProductContent(
                         }
                     }
                 }
+                if (uiState.invalidImages.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "⚠️ AI phát hiện ảnh không hợp lệ. Vui lòng xóa ảnh bị đánh dấu đỏ!",
+                        color = Color.Red,
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -467,14 +549,39 @@ fun SellProductContent(
             )
             Spacer(modifier = Modifier.height(20.dp))
 
-            FormInputField(
-                label = stringResource(R.string.price),
-                value = uiState.price,
-                onValueChange = onPriceChange,
-                placeholder = stringResource(R.string.price_hint),
-                keyboardType = KeyboardType.Number,
-                trailingText = stringResource(R.string.currency)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    FormInputField(
+                        label = stringResource(R.string.price),
+                        value = uiState.price,
+                        onValueChange = onPriceChange,
+                        placeholder = stringResource(R.string.price_hint),
+                        keyboardType = KeyboardType.Number,
+                        trailingText = stringResource(R.string.currency)
+                    )
+                }
+
+                Button(
+                    onClick = {
+                        onPredictPriceClick()
+                    },
+                    modifier = Modifier
+                        .padding(bottom = 20.dp)
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE8F3EA)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    if (uiState.isPredictingPrice) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = primaryGreen, strokeWidth = 2.dp)
+                    } else {
+                        Text("✨ Gợi ý AI", color = primaryGreen, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
 
             FormInputField(
                 label = stringResource(R.string.unit),
@@ -551,50 +658,51 @@ fun SellProductContent(
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(lightGreen)
-                    .padding(16.dp)
-            ) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Verified, contentDescription = null, tint = primaryGreen)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.cert_title),
-                            fontWeight = FontWeight.Bold,
-                            color = primaryGreen
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.cert_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = primaryGreen,
-                        lineHeight = 18.sp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.White)
-                            .clickable { onAddCertClick() }
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.add_cert),
-                            color = primaryGreen,
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(100.dp))
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .clip(RoundedCornerShape(12.dp))
+//                    .background(lightGreen)
+//                    .padding(16.dp)
+//            ) {
+//                Column {
+//                    Row(verticalAlignment = Alignment.CenterVertically) {
+//                        Icon(Icons.Default.Verified, contentDescription = null, tint = primaryGreen)
+//                        Spacer(modifier = Modifier.width(8.dp))
+//                        Text(
+//                            text = stringResource(R.string.cert_title),
+//                            fontWeight = FontWeight.Bold,
+//                            color = primaryGreen
+//                        )
+//                    }
+//                    Spacer(modifier = Modifier.height(8.dp))
+//                    Text(
+//                        text = stringResource(R.string.cert_desc),
+//                        style = MaterialTheme.typography.bodySmall,
+//                        color = primaryGreen,
+//                        lineHeight = 18.sp
+//                    )
+//                    Spacer(modifier = Modifier.height(12.dp))
+//                    Box(
+//                        modifier = Modifier
+//                            .clip(RoundedCornerShape(6.dp))
+//                            .background(Color.White)
+//                            .clickable { onAddCertClick() }
+//                            .padding(horizontal = 12.dp, vertical = 8.dp)
+//                    ) {
+//                        Text(
+//                            text = stringResource(R.string.add_cert),
+//                            color = primaryGreen,
+//                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+//                        )
+//                    }
+//                }
+//            }
+//
+//            Spacer(modifier = Modifier.height(100.dp))
         }
         val isFormValid = uiState.images.isNotEmpty() &&
+                uiState.invalidImages.isEmpty() &&
                 uiState.productName.isNotBlank() &&
                 uiState.category.isNotBlank() &&
                 uiState.price.isNotBlank() &&
@@ -707,7 +815,7 @@ fun CategoryDropdownMenu(
             readOnly = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
-                .menuAnchor()
+                .menuAnchor(type = MenuAnchorType.PrimaryEditable)
                 .fillMaxWidth(),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color(0xFFF5F5F5),
@@ -740,6 +848,32 @@ fun CategoryDropdownMenu(
 @Composable
 fun SellProductScreenPreview() {
     AgritechTheme {
-        SellProductScreen()
+        SellProductContent(
+            uiState = SellProductUiState(
+                images = emptyList(),
+                invalidImages = emptyList(),
+                productName = "",
+                category = "",
+                price = "",
+                unit = "",
+                quantity = 0,
+                description = "",
+                isLoading = false,
+                isPredictingPrice = false
+            ),
+            onNameChange = {},
+            onPriceChange = {},
+            onUnitChange = {},
+            onQuantityChange = {},
+            onDescriptionChange = {},
+            onCategoryChange = {},
+            onImageUploadClick = {},
+            onCameraCaptureClick = {},
+            onRemoveImage = {},
+            onAddCertClick = {},
+            onBackClick = {},
+            onPublishClick = {},
+            onPredictPriceClick = {}
+        )
     }
 }

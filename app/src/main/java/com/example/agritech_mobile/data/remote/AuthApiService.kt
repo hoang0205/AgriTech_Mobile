@@ -36,4 +36,9 @@ interface AuthApiService {
     suspend fun refreshToken(
         @Body request: RefreshTokenRequest
     ): Response<LoginResponse>
+
+    @POST("api/auth/logout")
+    suspend fun logout(
+        @Body request: LogoutRequest
+    ): Response<MessageResponse>
 }

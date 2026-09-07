@@ -1,18 +1,22 @@
 package com.example.agritech_mobile.data.repository
 
-import android.util.Log
-import com.example.agritech_mobile.data.remote.ProductApiService
-import com.example.agritech_mobile.data.remote.dto.PageResponse
-import com.example.agritech_mobile.data.remote.dto.ProductRequest
-import com.example.agritech_mobile.data.remote.dto.ProductResponse
+import com.example.agritech_mobile.data.remote.UserApiService
+import com.example.agritech_mobile.data.remote.dto.AddressRequest
+import com.example.agritech_mobile.data.remote.dto.ProvinceResponse
+import com.example.agritech_mobile.data.remote.dto.ShippingAddressResponce
+import com.example.agritech_mobile.data.remote.dto.ShippingDetails
+import com.example.agritech_mobile.data.remote.dto.UpdatePasswordRequest
+import com.example.agritech_mobile.data.remote.dto.UpdateProfileRequest
+import com.example.agritech_mobile.data.remote.dto.UpdateProfileResponse
+import com.example.agritech_mobile.data.remote.dto.WardResponse
 import javax.inject.Inject
 
-class ProductRepository @Inject constructor(
-    private val apiService: ProductApiService
+class UserRepository @Inject constructor(
+    private val userApiService: UserApiService
 ) {
-    suspend fun getProducts(): Result<PageResponse<ProductResponse>> {
+    suspend fun getUserProfile(): Result<UpdateProfileRequest> {
         return try {
-            val response = apiService.getProducts()
+            val response = userApiService.getUserProfile()
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
@@ -28,43 +32,13 @@ class ProductRepository @Inject constructor(
         }
     }
 
-    suspend fun createProduct(
-        name: String,
-        category: String,
-        price: Double,
-        quantity: Double,
-        unit: String,
-        description: String,
-        imageUrls: List<String>
-    ): Result<ProductResponse> {
-        val productRequest =
-            ProductRequest(name, category, price, quantity, unit, description, imageUrls)
+    suspend fun updateUserProfile(
+        fullName: String,
+        avatarUrl: String
+    ): Result<UpdateProfileResponse> {
         return try {
-            Log.d("CreateProduct", "Sending imageUrls: $imageUrls")
-
-            val response = apiService.createProduct(productRequest)
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null) {
-                    Log.d("CreateProduct", "Response imageUrls: ${body.imageUrls}")
-                    Result.success(body)
-                } else {
-                    Result.failure(Exception("Phản hồi từ server bị rỗng!"))
-                }
-            } else {
-                Log.e("CreateProduct", "Error: ${response.code()}")
-                Result.failure(Exception("Lỗi từ server: ${response.code()}"))
-            }
-        } catch (e: Exception) {
-            Log.e("CreateProduct", "Exception: ${e.localizedMessage}")
-            Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
-        }
-    }
-
-
-    suspend fun getProductById(productId: String): Result<ProductResponse> {
-        return try {
-            val response = apiService.getProductById(productId)
+            val request = UpdateProfileRequest(fullName, avatarUrl)
+            val response = userApiService.updateUserProfile(request)
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
@@ -80,9 +54,9 @@ class ProductRepository @Inject constructor(
         }
     }
 
-    suspend fun searchProducts(query: String): Result<PageResponse<ProductResponse>> {
+    suspend fun getUserAddress(): Result<List<ShippingDetails>> {
         return try {
-            val response = apiService.searchProducts(query)
+            val response = userApiService.getUserAddresses()
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
@@ -98,9 +72,15 @@ class ProductRepository @Inject constructor(
         }
     }
 
-    suspend fun getRandomProducts(): Result<List<ProductResponse>> {
+    suspend fun addUserAddress(
+        receiverName: String,
+        receiverPhone: String,
+        detail: String,
+        isDefault: Boolean = false
+    ): Result<ShippingAddressResponce> {
         return try {
-            val response = apiService.getRandomProducts()
+            val request = AddressRequest(receiverName, receiverPhone, detail, isDefault)
+            val response = userApiService.addAddress(request)
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
@@ -116,9 +96,9 @@ class ProductRepository @Inject constructor(
         }
     }
 
-    suspend fun getRecommendations(): Result<List<ProductResponse>> {
+    suspend fun setDefaultAddress(addressId: String): Result<ShippingAddressResponce> {
         return try {
-            val response = apiService.getRecommendations()
+            val response = userApiService.setDefaultAddress(addressId)
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
@@ -134,9 +114,9 @@ class ProductRepository @Inject constructor(
         }
     }
 
-    suspend fun getProductsByCategory(category: String): Result<PageResponse<ProductResponse>> {
+    suspend fun getProvinces(): Result<List<ProvinceResponse>> {
         return try {
-            val response = apiService.getProductsByCategory(category)
+            val response = userApiService.getProvinces()
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
@@ -152,9 +132,32 @@ class ProductRepository @Inject constructor(
         }
     }
 
-    suspend fun getSuggestedProducts(query: String): Result<List<String>> {
+    suspend fun getWards(provinceCode: String): Result<List<WardResponse>> {
         return try {
-            val response = apiService.getSuggestedProducts(query)
+            val response = userApiService.getWards(provinceCode)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Phản hồi từ server bị rỗng!"))
+                }
+            } else {
+                Result.failure(Exception("Lỗi từ server: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
+        }
+    }
+
+    suspend fun updateUserPassword(
+        currentPassword: String,
+        newPassword: String,
+        confirmPassword: String
+    ): Result<UpdateProfileResponse> {
+        return try {
+            val request = UpdatePasswordRequest(currentPassword, newPassword, confirmPassword)
+            val response = userApiService.updateUserPassword(request)
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {

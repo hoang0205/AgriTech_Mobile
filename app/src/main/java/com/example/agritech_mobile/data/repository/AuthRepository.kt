@@ -6,14 +6,17 @@ import com.example.agritech_mobile.data.remote.dto.ErrorResponse
 import com.example.agritech_mobile.data.remote.dto.ForgotPasswordRequest
 import com.example.agritech_mobile.data.remote.dto.LoginRequest
 import com.example.agritech_mobile.data.remote.dto.LoginResponse
+import com.example.agritech_mobile.data.remote.dto.LogoutRequest
 import com.example.agritech_mobile.data.remote.dto.MessageResponse
 import com.example.agritech_mobile.data.remote.dto.RegisterRequest
 import com.example.agritech_mobile.data.remote.dto.RegisterResponse
 import com.example.agritech_mobile.data.remote.dto.ResetPasswordRequest
 import com.example.agritech_mobile.data.remote.dto.VerifyEmail
+import com.google.firebase.auth.FirebaseAuth
 import okhttp3.Response
 import javax.inject.Inject
 import com.google.gson.Gson
+import kotlinx.coroutines.tasks.await
 
 class AuthRepository @Inject constructor(
     private val apiService: AuthApiService
@@ -23,7 +26,18 @@ class AuthRepository @Inject constructor(
             val response = apiService.login(LoginRequest(phone, password))
 
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+                val loginResponse = response.body()!!
+
+                loginResponse.firebaseToken?.let { token ->
+                    try {
+                        FirebaseAuth.getInstance().signInWithCustomToken(token).await()
+                        Log.d("AuthRepository", "Firebase Auth thành công: ${FirebaseAuth.getInstance().currentUser?.uid}")
+                    } catch (e: Exception) {
+                        Log.e("AuthRepository", "Firebase Auth thất bại: ${e.localizedMessage}")
+                    }
+                }
+
+                Result.success(loginResponse)
             } else {
                 val errorJson = response.errorBody()?.string()
                 val errorObj = try {
@@ -143,6 +157,21 @@ class AuthRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
+        }
+    }
+
+    suspend fun logout(accessToken: String): Result<MessageResponse> {
+        return try {
+            val request = LogoutRequest(accessToken)
+            val response = apiService.logout(request)
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Lỗi đăng xuất từ Server: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Lỗi kết nối: ${e.localizedMessage}"))
         }
     }
 }

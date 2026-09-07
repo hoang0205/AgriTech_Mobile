@@ -1,7 +1,8 @@
 package com.example.agritech_mobile.data.remote.dto
 
+import android.R
 import com.example.agritech_mobile.ui.dashboard.Product
-import com.example.agritech_mobile.ui.order.ShippingAddress
+import com.google.gson.annotations.SerializedName
 
 data class CheckOutRequest(
     val shippingAddress: String,
@@ -51,7 +52,15 @@ data class OrderBuyerResponse(
     val orderId: String,
     val orderDate: String,
     val status: String,
-    val shippingAddress: ShippingAddress,
+    val shippingAddress: String,
     val totalAmount: Double,
-    val orderItems: List<OrderBuyerItem>
+    val items: List<OrderBuyerItem>
+)
+
+data class OrderStatusCountResponse(
+    @SerializedName("PENDING") val pending: Long = 0,
+    @SerializedName("CONFIRMED") val confirmed: Long = 0,
+    @SerializedName("SHIPPING") val shipping: Long = 0,
+    @SerializedName("COMPLETED") val completed: Long = 0,
+    @SerializedName("CANCELLED") val cancelled: Long = 0
 )

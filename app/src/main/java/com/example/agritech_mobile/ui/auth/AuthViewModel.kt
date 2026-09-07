@@ -39,6 +39,14 @@ class AuthViewModel @Inject constructor(
             val result = repository.login(phone, password)
             result.onSuccess { response ->
                 tokenManager.saveTokens(response.accessToken, response.refreshToken)
+                tokenManager.saveUserName(response.fullName)
+
+                if (!response.avatarUrl.isNullOrBlank()) {
+                    tokenManager.saveAvatarUrl(response.avatarUrl)
+                } else {
+                    tokenManager.saveAvatarUrl("")
+                }
+
                 _authState.value = AuthState.Success("Thành công", response.accessToken)
             }.onFailure { exception ->
                 _authState.value = AuthState.Error(exception.message ?: "Lỗi không xác định")

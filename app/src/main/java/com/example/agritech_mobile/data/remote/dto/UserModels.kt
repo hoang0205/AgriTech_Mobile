@@ -6,6 +6,12 @@ data class UpdateProfileRequest(
 )
 
 data class UpdateProfileResponse(
-    val message: String,
-    val success: Boolean = true
+    val fullName: String,
+    val avatarUrl: String
+)
+
+data class UpdatePasswordRequest(
+    val oldPassword: String,
+    val newPassword: String,
+    val confirmPassword: String
 )

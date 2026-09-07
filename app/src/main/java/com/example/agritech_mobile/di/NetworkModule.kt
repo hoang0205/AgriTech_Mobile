@@ -2,11 +2,14 @@ package com.example.agritech_mobile.di
 
 import android.content.Context
 import coil.ImageLoader
+import com.example.agritech_mobile.data.remote.AiApiService
 import com.example.agritech_mobile.data.remote.AuthApiService
 import com.example.agritech_mobile.data.remote.CartApiService
 import com.example.agritech_mobile.data.remote.OrderApiService
 import com.example.agritech_mobile.data.remote.ProductApiService
+import com.example.agritech_mobile.data.remote.ReviewApiService
 import com.example.agritech_mobile.data.remote.UploadApiService
+import com.example.agritech_mobile.data.remote.UserApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,8 +24,11 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "http://192.168.1.30:2507/"
+//    private const val BASE_URL = "https://agritech-wtqr.onrender.com/"
 
+    private const val BASE_URL = "http://192.168.1.54:2507/"
+
+    private const val BASE_AI_URL = "http://10.10.10.213:8000/"
     @Provides
     @Singleton
     fun provideOkHttpClient(
@@ -75,5 +81,27 @@ object NetworkModule {
     @Singleton
     fun provideOrderApiService(retrofit: Retrofit): OrderApiService {
         return retrofit.create(OrderApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserApiService(retrofit: Retrofit): UserApiService {
+        return retrofit.create(UserApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideReviewService(retrofit: Retrofit): ReviewApiService {
+        return retrofit.create(ReviewApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAiApiService(): AiApiService {
+        val aiRetrofit = Retrofit.Builder()
+            .baseUrl(BASE_AI_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        return aiRetrofit.create(AiApiService::class.java)
     }
 }

@@ -1,8 +1,11 @@
 package com.example.agritech_mobile.ui.dashboard
 
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -14,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardBackspace
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.CheckCircle
@@ -22,6 +26,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarHalf
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,8 +46,13 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
+import com.example.agritech_mobile.data.remote.dto.ReviewModelsResponse
+import com.example.agritech_mobile.data.remote.dto.ReviewSummaryResponse
+import com.example.agritech_mobile.ui.cart.CartState
 import com.example.agritech_mobile.ui.cart.CartViewModel
 import com.example.agritech_mobile.ui.theme.AgritechTheme
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 data class ProductDetailUiState(
     val id: String = "1",
@@ -49,8 +60,8 @@ data class ProductDetailUiState(
     val price: String = "0",
     val unit: String = "kg",
     val category: String = "DANH MỤC",
-    val rating: String = "5.0",
-    val reviewCount: String = "0",
+    val rating: Double = 5.0,
+    val reviewCount: Int = 0,
     val stock: String = "0",
     val sellerName: String = "Đang tải...",
     val description: String = "Đang tải...",
@@ -62,7 +73,7 @@ data class ProductDetailUiState(
     val isFavorite: Boolean = false,
     val isLoading: Boolean = false,
     val imageUrls: List<String> = emptyList(),
-    val quantity: Double = 1.0
+    val quantity: Double = 1.0,
 )
 
 @Composable
@@ -74,9 +85,16 @@ fun ProductDetailScreen(
 ) {
     var uiState by remember { mutableStateOf(ProductDetailUiState()) }
     val dashboardState by viewModel.dashboardState.collectAsState()
+    val cartState by cartViewModel.cartState.collectAsState()
+    var showAddToCartError by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+    val reviewsList by viewModel.reviews.collectAsState()
+    val reviewSummary by viewModel.reviewSummary.collectAsState()
 
     LaunchedEffect(productId) {
         viewModel.getProductById(productId)
+        viewModel.getProductReviews(productId)
+        viewModel.getReviewSummary(productId)
     }
 
     LaunchedEffect(dashboardState) {
@@ -95,6 +113,8 @@ fun ProductDetailScreen(
                     price = "${productRes.price.toLong()}",
                     unit = productRes.unit,
                     category = productRes.category,
+                    rating = productRes.rating,
+                    reviewCount = productRes.reviewCount,
                     description = productRes.description,
                     sellerName = productRes.farmerName,
                     stock = productRes.quantity.toString(),
@@ -105,22 +125,53 @@ fun ProductDetailScreen(
             else -> {}
         }
     }
+    var hasHandledCartSuccess by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    LaunchedEffect(cartState) {
+        when (val state = cartState) {
+            is CartState.ActionSuccess -> {
+                if (!hasHandledCartSuccess) {
+                    hasHandledCartSuccess = true
+                    Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                    onBackClick()
+                }
+            }
+
+            is CartState.Error -> {
+                errorMessage = state.error
+                showAddToCartError = true
+            }
+
+            is CartState.Loading -> {
+                hasHandledCartSuccess = false
+            }
+
+            else -> {}
+        }
+    }
+
+    if (showAddToCartError) {
+        AlertDialog(
+            onDismissRequest = { showAddToCartError = false },
+            title = { Text("Lỗi thêm vào giỏ hàng") },
+            text = { Text(errorMessage) },
+            confirmButton = {
+                Button(onClick = { showAddToCartError = false }) {
+                    Text("Đóng")
+                }
+            }
+        )
+    }
 
     ProductDetailContent(
         uiState = uiState,
         onBackClick = onBackClick,
         onFavoriteClick = { uiState = uiState.copy(isFavorite = !uiState.isFavorite) },
-        onViewShopClick = { /* TODO: Mở trang Shop */ },
-        onChatClick = { /* TODO: Mở màn hình Chat */ },
+        onViewShopClick = { /* TODO*/ },
+        onChatClick = { /* TODO */ },
         onAddToCartClick = {
             cartViewModel.addToCart(uiState.id, uiState.quantity)
-            Toast.makeText(
-                context,
-                "Đã thêm sản phẩm vào giỏ hàng",
-                Toast.LENGTH_SHORT
-            ).show()
-            onBackClick()
         },
         onIncreaseQuantity = {
             uiState = uiState.copy(quantity = uiState.quantity + 1.0)
@@ -134,7 +185,9 @@ fun ProductDetailScreen(
             val filtered = input.filter { it.isDigit() || it == '.' }
             val newQty = filtered.toDoubleOrNull() ?: 0.0
             uiState = uiState.copy(quantity = newQty)
-        }
+        },
+        reviews = reviewsList,
+        reviewSummary = reviewSummary
     )
 }
 
@@ -148,7 +201,9 @@ fun ProductDetailContent(
     onAddToCartClick: () -> Unit,
     onIncreaseQuantity: () -> Unit,
     onDecreaseQuantity: () -> Unit,
-    onQuantityChange: (String) -> Unit
+    onQuantityChange: (String) -> Unit,
+    reviews: List<ReviewModelsResponse>,
+    reviewSummary: ReviewSummaryResponse?
 ) {
     val primaryGreen = Color(0xFF1B5E20)
     val lightGreen = Color(0xFFE8F5E9)
@@ -386,6 +441,21 @@ fun ProductDetailContent(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    ProductReviewsSection(
+                        rating = uiState.rating,
+                        reviewCount = uiState.reviewCount,
+                        primaryGreen = primaryGreen,
+                        textDark = textDark,
+                        textGray = textGray,
+                        reviews = reviews,
+                        reviewSummary = reviewSummary
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
 //                    Column {
 //                        val chunks = uiState.features.chunked(2)
 //                        chunks.forEach { rowItems ->
@@ -496,6 +566,288 @@ fun ProductDetailContent(
                 }
             }
         }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun ProductReviewsSection(
+    rating: Double,
+    reviewCount: Int,
+    reviews: List<ReviewModelsResponse>,
+    reviewSummary: ReviewSummaryResponse?,
+    primaryGreen: Color,
+    textDark: Color,
+    textGray: Color
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Column {
+                Text(
+                    text = "Đánh giá từ cộng đồng",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                    color = textDark
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Dựa trên $reviewCount lượt mua thực tế",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = textGray
+                )
+            }
+//            Row(
+//                verticalAlignment = Alignment.CenterVertically,
+//                modifier = Modifier.clickable { /* TODO: Go to all reviews */ }
+//            ) {
+//                Text(
+//                    text = "Xem tất cả",
+//                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+//                    color = primaryGreen
+//                )
+//                Icon(
+//                    imageVector = Icons.AutoMirrored.Filled.KeyboardBackspace,
+//                    contentDescription = null,
+//                    tint = primaryGreen,
+//                    modifier = Modifier.size(16.dp)
+//                )
+//            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ReviewSummaryCard(rating, reviewSummary, primaryGreen, textDark)
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (reviews.isEmpty()) {
+            Text(
+                text = "Chưa có đánh giá nào cho sản phẩm này.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = textGray,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+        } else {
+            reviews.forEach { review ->
+                ReviewItem(
+                    name = review.userName ?: "Khách hàng",
+                    time = formatReviewTime(review.createdAt ?: ""),
+                    rating = review.rating ?: 5,
+                    comment = review.comment ?: "",
+                    imageUrls = review.imageUrls,
+                    avatarColor = primaryGreen,
+                    primaryGreen = primaryGreen,
+                    textDark = textDark,
+                    textGray = textGray
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun ReviewSummaryCard(
+    rating: Double, reviewSummary: ReviewSummaryResponse?, primaryGreen: Color, textDark: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFF5F5F5))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = String.format("%.1f", rating),
+                fontSize = 50.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = textDark
+            )
+            Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                for (i in 1..5) {
+                    val icon = when {
+                        rating >= i -> Icons.Default.Star
+                        rating >= (i - 0.5) -> Icons.Default.StarHalf
+                        else -> Icons.Outlined.StarBorder
+                    }
+
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (rating >= (i - 0.5)) primaryGreen else Color(0xFFBDBDBD),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .height(70.dp)
+                .background(Color(0xFFE0E0E0))
+        )
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            val total = reviewSummary?.totalReviews?.toFloat() ?: 1f
+            val safeTotal = if (total == 0f) 1f else total
+
+            val percent5 = (reviewSummary?.star5 ?: 0) / safeTotal
+            val percent4 = (reviewSummary?.star4 ?: 0) / safeTotal
+            val percent3 = (reviewSummary?.star3 ?: 0) / safeTotal
+            val percent2 = (reviewSummary?.star2 ?: 0) / safeTotal
+            val percent1 = (reviewSummary?.star1 ?: 0) / safeTotal
+
+            RatingProgressBar(stars = 5, percentage = percent5, primaryGreen = primaryGreen)
+            RatingProgressBar(stars = 4, percentage = percent4, primaryGreen = primaryGreen)
+            RatingProgressBar(stars = 3, percentage = percent3, primaryGreen = primaryGreen)
+            RatingProgressBar(stars = 2, percentage = percent2, primaryGreen = primaryGreen)
+            RatingProgressBar(stars = 1, percentage = percent1, primaryGreen = primaryGreen)
+        }
+    }
+}
+
+@Composable
+fun RatingProgressBar(stars: Int, percentage: Float, primaryGreen: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = "$stars",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF424242),
+            modifier = Modifier.width(12.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(Color(0xFFE0E0E0))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(percentage)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(primaryGreen)
+            )
+        }
+    }
+}
+
+@Composable
+fun ReviewItem(
+    name: String,
+    time: String,
+    rating: Int,
+    comment: String,
+    imageUrls: List<String>?,
+    avatarColor: Color,
+    primaryGreen: Color,
+    textDark: Color,
+    textGray: Color
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val initials =
+                name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("")
+                    .uppercase()
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(avatarColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = initials,
+                    color = if (avatarColor == primaryGreen) Color.White else textDark,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = textDark
+                )
+                Row(modifier = Modifier.padding(top = 2.dp)) {
+                    repeat(5) { i ->
+                        Icon(
+                            imageVector = if (i < rating) Icons.Default.Star else Icons.Outlined.StarBorder,
+                            contentDescription = null,
+                            tint = if (i < rating) primaryGreen else Color(0xFFBDBDBD),
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+            }
+            Text(
+                text = time,
+                fontSize = 10.sp,
+                color = textGray,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = comment,
+            fontSize = 14.sp,
+            color = Color(0xFF424242),
+            lineHeight = 20.sp
+        )
+
+        if (!imageUrls.isNullOrEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                imageUrls.forEach { url ->
+                    AsyncImage(
+                        model = url,
+                        contentDescription = "Review Image",
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun formatReviewTime(rawTime: String): String {
+    return try {
+        val cleanTime = if (rawTime.contains(".")) rawTime.substringBefore(".") else rawTime
+        val parsedTime = LocalDateTime.parse(cleanTime)
+        val formatter = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy")
+        parsedTime.format(formatter)
+    } catch (e: Exception) {
+        rawTime
     }
 }
 
@@ -635,7 +987,11 @@ fun ProductDetailBottomBar(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, device = "spec:width=411dp,height=1200dp,dpi=420")
+@Preview(
+    showBackground = true,
+    showSystemUi = true,
+    device = "spec:width=411dp,height=1600dp,dpi=420"
+)
 @Composable
 fun ProductDetailScreenPreview() {
     AgritechTheme {
@@ -648,7 +1004,9 @@ fun ProductDetailScreenPreview() {
                 sellerName = "Meadowbrook Farms",
                 description = "Cà rốt cầu vồng hữu cơ, trồng theo chuẩn organic không sử dụng thuốc trừ sâu hóa học.",
                 imageUrls = listOf("https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=600&auto=format&fit=crop"),
-                quantity = 1.5
+                quantity = 1.5,
+                rating = 4.5,
+                reviewCount = 1
             ),
             onBackClick = {},
             onFavoriteClick = {},
@@ -657,7 +1015,23 @@ fun ProductDetailScreenPreview() {
             onAddToCartClick = {},
             onIncreaseQuantity = {},
             onDecreaseQuantity = {},
-            onQuantityChange = {}
+            onQuantityChange = {},
+            reviews = listOf(
+                ReviewModelsResponse(
+                    id = "mock_id_1",
+                    productId = "mock_product_id_1",
+                    userName = "Nguyễn Khánh Ly",
+                    userId = "Nguyễn Khánh Ly",
+                    rating = 5,
+                    comment = "Sản phẩm tươi ngon, đóng gói rất cẩn thận. Giao hàng siêu nhanh luôn, 10 điểm không có nhưng! Lần sau sẽ tiếp tục ủng hộ shop.",
+                    imageUrls = listOf(
+                        "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=200",
+                        "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=200"
+                    ),
+                    createdAt = "2 NGÀY TRƯỚC"
+                )
+            ),
+            reviewSummary = ReviewSummaryResponse(1, 5.0, 1, 0, 0, 0, 0)
         )
     }
 }

@@ -39,6 +39,8 @@ import com.example.agritech_mobile.R
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 enum class OrderStatus(@StringRes val titleRes: Int) {
     PENDING(R.string.pending),
@@ -100,7 +102,7 @@ fun SellerOrdersScreen(
                                 "+"
                             ) ?: "User"
                         }&background=random",
-                        dateTime = res.orderDate ?: "",
+                        dateTime = formatDateTime(res.orderDate),
                         status = try {
                             OrderStatus.valueOf(res.status ?: "PENDING")
                         } catch (e: Exception) {
@@ -118,6 +120,10 @@ fun SellerOrdersScreen(
                         totalAmount = res.totalRevenueFromThisOrder ?: 0.0
                     )
                 } ?: emptyList()
+            }
+
+            is OrderState.OrderBuyerItemSuccess -> {
+                isLoading = false
             }
 
             is OrderState.Success -> {
@@ -251,6 +257,7 @@ fun SellerOrdersContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SellerOrdersTopBar(itemCount: Int) {
+    val userAvatar by hiltViewModel<OrderViewModel>().userAvatar.collectAsState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -264,11 +271,20 @@ fun SellerOrdersTopBar(itemCount: Int) {
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (userAvatar.isNotBlank()) {
+                AsyncImage(
+                    model = userAvatar,
+                    contentDescription = "Avatar",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         Spacer(modifier = Modifier.width(12.dp))
         Text(
@@ -505,5 +521,21 @@ fun SellerOrdersScreenPreview() {
             ),
             onUpdateOrderStatus = { _, _ -> },
         )
+    }
+}
+
+fun formatDateTime(dateTimeStr: String?): String {
+    if (dateTimeStr.isNullOrBlank()) return ""
+    return try {
+        val cleanStr = dateTimeStr.replace(" T", "T").substringBefore(".")
+
+        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+
+        val formatter = SimpleDateFormat("HH:mm, dd/MM/yyyy", Locale.getDefault())
+
+        val date = parser.parse(cleanStr)
+        if (date != null) formatter.format(date) else dateTimeStr
+    } catch (e: Exception) {
+        dateTimeStr
     }
 }

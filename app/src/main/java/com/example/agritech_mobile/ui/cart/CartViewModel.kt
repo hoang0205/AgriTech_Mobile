@@ -2,6 +2,7 @@ package com.example.agritech_mobile.ui.cart
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.agritech_mobile.data.local.TokenManager
 import com.example.agritech_mobile.data.remote.dto.CartResponse
 import com.example.agritech_mobile.data.repository.CartRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,9 +22,12 @@ sealed class CartState {
 
 @HiltViewModel
 class CartViewModel @Inject constructor(
-    private val repository: CartRepository
+    private val repository: CartRepository,
+    private val tokenManager: TokenManager
 ) : ViewModel() {
     private val _cartState = MutableStateFlow<CartState>(CartState.Idle)
+
+    val userAvatar: StateFlow<String> = tokenManager.avatarUrlFlow
     val cartState: StateFlow<CartState> = _cartState.asStateFlow()
 
     init {
@@ -74,7 +78,6 @@ class CartViewModel @Inject constructor(
             val result = repository.addToCart(productId, quantity)
             result.onSuccess { response ->
                 _cartState.value = CartState.ActionSuccess(response.message)
-                loadCartItems()
             }.onFailure { exception ->
                 _cartState.value = CartState.Error(exception.message ?: "Lỗi hệ thống")
             }
