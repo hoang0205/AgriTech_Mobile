@@ -1,7 +1,9 @@
 package com.example.agritech_mobile
 
-import com.example.agritech_mobile.ui.AppNavigation
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -10,8 +12,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.example.agritech_mobile.data.local.TokenManager
+import com.example.agritech_mobile.ui.AppNavigation
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -22,11 +28,19 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var tokenManager: TokenManager
 
+    private var pendingChatRoomId by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+            }
+        }
         super.onCreate(savedInstanceState)
 
-        val accessToken = tokenManager.getAccessToken()
+        pendingChatRoomId = intent.getStringExtra("chatRoomId")
 
+        val accessToken = tokenManager.getAccessToken()
         val startDestination = if (!accessToken.isNullOrEmpty()) {
             "main_screen"
         } else {
@@ -40,13 +54,22 @@ class MainActivity : ComponentActivity() {
         setContent {
             AgritechTheme {
                 Surface(
-                    modifier = Modifier
-                        .fillMaxSize(),
+                    modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation(startRoute = startDestination)
+                    AppNavigation(
+                        startRoute = startDestination,
+                        pendingChatRoomId = pendingChatRoomId,
+                        onChatNavigated = { pendingChatRoomId = null }
+                    )
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingChatRoomId = intent.getStringExtra("chatRoomId")
     }
 }

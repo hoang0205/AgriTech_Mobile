@@ -5,6 +5,7 @@ import coil.ImageLoader
 import com.example.agritech_mobile.data.remote.AiApiService
 import com.example.agritech_mobile.data.remote.AuthApiService
 import com.example.agritech_mobile.data.remote.CartApiService
+import com.example.agritech_mobile.data.remote.NotificationApiService
 import com.example.agritech_mobile.data.remote.OrderApiService
 import com.example.agritech_mobile.data.remote.ProductApiService
 import com.example.agritech_mobile.data.remote.ReviewApiService
@@ -93,6 +94,12 @@ object NetworkModule {
     @Singleton
     fun provideReviewService(retrofit: Retrofit): ReviewApiService {
         return retrofit.create(ReviewApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotificationApiService(retrofit: Retrofit): NotificationApiService {
+        return retrofit.create(NotificationApiService::class.java)
     }
 
     @Provides

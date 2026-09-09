@@ -1,8 +1,10 @@
 package com.example.agritech_mobile.ui
 
+import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,6 +16,7 @@ import com.example.agritech_mobile.ui.auth.LoginScreen
 import com.example.agritech_mobile.ui.auth.ResetPasswordScreen
 import com.example.agritech_mobile.ui.auth.SignUpScreen
 import com.example.agritech_mobile.ui.auth.VerifyEmailScreen
+import com.example.agritech_mobile.ui.chat.ChatScreen
 import com.example.agritech_mobile.ui.checkout.CheckoutScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
@@ -22,12 +25,25 @@ import com.example.agritech_mobile.ui.order.AddressSelectionScreen
 import com.example.agritech_mobile.ui.user.BuyerOrdersScreen
 import com.example.agritech_mobile.ui.user.AddAddressScreen
 import com.example.agritech_mobile.ui.user.ReviewProductScreen
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun AppNavigation(
-    startRoute: String
+    startRoute: String,
+    pendingChatRoomId: String? = null,
+    onChatNavigated: () -> Unit = {}
 ) {
     val navController = rememberNavController()
+
+    LaunchedEffect(pendingChatRoomId) {
+        if (!pendingChatRoomId.isNullOrBlank() && startRoute == "main_screen") {
+            val myId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+            val partnerId = pendingChatRoomId.split("_").firstOrNull { it != myId } ?: ""
+
+            navController.navigate("chat/$pendingChatRoomId/$partnerId/${Uri.encode("Tin nhắn")}")
+            onChatNavigated()
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -293,6 +309,72 @@ fun AppNavigation(
                 shopName = shopName,
                 onBackClick = { navController.popBackStack() },
                 onReviewSuccess = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "chat/{roomId}/{partnerId}/{partnerName}?partnerAvatar={partnerAvatar}&partnerPhone={partnerPhone}&productId={productId}&productName={productName}&productPrice={productPrice}&productImage={productImage}",
+            arguments = listOf(
+                navArgument("roomId") { type = NavType.StringType },
+                navArgument("partnerId") { type = NavType.StringType },
+                navArgument("partnerName") { type = NavType.StringType },
+                navArgument("partnerAvatar") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("partnerPhone") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("productId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("productName") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("productPrice") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("productImage") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val roomId = backStackEntry.arguments?.getString("roomId") ?: ""
+            val partnerId = backStackEntry.arguments?.getString("partnerId") ?: ""
+            val partnerName = backStackEntry.arguments?.getString("partnerName") ?: ""
+            val partnerAvatar = backStackEntry.arguments?.getString("partnerAvatar")
+            val partnerPhone = backStackEntry.arguments?.getString("partnerPhone")
+
+            val productId = backStackEntry.arguments?.getString("productId")
+            val productName = backStackEntry.arguments?.getString("productName")
+            val productPrice = backStackEntry.arguments?.getString("productPrice")?.toDoubleOrNull()
+            val productImage = backStackEntry.arguments?.getString("productImage")
+
+            ChatScreen(
+                roomId = roomId,
+                partnerId = partnerId,
+                partnerName = partnerName,
+                partnerAvatar = partnerAvatar,
+                partnerPhone = partnerPhone,
+                initialProductId = productId,
+                initialProductName = productName,
+                initialProductPrice = productPrice,
+                initialProductImage = productImage,
+                onBack = { navController.popBackStack() },
+                onNavigateToProductDetail = { id ->
+                    navController.navigate("product_detail/$id")
+                }
             )
         }
     }

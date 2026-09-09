@@ -1,8 +1,11 @@
 package com.example.agritech_mobile.ui.chat
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.agritech_mobile.data.remote.NotificationApiService
 import com.example.agritech_mobile.data.remote.dto.ChatMessage
+import com.example.agritech_mobile.data.remote.dto.SendNotificationRequest
 import com.example.agritech_mobile.data.repository.ChatRepository
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,7 +26,8 @@ data class ChatUiState(
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    private val chatRepository: ChatRepository
+    private val chatRepository: ChatRepository,
+    private val notificationApiService: NotificationApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -108,15 +112,34 @@ class ChatViewModel @Inject constructor(
                 participantIds = participantIds
             )
 
-            if (result.isFailure) {
+            if (result.isSuccess) {
+                _uiState.update { it.copy(isSending = false) }
+
+                val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+                val recipientId = participantIds.firstOrNull { it != currentUserId }
+
+                if (!recipientId.isNullOrBlank()) {
+                    try {
+                        val previewText = message.productName?.let { "[Sản phẩm] $it" } ?: message.text
+                        notificationApiService.sendChatNotification(
+                            SendNotificationRequest(
+                                recipientId = recipientId,
+                                senderName = message.senderName.ifBlank { "Tin nhắn mới" },
+                                messageText = previewText,
+                                roomId = currentRoomId
+                            )
+                        )
+                    } catch (e: Exception) {
+                        Log.e("ChatViewModel", "Lỗi kích hoạt thông báo: ${e.localizedMessage}")
+                    }
+                }
+            } else {
                 _uiState.update {
                     it.copy(
                         isSending = false,
                         errorMessage = "Không thể gửi tin nhắn. Vui lòng thử lại!"
                     )
                 }
-            } else {
-                _uiState.update { it.copy(isSending = false) }
             }
         }
     }

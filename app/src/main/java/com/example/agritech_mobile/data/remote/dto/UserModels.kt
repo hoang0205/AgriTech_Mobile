@@ -15,3 +15,14 @@ data class UpdatePasswordRequest(
     val newPassword: String,
     val confirmPassword: String
 )
+
+data class FcmTokenRequest(
+    val fcmToken: String
+)
+
+data class SendNotificationRequest(
+    val recipientId: String,
+    val senderName: String,
+    val messageText: String,
+    val roomId: String
+)
