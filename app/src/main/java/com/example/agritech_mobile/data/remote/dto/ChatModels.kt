@@ -4,6 +4,7 @@ data class ChatMessage(
     val id: String = "",
     val senderId: String = "",
     val senderName: String = "",
+    val senderAvatar: String? = null,
     val text: String = "",
     val timestamp: Long = System.currentTimeMillis(),
 

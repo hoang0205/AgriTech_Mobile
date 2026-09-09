@@ -46,7 +46,8 @@ fun MainScreen(
     onNavigateToCreateProduct: () -> Unit,
     onNavigateToCheckout: (String) -> Unit,
     onLogoutSuccess: () -> Unit,
-    onNavigateToBuyerOrders: (String) -> Unit
+    onNavigateToBuyerOrders: (String) -> Unit,
+    onNavigateToChat: () -> Unit
 ) {
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
 
@@ -142,7 +143,7 @@ fun MainScreen(
             when (currentTab) {
                 "HOME" -> HomeScreen(
                     onNavigateToDetail = onNavigateToDetail,
-                    onNavigateToCreateProduct = onNavigateToCreateProduct
+                    onNavigateToChat = onNavigateToChat,
                 )
 
                 "ORDERS" -> SellerOrdersScreen()

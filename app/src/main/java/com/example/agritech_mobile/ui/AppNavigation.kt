@@ -16,6 +16,7 @@ import com.example.agritech_mobile.ui.auth.LoginScreen
 import com.example.agritech_mobile.ui.auth.ResetPasswordScreen
 import com.example.agritech_mobile.ui.auth.SignUpScreen
 import com.example.agritech_mobile.ui.auth.VerifyEmailScreen
+import com.example.agritech_mobile.ui.chat.ChatListScreen
 import com.example.agritech_mobile.ui.chat.ChatScreen
 import com.example.agritech_mobile.ui.checkout.CheckoutScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
@@ -155,6 +156,9 @@ fun AppNavigation(
                 },
                 onNavigateToBuyerOrders = { status ->
                     navController.navigate("buyer_orders/$status")
+                },
+                onNavigateToChat = {
+                    navController.navigate("chat_list")
                 }
             )
         }
@@ -168,8 +172,22 @@ fun AppNavigation(
             val productId = backStackEntry.arguments?.getString("productId") ?: ""
 
             ProductDetailScreen(
+                productId = productId,
                 onBackClick = { navController.popBackStack() },
-                productId = productId
+                onChatClick = { sellerId, sellerName, sellerAvatar, sellerPhone, pId, pName, pPrice, pImage ->
+                    val myUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                    val roomId = com.example.agritech_mobile.data.repository.ChatRepository.generateRoomId(myUserId, sellerId)
+
+                    navController.navigate(
+                        "chat/$roomId/$sellerId/${Uri.encode(sellerName)}?" +
+                                "partnerAvatar=${Uri.encode(sellerAvatar ?: "")}&" +
+                                "partnerPhone=${sellerPhone ?: ""}&" +
+                                "productId=$pId&" +
+                                "productName=${Uri.encode(pName)}&" +
+                                "productPrice=$pPrice&" +
+                                "productImage=${Uri.encode(pImage ?: "")}"
+                    )
+                }
             )
         }
 
@@ -374,6 +392,17 @@ fun AppNavigation(
                 onBack = { navController.popBackStack() },
                 onNavigateToProductDetail = { id ->
                     navController.navigate("product_detail/$id")
+                }
+            )
+        }
+
+        composable("chat_list") {
+            ChatListScreen(
+                onBackClick = { navController.popBackStack() },
+                onRoomClick = { roomId, partnerId, partnerName, partnerAvatar ->
+                    navController.navigate(
+                        "chat/$roomId/$partnerId/${Uri.encode(partnerName)}?partnerAvatar=${Uri.encode(partnerAvatar ?: "")}"
+                    )
                 }
             )
         }

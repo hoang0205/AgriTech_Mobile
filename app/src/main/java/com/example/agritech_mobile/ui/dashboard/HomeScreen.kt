@@ -66,7 +66,7 @@ data class HomeUiState(
 fun HomeScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
     onNavigateToDetail: (String) -> Unit,
-    onNavigateToCreateProduct: () -> Unit
+    onNavigateToChat: () -> Unit
 ) {
     val context = LocalContext.current
     val dashboardState by viewModel.dashboardState.collectAsStateWithLifecycle()
@@ -208,7 +208,8 @@ fun HomeScreen(
             uiState = uiState.copy(selectedCategory = null)
             viewModel.getProducts()
         },
-        onResetCategoryClick = {}
+        onResetCategoryClick = {},
+        onNavigateToChat = onNavigateToChat
     )
 }
 
@@ -223,7 +224,8 @@ fun HomeContent(
     onProductClick: (Product) -> Unit,
     onSeeAllClick: () -> Unit,
     onResetCategory: () -> Unit = {},
-    onResetCategoryClick: () -> Unit = {}
+    onResetCategoryClick: () -> Unit = {},
+    onNavigateToChat: () -> Unit
 ) {
     var isSearchMode by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -245,7 +247,7 @@ fun HomeContent(
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut()
         ) {
-            HomeHeader(userName = uiState.userName, userAvatar = uiState.userAvatar)
+            HomeHeader(userName = uiState.userName, userAvatar = uiState.userAvatar, onNavigateToChat = onNavigateToChat)
         }
 
         HomeSearchBar(
@@ -525,7 +527,7 @@ fun TextSuggestionItem(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun HomeHeader(userName: String, userAvatar: String) {
+fun HomeHeader(userName: String, userAvatar: String, onNavigateToChat: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -561,6 +563,13 @@ fun HomeHeader(userName: String, userAvatar: String) {
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f)
         )
+        IconButton(onClick = onNavigateToChat) {
+            Icon(
+                Icons.Default.Chat,
+                contentDescription = "Chat",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
         IconButton(onClick = { /* TODO: Notification */ }) {
             Icon(
                 Icons.Default.Notifications,
@@ -765,7 +774,9 @@ fun HomeScreenPreview() {
             onCategoryClick = {},
             onProductClick = {},
             onSeeAllClick = {},
-            onResetCategory = {}
+            onResetCategory = {},
+            onResetCategoryClick = {},
+            onNavigateToChat = {}
         )
     }
 }

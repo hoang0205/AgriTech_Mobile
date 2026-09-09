@@ -70,6 +70,8 @@ class AuthRepository @Inject constructor(
 
     suspend fun logout(accessToken: String): Result<MessageResponse> {
         return try {
+            FirebaseAuth.getInstance().signOut()
+
             val request = LogoutRequest(accessToken)
             val response = apiService.logout(request)
 
@@ -81,6 +83,7 @@ class AuthRepository @Inject constructor(
                 Result.failure(Exception("Lỗi đăng xuất từ Server: ${response.code()}"))
             }
         } catch (e: Exception) {
+            FirebaseAuth.getInstance().signOut()
             tokenManager.clearTokens()
             Result.failure(Exception("Lỗi kết nối: ${e.localizedMessage}"))
         }

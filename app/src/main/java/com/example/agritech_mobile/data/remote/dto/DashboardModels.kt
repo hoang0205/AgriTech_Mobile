@@ -28,7 +28,10 @@ data class ProductResponse(
     val imageUrls: List<String>,
     val farmerName: String,
     val rating: Double,
-    val reviewCount: Int
+    val reviewCount: Int,
+    val farmerId: String,
+    val farmerAvatar: String?,
+    val farmerPhone: String?
 )
 
 

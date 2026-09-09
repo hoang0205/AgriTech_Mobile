@@ -26,13 +26,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.data.remote.dto.ChatMessage
+import com.example.agritech_mobile.ui.dashboard.DashboardViewModel
 import com.google.firebase.auth.FirebaseAuth
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -51,24 +56,43 @@ fun ChatScreen(
     initialProductImage: String? = null,
     onBack: () -> Unit,
     onNavigateToProductDetail: (String) -> Unit = {},
-    viewModel: ChatViewModel = hiltViewModel()
+    viewModel: ChatViewModel = hiltViewModel(),
+    dashboardViewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
     val context = LocalContext.current
 
-    LaunchedEffect(roomId) {
-        viewModel.initChatRoom(roomId, listOf(currentUserId, partnerId))
+    val myAvatar = dashboardViewModel.userAvatar.collectAsStateWithLifecycle().value
+    val myName = dashboardViewModel.userName.collectAsStateWithLifecycle().value
 
-        if (!initialProductId.isNullOrBlank() && initialProductName != null && initialProductPrice != null) {
-            viewModel.sendProductCard(
-                senderName = "Tôi",
-                productId = initialProductId,
-                productName = initialProductName,
-                productPrice = initialProductPrice,
-                productImage = initialProductImage ?: ""
-            )
-        }
+    LaunchedEffect(roomId, myName, myAvatar) {
+        viewModel.initChatRoom(
+            roomId = roomId,
+            partnerId = partnerId,
+            partnerName = partnerName,
+            partnerAvatar = partnerAvatar,
+            myName = myName,
+            myAvatar = myAvatar
+        )
+    }
+
+    var pendingProduct by remember(roomId) {
+        mutableStateOf(
+            if (!initialProductId.isNullOrBlank() && initialProductName != null && initialProductPrice != null) {
+                ChatMessage(
+                    id = "draft_product",
+                    senderId = currentUserId,
+                    senderName = myName,
+                    senderAvatar = myAvatar,
+                    productId = initialProductId,
+                    productName = initialProductName,
+                    productPrice = initialProductPrice,
+                    productImage = initialProductImage,
+                    timestamp = System.currentTimeMillis()
+                )
+            } else null
+        )
     }
 
     ChatContent(
@@ -77,6 +101,7 @@ fun ChatScreen(
         partnerName = partnerName,
         partnerAvatar = partnerAvatar,
         hasPhone = !partnerPhone.isNullOrBlank(),
+        pendingProduct = pendingProduct,
         onBack = onBack,
         onCallClick = {
             partnerPhone?.let { phone ->
@@ -85,11 +110,17 @@ fun ChatScreen(
             }
         },
         onInputTextChanged = viewModel::onInputTextChanged,
-        onSendClicked = { viewModel.sendTextMessage("Tôi") },
+        onSendClicked = {
+            viewModel.sendMessageWithOptionalProduct(
+                product = pendingProduct,
+                senderName = myName,
+                senderAvatar = myAvatar
+            )
+            pendingProduct = null
+        },
         onProductClick = onNavigateToProductDetail
     )
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,6 +130,7 @@ fun ChatContent(
     partnerName: String,
     partnerAvatar: String?,
     hasPhone: Boolean,
+    pendingProduct: ChatMessage?,
     onBack: () -> Unit,
     onCallClick: () -> Unit,
     onInputTextChanged: (String) -> Unit,
@@ -108,9 +140,11 @@ fun ChatContent(
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(uiState.messages.size) {
-        if (uiState.messages.isNotEmpty()) {
-            listState.animateScrollToItem(uiState.messages.size - 1)
+    // Cuộn xuống dòng cuối khi có tin nhắn mới hoặc có thẻ tạm
+    val totalCount = uiState.messages.size + (if (pendingProduct != null) 1 else 0)
+    LaunchedEffect(totalCount) {
+        if (totalCount > 0) {
+            listState.animateScrollToItem(totalCount)
         }
     }
 
@@ -132,12 +166,6 @@ fun ChatContent(
                                     .clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .background(Color(0xFF2E7D32), CircleShape)
-                                    .align(Alignment.BottomEnd)
-                            )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
@@ -148,9 +176,9 @@ fun ChatContent(
                                 color = Color(0xFF1B5E20)
                             )
                             Text(
-                                text = "Online",
+                                text = "Người bán",
                                 fontSize = 12.sp,
-                                color = Color(0xFF2E7D32)
+                                color = Color.Gray
                             )
                         }
                     }
@@ -194,7 +222,7 @@ fun ChatContent(
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.Bottom)
             ) {
                 item {
                     Box(
@@ -234,6 +262,15 @@ fun ChatContent(
                         )
                     }
                 }
+
+                if (pendingProduct != null) {
+                    item {
+                        ProductMessageCard(
+                            message = pendingProduct,
+                            onProductClick = { onProductClick(pendingProduct.productId ?: "") }
+                        )
+                    }
+                }
             }
         }
     }
@@ -254,8 +291,9 @@ fun ChatBubbleItem(
         verticalAlignment = Alignment.Bottom
     ) {
         if (!isMe) {
+            val displayAvatar = message.senderAvatar ?: partnerAvatar ?: "https://via.placeholder.com/150"
             AsyncImage(
-                model = partnerAvatar ?: "https://via.placeholder.com/150",
+                model = displayAvatar,
                 contentDescription = null,
                 modifier = Modifier
                     .size(28.dp)
@@ -350,7 +388,9 @@ fun ProductMessageCard(
                     text = message.productName ?: "Sản phẩm",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
-                    color = Color.Black
+                    color = Color.Black,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
@@ -379,6 +419,9 @@ fun ChatBottomInput(
     onTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit
 ) {
+    val isImeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     Surface(
         color = Color.White,
         shadowElevation = 8.dp
@@ -386,8 +429,13 @@ fun ChatBottomInput(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .imePadding()
+                .then(
+                    if (isImeVisible) {
+                        Modifier.padding(bottom = max(navBarHeight, 24.dp))
+                    } else {
+                        Modifier.navigationBarsPadding()
+                    }
+                )
                 .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -435,49 +483,40 @@ fun ChatBottomInput(
     }
 }
 
+
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun ChatScreenPreview() {
     val sampleMessages = listOf(
         ChatMessage(
             id = "1",
-            productId = "prod_001",
-            productName = "Durian Ri6 (Premium Grade)",
-            productPrice = 120000.0,
-            productImage = "https://via.placeholder.com/150",
             senderId = "user_2",
-            timestamp = 1714500000000L
-        ),
-        ChatMessage(
-            id = "2",
-            senderId = "user_2",
-            text = "Chào bạn, sầu riêng Ri6 nhà mình vừa hái sáng nay, bao ăn nhé!",
+            text = "Chào bạn! Shop có thể hỗ trợ gì cho bạn?",
             timestamp = 1714500100000L
-        ),
-        ChatMessage(
-            id = "3",
-            senderId = "user_1",
-            text = "Chào chú, con muốn đặt 2 quả tầm 5-6kg ạ. Có giao trong chiều nay được không chú?",
-            timestamp = 1714500200000L
-        ),
-        ChatMessage(
-            id = "4",
-            senderId = "user_2",
-            text = "Được nhé con. Chú chọn cho 2 quả ngon nhất, chiều 3h chú giao qua.",
-            timestamp = 1714500300000L
         )
+    )
+
+    val sampleDraftProduct = ChatMessage(
+        id = "draft_prod",
+        productId = "prod_001",
+        productName = "Sầu riêng Ri6 Chín Cây (Loại 1)",
+        productPrice = 120000.0,
+        productImage = "https://via.placeholder.com/150",
+        senderId = "user_1",
+        timestamp = System.currentTimeMillis()
     )
 
     ChatContent(
         uiState = ChatUiState(
             messages = sampleMessages,
-            inputText = "Dạ vâng con cảm ơn chú!",
+            inputText = "Quả này còn hàng giao liền không shop?",
             isLoading = false
         ),
         currentUserId = "user_1",
-        partnerName = "Farmer Hoang",
+        partnerName = "Nông Trại Hữu Cơ Ba Vì",
         partnerAvatar = null,
         hasPhone = true,
+        pendingProduct = sampleDraftProduct,
         onBack = {},
         onCallClick = {},
         onInputTextChanged = {},

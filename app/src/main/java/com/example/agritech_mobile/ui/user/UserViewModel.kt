@@ -9,6 +9,8 @@ import com.example.agritech_mobile.data.remote.dto.WardResponse
 import com.example.agritech_mobile.data.repository.AuthRepository
 import com.example.agritech_mobile.data.repository.UploadRepository
 import com.example.agritech_mobile.data.repository.UserRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -203,6 +205,14 @@ class UserViewModel @Inject constructor(
                 } catch (e: Exception) {
                 }
             }
+
+            try {
+                FirebaseAuth.getInstance().signOut()
+            } catch (_: Exception) {}
+
+            try {
+                FirebaseMessaging.getInstance().deleteToken()
+            } catch (_: Exception) {}
 
             tokenManager.clearAll()
 

@@ -63,12 +63,12 @@ data class ProductDetailUiState(
     val rating: Double = 5.0,
     val reviewCount: Int = 0,
     val stock: String = "0",
+    val sellerId: String = "",
     val sellerName: String = "Đang tải...",
+    val sellerAvatar: String? = null,
+    val sellerPhone: String? = null,
     val description: String = "Đang tải...",
-    val features: List<String> = listOf(
-        "Sản phẩm sạch",
-        "Nguồn gốc rõ ràng"
-    ),
+    val features: List<String> = listOf("Sản phẩm sạch", "Nguồn gốc rõ ràng"),
     val shippingFee: String = "15.000",
     val isFavorite: Boolean = false,
     val isLoading: Boolean = false,
@@ -80,6 +80,16 @@ data class ProductDetailUiState(
 fun ProductDetailScreen(
     onBackClick: () -> Unit = {},
     productId: String = "",
+    onChatClick: (
+        sellerId: String,
+        sellerName: String,
+        sellerAvatar: String?,
+        sellerPhone: String?,
+        productId: String,
+        productName: String,
+        productPrice: Double,
+        productImage: String?
+    ) -> Unit = { _, _, _, _, _, _, _, _ -> },
     viewModel: DashboardViewModel = hiltViewModel(),
     cartViewModel: CartViewModel = hiltViewModel()
 ) {
@@ -116,7 +126,10 @@ fun ProductDetailScreen(
                     rating = productRes.rating,
                     reviewCount = productRes.reviewCount,
                     description = productRes.description,
+                    sellerId = productRes.farmerId,
                     sellerName = productRes.farmerName,
+                    sellerAvatar = productRes.farmerAvatar,
+                    sellerPhone = productRes.farmerPhone,
                     stock = productRes.quantity.toString(),
                     imageUrls = productRes.imageUrls,
                 )
@@ -169,7 +182,18 @@ fun ProductDetailScreen(
         onBackClick = onBackClick,
         onFavoriteClick = { uiState = uiState.copy(isFavorite = !uiState.isFavorite) },
         onViewShopClick = { /* TODO*/ },
-        onChatClick = { /* TODO */ },
+        onChatClick = {
+            onChatClick(
+                uiState.sellerId,
+                uiState.sellerName,
+                uiState.sellerAvatar,
+                uiState.sellerPhone,
+                uiState.id,
+                uiState.name,
+                uiState.price.toDoubleOrNull() ?: 0.0,
+                uiState.imageUrls.firstOrNull()
+            )
+        },
         onAddToCartClick = {
             cartViewModel.addToCart(uiState.id, uiState.quantity)
         },
@@ -879,107 +903,107 @@ fun ProductDetailBottomBar(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-//            Box(
-//                modifier = Modifier
-//                    .size(52.dp)
-//                    .clip(RoundedCornerShape(12.dp))
-//                    .background(Color(0xFFF5F5F5))
-//                    .clickable { onChatClick() },
-//                contentAlignment = Alignment.Center
-//            ) {
-//                Icon(
-//                    Icons.Default.ChatBubbleOutline,
-//                    contentDescription = "Chat",
-//                    tint = Color(0xFF1B5E20)
-//                )
-//            }
-//
-//            Spacer(modifier = Modifier.width(12.dp))
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFF5F5F5))
+                    .clickable { onChatClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ChatBubbleOutline,
+                    contentDescription = "Chat",
+                    tint = Color(0xFF1B5E20),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
 
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFFF5F5F5))
-                    .height(52.dp)
-                    .padding(horizontal = 4.dp),
+                    .height(48.dp)
+                    .padding(horizontal = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onDecreaseQuantity, modifier = Modifier.size(36.dp)) {
+                IconButton(
+                    onClick = onDecreaseQuantity,
+                    modifier = Modifier.size(28.dp)
+                ) {
                     Icon(
                         Icons.Default.Remove,
                         contentDescription = "Decrease",
                         tint = Color(0xFF212121),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
 
                 BasicTextField(
                     value = displayQuantity,
-                    onValueChange = { onQuantityChange(it) },
-                    modifier = Modifier
-                        .width(IntrinsicSize.Min)
-                        .widthIn(min = 40.dp),
+                    onValueChange = onQuantityChange,
+                    modifier = Modifier.widthIn(min = 28.dp, max = 45.dp),
                     textStyle = androidx.compose.ui.text.TextStyle(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         color = Color(0xFF212121),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     ),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal
-                    ),
-                    singleLine = true,
-                    decorationBox = { innerTextField ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            innerTextField()
-                            Spacer(modifier = Modifier.width(4.dp))
-                        }
-                    }
-                )
-                Text(
-                    text = unit,
-                    fontSize = 14.sp,
-                    color = Color.Black,
-                    maxLines = 1,
-                    fontWeight = FontWeight.Bold
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true
                 )
 
-                IconButton(onClick = onIncreaseQuantity, modifier = Modifier.size(36.dp)) {
+                Text(
+                    text = unit,
+                    fontSize = 12.sp,
+                    color = Color.DarkGray,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(end = 2.dp)
+                )
+
+                IconButton(
+                    onClick = onIncreaseQuantity,
+                    modifier = Modifier.size(28.dp)
+                ) {
                     Icon(
                         Icons.Default.Add,
                         contentDescription = "Increase",
                         tint = Color(0xFF212121),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Button(
                 onClick = onAddToCartClick,
                 modifier = Modifier
                     .weight(1f)
-                    .height(52.dp),
+                    .height(48.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20)),
                 shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(0.dp)
+                contentPadding = PaddingValues(horizontal = 8.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        Icons.Default.ShoppingCart,
+                        imageVector = Icons.Default.ShoppingCart,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = stringResource(R.string.add_to_cart_btn),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "Thêm vào giỏ",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }
