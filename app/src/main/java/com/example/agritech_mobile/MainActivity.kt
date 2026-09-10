@@ -16,10 +16,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
 import com.example.agritech_mobile.data.local.TokenManager
+import com.example.agritech_mobile.data.repository.AuthRepository
 import com.example.agritech_mobile.ui.AppNavigation
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -27,6 +30,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var tokenManager: TokenManager
+
+    @Inject
+    lateinit var authRepository: AuthRepository
 
     private var pendingChatRoomId by mutableStateOf<String?>(null)
 
@@ -42,6 +48,7 @@ class MainActivity : ComponentActivity() {
 
         val accessToken = tokenManager.getAccessToken()
         val startDestination = if (!accessToken.isNullOrEmpty()) {
+            lifecycleScope.launch { authRepository.registerFcmToken() }
             "main_screen"
         } else {
             "auth_graph"

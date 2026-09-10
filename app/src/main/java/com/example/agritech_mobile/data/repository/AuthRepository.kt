@@ -44,13 +44,7 @@ class AuthRepository @Inject constructor(
                     }
                 }
 
-                try {
-                    val fcmToken = FirebaseMessaging.getInstance().token.await()
-                    notificationApiService.updateFcmToken(FcmTokenRequest(fcmToken))
-                    Log.d("AuthRepository", "Đã cập nhật FCM Token lên server thành công: $fcmToken")
-                } catch (e: Exception) {
-                    Log.e("AuthRepository", "Cập nhật FCM Token thất bại: ${e.localizedMessage}")
-                }
+                registerFcmToken()
 
                 Result.success(loginResponse)
             } else {
@@ -68,6 +62,24 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun registerFcmToken(token: String? = null) {
+        if (tokenManager.getAccessToken().isNullOrEmpty()) {
+            Log.d("AuthRepository", "Bỏ qua cập nhật FCM token: chưa đăng nhập")
+            return
+        }
+        try {
+            val fcmToken = token ?: FirebaseMessaging.getInstance().token.await()
+            val response = notificationApiService.updateFcmToken(FcmTokenRequest(fcmToken))
+            if (response.isSuccessful) {
+                Log.d("AuthRepository", "Đã cập nhật FCM Token lên server thành công: $fcmToken")
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("AuthRepository", "Server từ chối cập nhật FCM token. Code=${response.code()}, body=$errorBody")
+            }
+        } catch (e: Exception) {
+            Log.e("AuthRepository", "Cập nhật FCM Token thất bại: ${e.localizedMessage}")
+        }
+    }
     suspend fun logout(accessToken: String): Result<MessageResponse> {
         return try {
             FirebaseAuth.getInstance().signOut()

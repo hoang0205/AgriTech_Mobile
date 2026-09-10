@@ -9,7 +9,7 @@ import retrofit2.http.PUT
 
 interface NotificationApiService {
 
-    @PUT("/api/users/fcm-token")
+    @PUT("/api/user/fcm-token")
     suspend fun updateFcmToken(
         @Body request: FcmTokenRequest
     ): Response<Map<String, String>>
