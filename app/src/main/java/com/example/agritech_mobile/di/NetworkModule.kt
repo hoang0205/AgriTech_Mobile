@@ -27,7 +27,7 @@ object NetworkModule {
 
 //    private const val BASE_URL = "https://agritech-wtqr.onrender.com/"
 
-    private const val BASE_URL = "http://192.168.1.76:2507/"
+    private const val BASE_URL = "http://10.125.248.120:2507/"
 
     private const val BASE_AI_URL = "http://10.10.10.213:8000/"
     @Provides

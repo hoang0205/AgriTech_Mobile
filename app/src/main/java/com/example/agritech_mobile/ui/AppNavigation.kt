@@ -5,6 +5,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,6 +24,7 @@ import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.main.MainScreen
 import com.example.agritech_mobile.ui.order.AddressSelectionScreen
+import com.example.agritech_mobile.ui.order.MapPickerScreen
 import com.example.agritech_mobile.ui.user.BuyerOrdersScreen
 import com.example.agritech_mobile.ui.user.AddAddressScreen
 import com.example.agritech_mobile.ui.user.ReviewProductScreen
@@ -280,12 +282,26 @@ fun AppNavigation(
             )
         }
 
-        composable("add_address") {
+        composable("add_address") { backStackEntry ->
+            val pickedProvince = backStackEntry.savedStateHandle
+                .getStateFlow<String?>("picked_province", null)
+                .collectAsState()
+
+            val pickedWard = backStackEntry.savedStateHandle
+                .getStateFlow<String?>("picked_ward", null)
+                .collectAsState()
+
+            val pickedDetail = backStackEntry.savedStateHandle
+                .getStateFlow<String?>("picked_detail", null)
+                .collectAsState()
+
             AddAddressScreen(
                 onBackClick = { navController.popBackStack() },
-                onSaveSuccess = {
-                    navController.popBackStack()
-                }
+                onSaveSuccess = { navController.popBackStack() },
+                onPickMapClick = { navController.navigate("map_picker") },
+                pickedProvince = pickedProvince.value,
+                pickedWard = pickedWard.value,
+                pickedDetail = pickedDetail.value
             )
         }
 
@@ -392,6 +408,22 @@ fun AppNavigation(
                 onBack = { navController.popBackStack() },
                 onNavigateToProductDetail = { id ->
                     navController.navigate("product_detail/$id")
+                }
+            )
+        }
+
+        composable("map_picker") {
+            MapPickerScreen(
+                onAddressSelected = { parsedAddress, latLng ->
+                    navController.previousBackStackEntry?.savedStateHandle?.apply {
+                        set("picked_province", parsedAddress.province)
+                        set("picked_ward", parsedAddress.ward)
+                        set("picked_detail", parsedAddress.detail)
+                    }
+                    navController.popBackStack()
+                },
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }

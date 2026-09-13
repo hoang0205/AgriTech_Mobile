@@ -1,6 +1,7 @@
 package com.example.agritech_mobile.ui.user
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,7 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -25,19 +24,28 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
 import com.example.agritech_mobile.ui.theme.AgritechTheme
+
+private fun normalizeName(name: String): String {
+    return name
+        .replace(Regex("^(Thành phố|Tỉnh|TP\\.?|Quận|Huyện|Thị xã|TX\\.?|Q\\.?|H\\.?|Phường|Xã|Thị trấn|P\\.?|X\\.?|TT\\.?)\\s+", RegexOption.IGNORE_CASE), "")
+        .trim()
+        .lowercase()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddAddressScreen(
     onBackClick: () -> Unit,
     onSaveSuccess: () -> Unit,
+    onPickMapClick: () -> Unit = {},
+    pickedProvince: String? = null,
+    pickedWard: String? = null,
+    pickedDetail: String? = null,
     viewModel: UserViewModel = hiltViewModel()
 ) {
     val addressState by viewModel.addressState.collectAsState()
-
     val provinces by viewModel.provinces.collectAsState()
     val wards by viewModel.wards.collectAsState()
 
@@ -48,19 +56,19 @@ fun AddAddressScreen(
     AddAddressContent(
         onBackClick = onBackClick,
         onSaveSuccess = onSaveSuccess,
+        onPickMapClick = onPickMapClick,
+        pickedProvince = pickedProvince,
+        pickedWard = pickedWard,
+        pickedDetail = pickedDetail,
         addressState = addressState,
-
         provinces = provinces.map { it.name },
         wards = wards.map { it.name },
-
         onProvinceSelected = { selectedProvinceName ->
             val provinceCode = provinces.find { it.name == selectedProvinceName }?.code
-
             if (provinceCode != null) {
                 viewModel.getWards(provinceCode)
             }
         },
-
         onAddNewAddress = { name, phone, address, isDefault ->
             viewModel.addNewAddress(name, phone, address, isDefault)
         }
@@ -75,6 +83,10 @@ fun AddAddressContent(
     addressState: AddressState,
     provinces: List<String>,
     wards: List<String>,
+    pickedProvince: String? = null,
+    pickedWard: String? = null,
+    pickedDetail: String? = null,
+    onPickMapClick: () -> Unit = {},
     onProvinceSelected: (String) -> Unit,
     onAddNewAddress: (String, String, String, Boolean) -> Unit
 ) {
@@ -86,8 +98,43 @@ fun AddAddressContent(
     var ward by remember { mutableStateOf("") }
     var detail by remember { mutableStateOf("") }
     var isDefault by remember { mutableStateOf(false) }
-
     var isSubmitting by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pickedDetail) {
+        if (!pickedDetail.isNullOrBlank()) {
+            detail = pickedDetail
+        }
+    }
+
+    LaunchedEffect(pickedProvince, provinces) {
+        if (!pickedProvince.isNullOrBlank() && provinces.isNotEmpty()) {
+            val cleanMapProvince = normalizeName(pickedProvince)
+            val matchedCity = provinces.find { p ->
+                val cleanP = normalizeName(p)
+                cleanP == cleanMapProvince || cleanP.contains(cleanMapProvince) || cleanMapProvince.contains(cleanP)
+            }
+            if (matchedCity != null && city != matchedCity) {
+                city = matchedCity
+                ward = ""
+                onProvinceSelected(matchedCity)
+            }
+        }
+    }
+
+    LaunchedEffect(pickedWard, wards) {
+        if (!pickedWard.isNullOrBlank() && wards.isNotEmpty()) {
+            val cleanMapWard = normalizeName(pickedWard)
+            val matchedWard = wards.find { w ->
+                val cleanW = normalizeName(w)
+                cleanW == cleanMapWard || cleanW.contains(cleanMapWard) || cleanMapWard.contains(cleanW)
+            }
+            if (matchedWard != null) {
+                ward = matchedWard
+            } else {
+                ward = pickedWard
+            }
+        }
+    }
 
     LaunchedEffect(addressState) {
         if (isSubmitting) {
@@ -97,12 +144,10 @@ fun AddAddressContent(
                     Toast.makeText(context, "Thêm địa chỉ thành công", Toast.LENGTH_SHORT).show()
                     onSaveSuccess()
                 }
-
                 is AddressState.Error -> {
                     isSubmitting = false
                     Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
                 }
-
                 else -> {}
             }
         }
@@ -147,16 +192,16 @@ fun AddAddressContent(
                     ) {
                         Button(
                             onClick = {
-                                if (name.isBlank() || phone.isBlank() || detail.isBlank()) {
+                                if (name.isBlank() || phone.isBlank() || detail.isBlank() || city.isBlank()) {
                                     Toast.makeText(
                                         context,
-                                        "Vui lòng nhập đủ thông tin",
+                                        "Vui lòng nhập đủ thông tin địa chỉ",
                                         Toast.LENGTH_SHORT
                                     ).show()
                                     return@Button
                                 }
                                 isSubmitting = true
-                                val fullAddress = "$detail, $ward, $city"
+                                val fullAddress = if (ward.isNotBlank()) "$detail, $ward, $city" else "$detail, $city"
                                 onAddNewAddress(name, phone, fullAddress, isDefault)
                             },
                             modifier = Modifier
@@ -251,6 +296,34 @@ fun AddAddressContent(
                             lines = 3
                         )
 
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedButton(
+                            onClick = onPickMapClick,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, Color(0xFF1B5E20)),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = Color(0xFFE8F5E9).copy(alpha = 0.5f),
+                                contentColor = Color(0xFF1B5E20)
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = Color(0xFF1B5E20)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Chọn vị trí trên bản đồ",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+                        }
+
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Row(
@@ -274,18 +347,11 @@ fun AddAddressContent(
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        stringResource(R.string.add_address_set_default),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-//                                    Text(
-//                                        stringResource(R.string.add_address_set_default_desc),
-//                                        color = Color.Gray,
-//                                        fontSize = 12.sp
-//                                    )
-                                }
+                                Text(
+                                    stringResource(R.string.add_address_set_default),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
                             }
                             Switch(
                                 checked = isDefault,
@@ -300,57 +366,6 @@ fun AddAddressContent(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-
-//                Box(
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .height(180.dp)
-//                        .clip(RoundedCornerShape(16.dp))
-//                ) {
-//                    AsyncImage(
-//                        model = "https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=800",
-//                        contentDescription = "Map",
-//                        contentScale = ContentScale.Crop,
-//                        modifier = Modifier.fillMaxSize()
-//                    )
-//                    Box(
-//                        modifier = Modifier
-//                            .fillMaxSize()
-//                            .background(Color.Black.copy(alpha = 0.5f))
-//                    )
-//                    Icon(
-//                        Icons.Default.LocationOn,
-//                        contentDescription = null,
-//                        tint = Color(0xFF4CAF50),
-//                        modifier = Modifier
-//                            .align(Alignment.Center)
-//                            .size(40.dp)
-//                    )
-//
-//                    Button(
-//                        onClick = { /* Lấy vị trí */ },
-//                        modifier = Modifier
-//                            .align(Alignment.BottomEnd)
-//                            .padding(12.dp),
-//                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-//                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-//                    ) {
-//                        Icon(
-//                            Icons.Default.MyLocation,
-//                            contentDescription = null,
-//                            tint = Color(0xFF1B5E20),
-//                            modifier = Modifier.size(16.dp)
-//                        )
-//                        Spacer(modifier = Modifier.width(4.dp))
-//                        Text(
-//                            stringResource(R.string.add_address_my_location),
-//                            color = Color(0xFF212121),
-//                            fontWeight = FontWeight.Medium,
-//                            fontSize = 12.sp
-//                        )
-//                    }
-//                }
-//                Spacer(modifier = Modifier.height(24.dp))
             }
         }
 
@@ -385,7 +400,8 @@ fun CustomTextField(
                 label,
                 color = Color(0xFF1B5E20),
                 fontWeight = FontWeight.Bold,
-            ) },
+            )
+        },
         placeholder = { Text(placeholder, color = Color.Gray) },
         modifier = Modifier
             .fillMaxWidth()
