@@ -108,4 +108,34 @@ class OrderRepository @Inject constructor(
             Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
         }
     }
+    suspend fun getVnpayPaymentUrl(orderId: Long): Result<String> {
+        return try {
+            val response = orderApiService.getVnpayPaymentUrl(orderId)
+            if (response.isSuccessful) {
+                val url = response.body()?.get("paymentUrl")
+                if (!url.isNullOrBlank()) {
+                    Result.success(url)
+                } else {
+                    Result.failure(Exception("Không tìm thấy đường dẫn thanh toán"))
+                }
+            } else {
+                Result.failure(Exception("Lỗi máy chủ (${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun markOrderAsPaid(orderId: Long): Result<Unit> {
+        return try {
+            val response = orderApiService.markOrderAsPaid(orderId)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Không thể cập nhật trạng thái đơn"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

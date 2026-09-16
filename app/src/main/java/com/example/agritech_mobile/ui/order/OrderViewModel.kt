@@ -19,9 +19,8 @@ sealed class OrderState {
     object Idle : OrderState()
     object Loading : OrderState()
     data class OrderItemSuccess(val items: List<OrderResponse>) : OrderState()
-
     data class OrderBuyerItemSuccess(val items: List<OrderBuyerResponse>) : OrderState()
-    data class Success(val message: String) : OrderState()
+    data class Success(val message: String, val orderId: Long? = null) : OrderState()
     data class Error(val error: String) : OrderState()
 }
 
@@ -43,7 +42,10 @@ class OrderViewModel @Inject constructor(
         viewModelScope.launch {
             val result = repository.checkout(shippingAddress, phoneNumber, selectedCartItemIds)
             result.onSuccess { response ->
-                _orderState.value = OrderState.Success(response.message)
+                _orderState.value = OrderState.Success(
+                    message = response.message,
+                    orderId = response.orderId
+                )
             }.onFailure { exception ->
                 _orderState.value = OrderState.Error(exception.message ?: "Lỗi hệ thống")
             }
@@ -97,6 +99,25 @@ class OrderViewModel @Inject constructor(
         }
     }
 
+    fun payWithVnpay(orderId: Long, onUrlReady: (String) -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.getVnpayPaymentUrl(orderId)
+            result.onSuccess { url ->
+                onUrlReady(url)
+            }.onFailure { exception ->
+                onError(exception.message ?: "Không thể kết nối đến VNPay")
+            }
+        }
+    }
+
+    fun confirmOrderPaid(orderId: Long, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            val result = repository.markOrderAsPaid(orderId)
+            result.onSuccess {
+                onSuccess()
+            }
+        }
+    }
     fun resetState() {
         _orderState.value = OrderState.Idle
     }

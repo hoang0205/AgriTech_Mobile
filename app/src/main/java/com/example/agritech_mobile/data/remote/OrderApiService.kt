@@ -11,6 +11,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -36,4 +37,14 @@ interface OrderApiService {
 
     @GET("/api/orders/my-orders/count")
     suspend fun getOrderStatusCounts(): Response<OrderStatusCountResponse>
+
+    @POST("api/orders/{id}/vnpay-payment")
+    suspend fun getVnpayPaymentUrl(
+        @Path("id") orderId: Long
+    ): Response<Map<String, String>>
+
+    @PUT("api/orders/{id}/mark-as-paid")
+    suspend fun markOrderAsPaid(
+        @Path("id") orderId: Long
+    ): Response<Map<String, String>>
 }

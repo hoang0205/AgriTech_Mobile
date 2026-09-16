@@ -1,4 +1,4 @@
-package com.example.agritech_mobile.ui.checkout
+package com.example.agritech_mobile.ui.cart
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -7,15 +7,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.LocalAtm
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,13 +33,13 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
-import com.example.agritech_mobile.ui.cart.CartState
-import com.example.agritech_mobile.ui.cart.CartViewModel
 import com.example.agritech_mobile.ui.order.OrderState
 import com.example.agritech_mobile.ui.order.OrderViewModel
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 import com.example.agritech_mobile.ui.user.AddressState
 import com.example.agritech_mobile.ui.user.UserViewModel
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.text.DecimalFormat
 
 data class CheckoutItem(
@@ -53,7 +52,7 @@ data class CheckoutItem(
 )
 
 enum class PaymentMethodType {
-    COD, E_WALLET, BANK_TRANSFER
+    COD, VNPAY, BANK_TRANSFER
 }
 
 data class CheckoutUiState(
@@ -75,6 +74,7 @@ fun CheckoutScreen(
     onBackClick: () -> Unit,
     onPlaceOrderSuccess: () -> Unit,
     onNavigateToAddressSelection: (String?) -> Unit,
+    onNavigateToVnpay: (orderId: Long, paymentUrl: String) -> Unit = { _, _ -> },
     viewModel: OrderViewModel = hiltViewModel(),
     cartViewModel: CartViewModel = hiltViewModel(),
     userViewModel: UserViewModel = hiltViewModel()
@@ -86,6 +86,7 @@ fun CheckoutScreen(
     val addressState by userViewModel.addressState.collectAsState()
 
     var isLoading by remember { mutableStateOf(false) }
+    var loadingMessage by remember { mutableStateOf("Đang xử lý đơn hàng...") }
 
     var uiState by remember {
         mutableStateOf(
@@ -111,7 +112,6 @@ fun CheckoutScreen(
     LaunchedEffect(cartState) {
         if (cartState is CartState.CartItemsSuccess) {
             val allCartItems = (cartState as CartState.CartItemsSuccess).items
-
             val selectedItems = allCartItems.filter { it.cartItemId in selectedCartItemIds }
 
             val mappedItems = selectedItems.map { res ->
@@ -168,22 +168,55 @@ fun CheckoutScreen(
 
     LaunchedEffect(orderState) {
         when (val state = orderState) {
-            is OrderState.Loading -> isLoading = true
+            is OrderState.Loading -> {
+                isLoading = true
+                loadingMessage = "Đang tạo đơn hàng..."
+            }
+
             is OrderState.Success -> {
-                isLoading = false
-                Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
-                onPlaceOrderSuccess()
+                if (uiState.selectedPaymentMethod == PaymentMethodType.VNPAY) {
+                    val orderId = state.orderId ?: 0L
+                    if (orderId > 0L) {
+                        loadingMessage = "Đang kết nối tới cổng VNPay..."
+                        viewModel.payWithVnpay(
+                            orderId = orderId,
+                            onUrlReady = { paymentUrl ->
+                                isLoading = false
+                                viewModel.resetState()
+                                val encodedUrl =
+                                    URLEncoder.encode(paymentUrl, StandardCharsets.UTF_8.toString())
+                                onNavigateToVnpay(orderId, encodedUrl)
+                            },
+                            onError = { error ->
+                                isLoading = false
+                                viewModel.resetState()
+                                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                                onPlaceOrderSuccess()
+                            }
+                        )
+                    } else {
+                        isLoading = false
+                        viewModel.resetState()
+                        Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                        onPlaceOrderSuccess()
+                    }
+                } else {
+                    isLoading = false
+                    viewModel.resetState()
+                    Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                    onPlaceOrderSuccess()
+                }
             }
 
             is OrderState.Error -> {
                 isLoading = false
                 Toast.makeText(context, state.error, Toast.LENGTH_LONG).show()
+                viewModel.resetState()
             }
 
             else -> isLoading = false
         }
     }
-
     Box(modifier = Modifier.fillMaxSize()) {
         CheckoutContent(
             uiState = uiState,
@@ -201,6 +234,11 @@ fun CheckoutScreen(
                 uiState = uiState.copy(selectedPaymentMethod = method)
             },
             onPlaceOrderClick = {
+                if (uiState.address.isBlank() || uiState.phone.isBlank()) {
+                    Toast.makeText(context, "Vui lòng chọn địa chỉ nhận hàng", Toast.LENGTH_SHORT)
+                        .show()
+                    return@CheckoutContent
+                }
                 viewModel.checkout(
                     shippingAddress = uiState.address,
                     phoneNumber = uiState.phone,
@@ -213,10 +251,26 @@ fun CheckoutScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.6f)),
+                    .background(Color.Black.copy(alpha = 0.4f)),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF1B5E20))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = loadingMessage,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
             }
         }
     }
@@ -232,10 +286,20 @@ fun CheckoutContent(
 ) {
     val formatter = DecimalFormat("#,###")
 
+    val buttonText = when (uiState.selectedPaymentMethod) {
+        PaymentMethodType.VNPAY -> "Thanh toán qua VNPay"
+        else -> stringResource(R.string.checkout_place_order)
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { CheckoutTopBar(onBackClick) },
-        bottomBar = { CheckoutBottomBar(onPlaceOrderClick) }
+        bottomBar = {
+            CheckoutBottomBar(
+                buttonText = buttonText,
+                onPlaceOrderClick = onPlaceOrderClick
+            )
+        }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -289,6 +353,7 @@ fun CheckoutContent(
             item {
                 SectionHeader(stringResource(R.string.checkout_payment_method))
                 Spacer(modifier = Modifier.height(12.dp))
+
                 PaymentMethodCard(
                     icon = Icons.Default.LocalAtm,
                     title = "COD",
@@ -297,14 +362,16 @@ fun CheckoutContent(
                     onClick = { onPaymentMethodSelect(PaymentMethodType.COD) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
+
                 PaymentMethodCard(
-                    icon = Icons.Default.Wallet,
-                    title = stringResource(R.string.checkout_e_wallet),
-                    description = stringResource(R.string.checkout_e_wallet_desc),
-                    isSelected = uiState.selectedPaymentMethod == PaymentMethodType.E_WALLET,
-                    onClick = { onPaymentMethodSelect(PaymentMethodType.E_WALLET) }
+                    icon = Icons.Default.CreditCard,
+                    title = "Cổng thanh toán VNPay",
+                    description = "Thanh toán bằng VNPay",
+                    isSelected = uiState.selectedPaymentMethod == PaymentMethodType.VNPAY,
+                    onClick = { onPaymentMethodSelect(PaymentMethodType.VNPAY) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
+
                 PaymentMethodCard(
                     icon = Icons.Default.AccountBalance,
                     title = stringResource(R.string.checkout_bank_transfer),
@@ -326,7 +393,6 @@ fun CheckoutContent(
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -609,7 +675,10 @@ fun SummaryLine(label: String, value: String, isGreen: Boolean = false) {
 }
 
 @Composable
-fun CheckoutBottomBar(onPlaceOrderClick: () -> Unit) {
+fun CheckoutBottomBar(
+    buttonText: String,
+    onPlaceOrderClick: () -> Unit
+) {
     Surface(
         shadowElevation = 24.dp,
         color = MaterialTheme.colorScheme.background,
@@ -633,7 +702,7 @@ fun CheckoutBottomBar(onPlaceOrderClick: () -> Unit) {
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = stringResource(R.string.checkout_place_order),
+                        text = buttonText,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -680,7 +749,7 @@ fun CheckoutScreenPreview() {
                 shippingFee = 35000.0,
                 discount = 15000.0,
                 totalAmount = 590000.0,
-                selectedPaymentMethod = PaymentMethodType.COD
+                selectedPaymentMethod = PaymentMethodType.VNPAY
             ),
             onBackClick = {},
             onChangeAddressClick = {},

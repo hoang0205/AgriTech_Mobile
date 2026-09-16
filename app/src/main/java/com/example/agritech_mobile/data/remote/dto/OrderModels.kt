@@ -15,7 +15,8 @@ data class StatusRequest(
 )
 
 data class OrderMessageResponse(
-    val message: String
+    val message: String,
+    val orderId: Long? = null
 )
 
 data class OrderItem(

@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,16 +20,20 @@ import com.example.agritech_mobile.ui.auth.SignUpScreen
 import com.example.agritech_mobile.ui.auth.VerifyEmailScreen
 import com.example.agritech_mobile.ui.chat.ChatListScreen
 import com.example.agritech_mobile.ui.chat.ChatScreen
-import com.example.agritech_mobile.ui.checkout.CheckoutScreen
+import com.example.agritech_mobile.ui.cart.CheckoutScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.main.MainScreen
 import com.example.agritech_mobile.ui.order.AddressSelectionScreen
 import com.example.agritech_mobile.ui.order.MapPickerScreen
+import com.example.agritech_mobile.ui.order.OrderViewModel
+import com.example.agritech_mobile.ui.order.VnpayPaymentScreen
 import com.example.agritech_mobile.ui.user.BuyerOrdersScreen
 import com.example.agritech_mobile.ui.user.AddAddressScreen
 import com.example.agritech_mobile.ui.user.ReviewProductScreen
 import com.google.firebase.auth.FirebaseAuth
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 @Composable
 fun AppNavigation(
@@ -261,9 +266,46 @@ fun AppNavigation(
                         currentAddressId
                     )
                     navController.navigate("address_selection")
+                },
+                onNavigateToVnpay = { orderId, encodedPaymentUrl ->
+                    navController.navigate("vnpay_payment/$orderId/$encodedPaymentUrl")
                 }
             )
         }
+
+        composable(
+            route = "vnpay_payment/{orderId}/{paymentUrl}",
+            arguments = listOf(
+                navArgument("orderId") { type = NavType.LongType },
+                navArgument("paymentUrl") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getLong("orderId") ?: 0L
+            val rawUrl = backStackEntry.arguments?.getString("paymentUrl") ?: ""
+            val decodedUrl = URLDecoder.decode(rawUrl, StandardCharsets.UTF_8.toString())
+
+            val orderViewModel: OrderViewModel = hiltViewModel()
+
+            VnpayPaymentScreen(
+                paymentUrl = decodedUrl,
+                onPaymentSuccess = {
+                    orderViewModel.confirmOrderPaid(orderId) {
+                        navController.navigate("buyer_orders/ALL") {
+                            popUpTo("main_screen") { inclusive = false }
+                        }
+                    }
+                },
+                onPaymentFailed = {
+                    navController.navigate("buyer_orders/ALL") {
+                        popUpTo("main_screen") { inclusive = false }
+                    }
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         composable("address_selection") { backStackEntry ->
             val currentAddressId = navController.previousBackStackEntry
                 ?.savedStateHandle
@@ -435,6 +477,39 @@ fun AppNavigation(
                     navController.navigate(
                         "chat/$roomId/$partnerId/${Uri.encode(partnerName)}?partnerAvatar=${Uri.encode(partnerAvatar ?: "")}"
                     )
+                }
+            )
+        }
+
+        composable(
+            route = "vnpay_payment/{orderId}/{paymentUrl}",
+            arguments = listOf(
+                navArgument("orderId") { type = NavType.LongType },
+                navArgument("paymentUrl") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getLong("orderId") ?: 0L
+            val rawUrl = backStackEntry.arguments?.getString("paymentUrl") ?: ""
+            val decodedUrl = URLDecoder.decode(rawUrl, StandardCharsets.UTF_8.toString())
+
+            val orderViewModel: OrderViewModel = hiltViewModel()
+
+            VnpayPaymentScreen(
+                paymentUrl = decodedUrl,
+                onPaymentSuccess = {
+                    orderViewModel.confirmOrderPaid(orderId) {
+                        navController.navigate("buyer_orders") {
+                            popUpTo("main") { inclusive = false }
+                        }
+                    }
+                },
+                onPaymentFailed = {
+                    navController.navigate("buyer_orders") {
+                        popUpTo("main") { inclusive = false }
+                    }
+                },
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }
