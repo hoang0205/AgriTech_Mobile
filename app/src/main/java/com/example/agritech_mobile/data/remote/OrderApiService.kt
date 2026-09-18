@@ -47,4 +47,9 @@ interface OrderApiService {
     suspend fun markOrderAsPaid(
         @Path("id") orderId: Long
     ): Response<Map<String, String>>
+
+    @PUT("api/orders/{orderId}/cancel")
+    suspend fun cancelOrderByBuyer(
+        @Path("orderId") orderId: Long
+    ): Response<OrderMessageResponse>
 }

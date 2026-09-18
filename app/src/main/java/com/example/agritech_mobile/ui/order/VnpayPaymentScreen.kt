@@ -1,35 +1,30 @@
 package com.example.agritech_mobile.ui.order
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.net.http.SslError
+import android.webkit.*
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.example.agritech_mobile.ui.theme.AgritechTheme
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun VnpayPaymentScreen(
@@ -40,76 +35,11 @@ fun VnpayPaymentScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var isLoading by remember { mutableStateOf(true) }
+    var progress by remember { mutableIntStateOf(0) }
+    var currentWebUrl by remember { mutableStateOf(paymentUrl) }
 
-    VnpayPaymentContent(
-        isLoading = isLoading,
-        onBackClick = onBackClick,
-        modifier = modifier,
-        webViewContent = {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.loadWithOverviewMode = true
-                        settings.useWideViewPort = true
-
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                isLoading = true
-                            }
-
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                isLoading = false
-                            }
-
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?
-                            ): Boolean {
-                                val url = request?.url?.toString() ?: ""
-
-                                if (url.startsWith("agritech://payment-result")) {
-                                    val uri = Uri.parse(url)
-                                    val responseCode = uri.getQueryParameter("vnp_ResponseCode")
-
-                                    if (responseCode == "00") {
-                                        Toast.makeText(context, "Thanh toán thành công!", Toast.LENGTH_SHORT).show()
-                                        onPaymentSuccess()
-                                    } else {
-                                        val message = when (responseCode) {
-                                            "24" -> "Bạn đã hủy giao dịch thanh toán"
-                                            "51" -> "Tài khoản không đủ số dư"
-                                            else -> "Giao dịch không thành công (Mã lỗi: $responseCode)"
-                                        }
-                                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                        onPaymentFailed(message)
-                                    }
-                                    return true
-                                }
-                                return false
-                            }
-                        }
-                        loadUrl(paymentUrl)
-                    }
-                }
-            )
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun VnpayPaymentContent(
-    isLoading: Boolean,
-    onBackClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    webViewContent: @Composable BoxScope.() -> Unit
-) {
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = {
@@ -133,6 +63,19 @@ fun VnpayPaymentContent(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    // Nút mở bằng trình duyệt ngoài nếu muốn test trực tiếp trên Chrome
+                    IconButton(onClick = {
+                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(currentWebUrl))
+                        context.startActivity(browserIntent)
+                    }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = "Mở bằng trình duyệt",
+                            tint = Color.DarkGray
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         }
@@ -142,126 +85,132 @@ fun VnpayPaymentContent(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            webViewContent()
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        // 1. Cho phép Cookies & Session
+                        val cookieManager = CookieManager.getInstance()
+                        cookieManager.setAcceptCookie(true)
+                        cookieManager.setAcceptThirdPartyCookies(this, true)
 
-            if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.White.copy(alpha = 0.7f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(
-                            color = Color(0xFF1B5E20),
-                            strokeWidth = 3.dp
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Đang kết nối tới VNPay Sandbox...",
-                            fontSize = 13.sp,
-                            color = Color.DarkGray
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+                        // 2. Cấu hình chống lệch tọa độ cảm ứng
+                        isClickable = true
+                        isFocusable = true
+                        isFocusableInTouchMode = true
 
-@Preview(name = "1. Giao diện Cổng VNPay (Preview)", showBackground = true, device = "spec:width=411dp,height=891dp")
-@Composable
-private fun VnpayPaymentPreviewSuccess() {
-    AgritechTheme {
-        VnpayPaymentContent(
-            isLoading = false,
-            onBackClick = {},
-            webViewContent = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFFF4F6F8))
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "VNPAY SANDBOX GATEWAY",
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF005BAA),
-                                fontSize = 16.sp
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Đơn hàng: Thanh toan don hang AgriTech #101",
-                                fontSize = 14.sp,
-                                color = Color.Black
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Số tiền: 250.000 VND",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp,
-                                color = Color(0xFFD32F2F)
-                            )
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            databaseEnabled = true
+                            javaScriptCanOpenWindowsAutomatically = true
+                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+                            // TẮT ZOOM ĐỂ TRÁNH LỆCH VỊ TRÍ NÚT
+                            useWideViewPort = false
+                            loadWithOverviewMode = false
+                            setSupportZoom(false)
+                            builtInZoomControls = false
+                            displayZoomControls = false
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.CreditCard, contentDescription = null, tint = Color(0xFF005BAA))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Thẻ ATM / Tài khoản ngân hàng (NCB)", fontWeight = FontWeight.SemiBold)
+                        // 3. Xử lý hộp thoại confirm khi bấm nút "Hủy / Thoát"
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                progress = newProgress
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
-                                    .background(Color(0xFFFAFAFA))
-                                    .padding(horizontal = 12.dp),
-                                contentAlignment = Alignment.CenterStart
+
+                            override fun onJsConfirm(
+                                view: WebView?,
+                                url: String?,
+                                message: String?,
+                                result: JsResult?
+                            ): Boolean {
+                                AlertDialog.Builder(ctx)
+                                    .setTitle("Xác nhận")
+                                    .setMessage(message)
+                                    .setPositiveButton("Đồng ý") { _, _ -> result?.confirm() }
+                                    .setNegativeButton("Không") { _, _ -> result?.cancel() }
+                                    .setOnCancelListener { result?.cancel() }
+                                    .show()
+                                return true
+                            }
+
+                            override fun onJsAlert(
+                                view: WebView?,
+                                url: String?,
+                                message: String?,
+                                result: JsResult?
+                            ): Boolean {
+                                AlertDialog.Builder(ctx)
+                                    .setTitle("Thông báo")
+                                    .setMessage(message)
+                                    .setPositiveButton("OK") { _, _ -> result?.confirm() }
+                                    .show()
+                                return true
+                            }
+                        }
+
+                        // 4. Bắt URL kết quả thanh toán
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                                currentWebUrl = url ?: paymentUrl
+                            }
+
+                            override fun onReceivedSslError(
+                                view: WebView?,
+                                handler: SslErrorHandler?,
+                                error: SslError?
                             ) {
-                                Text("9704 1985 2619 1432 198", color = Color.DarkGray)
+                                handler?.proceed()
+                            }
+
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView?,
+                                request: WebResourceRequest?
+                            ): Boolean {
+                                val url = request?.url?.toString() ?: ""
+                                currentWebUrl = url
+
+                                if (url.contains("payment-result")) {
+                                    val uri = Uri.parse(url)
+                                    val responseCode = uri.getQueryParameter("vnp_ResponseCode")
+
+                                    if (responseCode == "00") {
+                                        Toast.makeText(context, "Thanh toán thành công!", Toast.LENGTH_SHORT).show()
+                                        onPaymentSuccess()
+                                    } else {
+                                        val message = when (responseCode) {
+                                            "24" -> "Bạn đã hủy giao dịch thanh toán"
+                                            "51" -> "Tài khoản không đủ số dư"
+                                            else -> "Giao dịch không thành công (Mã: $responseCode)"
+                                        }
+                                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                        onPaymentFailed(message)
+                                    }
+                                    return true
+                                }
+                                return false
                             }
                         }
+
+                        loadUrl(paymentUrl)
                     }
                 }
-            }
-        )
-    }
-}
+            )
 
-@Preview(name = "2. Trạng thái đang tải (Loading)", showBackground = true, device = "spec:width=411dp,height=891dp")
-@Composable
-private fun VnpayPaymentPreviewLoading() {
-    AgritechTheme {
-        VnpayPaymentContent(
-            isLoading = true,
-            onBackClick = {},
-            webViewContent = {
-                Box(
+            // Thanh tiến trình chạy ở cạnh trên, không bao giờ che cảm ứng
+            if (progress in 1..99) {
+                LinearProgressIndicator(
+                    progress = { progress / 100f },
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFFF4F6F8))
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .align(Alignment.TopCenter),
+                    color = Color(0xFF1B5E20),
+                    trackColor = Color.Transparent
                 )
             }
-        )
+        }
     }
 }

@@ -241,4 +241,5 @@
     <string name="buyer_order_total">Total amount</string>
     <string name="buyer_order_cancel_btn">Cancel Order</string>
     <string name="buyer_order_shop_default">Store</string>
+    <string name="unpaid">Unpaid</string>
 </resources>

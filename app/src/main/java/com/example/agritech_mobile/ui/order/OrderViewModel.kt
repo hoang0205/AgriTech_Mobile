@@ -37,10 +37,10 @@ class OrderViewModel @Inject constructor(
     private val _orderCounts = MutableStateFlow(OrderStatusCountResponse())
     val orderCounts: StateFlow<OrderStatusCountResponse> = _orderCounts.asStateFlow()
 
-    fun checkout(shippingAddress: String, phoneNumber: String, selectedCartItemIds: List<String>) {
+    fun checkout(shippingAddress: String, phoneNumber: String, selectedCartItemIds: List<String>, paymentMethod: String = "COD") {
         _orderState.value = OrderState.Loading
         viewModelScope.launch {
-            val result = repository.checkout(shippingAddress, phoneNumber, selectedCartItemIds)
+            val result = repository.checkout(shippingAddress, phoneNumber, selectedCartItemIds, paymentMethod)
             result.onSuccess { response ->
                 _orderState.value = OrderState.Success(
                     message = response.message,
@@ -95,6 +95,18 @@ class OrderViewModel @Inject constructor(
                 _orderCounts.value = counts
             }.onFailure {
                 _orderCounts.value = OrderStatusCountResponse()
+            }
+        }
+    }
+
+    fun cancelOrder(orderId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.cancelOrderByBuyer(orderId)
+            result.onSuccess {
+                loadOrderCounts()
+                onSuccess()
+            }.onFailure { exception ->
+                onError(exception.message ?: "Không thể hủy đơn hàng")
             }
         }
     }

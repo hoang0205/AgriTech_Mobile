@@ -7,7 +7,8 @@ import com.google.gson.annotations.SerializedName
 data class CheckOutRequest(
     val shippingAddress: String,
     val phoneNumber: String,
-    val selectedCartItemIds: List<String>
+    val selectedCartItemIds: List<String>,
+    val paymentMethod: String = "COD"
 )
 
 data class StatusRequest(

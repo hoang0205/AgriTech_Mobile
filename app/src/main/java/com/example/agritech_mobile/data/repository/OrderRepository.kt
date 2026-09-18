@@ -34,10 +34,11 @@ class OrderRepository @Inject constructor(
     suspend fun checkout(
         shippingAddress: String,
         phoneNumber: String,
-        selectedCartItemIds: List<String>
+        selectedCartItemIds: List<String>,
+        paymentMethod: String = "COD"
     ): Result<OrderMessageResponse> {
         return try {
-            val request = CheckOutRequest(shippingAddress, phoneNumber, selectedCartItemIds)
+            val request = CheckOutRequest(shippingAddress, phoneNumber, selectedCartItemIds, paymentMethod)
             val response = orderApiService.checkout(request)
             if (response.isSuccessful) {
                 val body = response.body()
@@ -133,6 +134,19 @@ class OrderRepository @Inject constructor(
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Không thể cập nhật trạng thái đơn"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun cancelOrderByBuyer(orderId: Long): Result<OrderMessageResponse> {
+        return try {
+            val response = orderApiService.cancelOrderByBuyer(orderId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Không thể hủy đơn hàng (${response.code()})"))
             }
         } catch (e: Exception) {
             Result.failure(e)

@@ -267,30 +267,30 @@ fun AppNavigation(
                     )
                     navController.navigate("address_selection")
                 },
-                onNavigateToVnpay = { orderId, encodedPaymentUrl ->
-                    navController.navigate("vnpay_payment/$orderId/$encodedPaymentUrl")
+                onNavigateToVnpay = { orderId, rawPaymentUrl ->
+                    navController.currentBackStackEntry?.savedStateHandle?.set("vnpay_raw_url", rawPaymentUrl)
+                    navController.navigate("vnpay_payment/$orderId")
                 }
             )
         }
 
         composable(
-            route = "vnpay_payment/{orderId}/{paymentUrl}",
-            arguments = listOf(
-                navArgument("orderId") { type = NavType.LongType },
-                navArgument("paymentUrl") { type = NavType.StringType }
-            )
+            route = "vnpay_payment/{orderId}",
+            arguments = listOf(navArgument("orderId") { type = NavType.LongType })
         ) { backStackEntry ->
             val orderId = backStackEntry.arguments?.getLong("orderId") ?: 0L
-            val rawUrl = backStackEntry.arguments?.getString("paymentUrl") ?: ""
-            val decodedUrl = URLDecoder.decode(rawUrl, StandardCharsets.UTF_8.toString())
+
+            val paymentUrl = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("vnpay_raw_url") ?: ""
 
             val orderViewModel: OrderViewModel = hiltViewModel()
 
             VnpayPaymentScreen(
-                paymentUrl = decodedUrl,
+                paymentUrl = paymentUrl,
                 onPaymentSuccess = {
                     orderViewModel.confirmOrderPaid(orderId) {
-                        navController.navigate("buyer_orders/ALL") {
+                        navController.navigate("buyer_orders/CONFIRMED") {
                             popUpTo("main_screen") { inclusive = false }
                         }
                     }

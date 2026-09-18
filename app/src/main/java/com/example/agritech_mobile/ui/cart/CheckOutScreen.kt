@@ -183,9 +183,7 @@ fun CheckoutScreen(
                             onUrlReady = { paymentUrl ->
                                 isLoading = false
                                 viewModel.resetState()
-                                val encodedUrl =
-                                    URLEncoder.encode(paymentUrl, StandardCharsets.UTF_8.toString())
-                                onNavigateToVnpay(orderId, encodedUrl)
+                                onNavigateToVnpay(orderId, paymentUrl)
                             },
                             onError = { error ->
                                 isLoading = false
@@ -239,10 +237,12 @@ fun CheckoutScreen(
                         .show()
                     return@CheckoutContent
                 }
+                val method = if (uiState.selectedPaymentMethod == PaymentMethodType.VNPAY) "VNPAY" else "COD"
                 viewModel.checkout(
                     shippingAddress = uiState.address,
                     phoneNumber = uiState.phone,
-                    selectedCartItemIds = selectedCartItemIds
+                    selectedCartItemIds = selectedCartItemIds,
+                    paymentMethod = method
                 )
             }
         )

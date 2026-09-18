@@ -47,7 +47,9 @@ enum class OrderStatus(@StringRes val titleRes: Int) {
     CONFIRMED(R.string.confirmed),
     SHIPPING(R.string.shipping),
     COMPLETED(R.string.completed),
-    CANCELLED(R.string.cancelled)
+    CANCELLED(R.string.cancelled),
+
+    UNPAID(R.string.unpaid)
 }
 
 data class SellerOrderItem(

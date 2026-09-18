@@ -139,8 +139,18 @@ fun BuyerOrdersScreen(
             orders = orders,
             initialStatus = initialStatus,
             onBackClick = onBackClick,
-            onCancelOrder = { orderId ->
-                viewModel.updateOrderStatus(orderId, OrderStatus.CANCELLED.name)
+            onCancelOrder = { orderIdStr ->
+                val id = orderIdStr.toLongOrNull() ?: 0L
+                viewModel.cancelOrder(
+                    orderId = id,
+                    onSuccess = {
+                        Toast.makeText(context, "Đã hủy đơn hàng thành công", Toast.LENGTH_SHORT).show()
+                        viewModel.getBuyerOrders()
+                    },
+                    onError = { error ->
+                        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                    }
+                )
             },
             onReviewClick = onReviewClick
         )
@@ -385,7 +395,7 @@ fun BuyerOrderCard(
                 )
             }
 
-            if (order.status == OrderStatus.PENDING) {
+            if (order.status == OrderStatus.PENDING || order.status.name == "UNPAID") {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = onCancelClick,
