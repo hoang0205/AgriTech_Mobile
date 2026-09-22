@@ -4,6 +4,8 @@ import com.example.agritech_mobile.data.remote.AiApiService
 import com.example.agritech_mobile.data.remote.dto.ChatBotRequest
 import com.example.agritech_mobile.data.remote.dto.ChatBotResponse
 import com.example.agritech_mobile.data.remote.dto.ChatHistoryMessage
+import com.example.agritech_mobile.data.remote.dto.GenerateDescriptionRequest
+import com.example.agritech_mobile.data.remote.dto.GenerateDescriptionResponse
 import com.example.agritech_mobile.data.remote.dto.PredictImageResponse
 import com.example.agritech_mobile.data.remote.dto.PricePredictionRequest
 import com.example.agritech_mobile.data.remote.dto.PricePredictionResponse
@@ -105,4 +107,36 @@ class AiRepository @Inject constructor(
             Result.failure(Exception("Lỗi kết nối: ${e.localizedMessage}"))
         }
     }
+
+    suspend fun generateDescription(request: GenerateDescriptionRequest): Result<GenerateDescriptionResponse> {
+        return try {
+            val response = aiApiService.generateDescription(request)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Phản hồi từ server bị rỗng!"))
+                }
+            } else {
+                Result.failure(Exception("Lỗi từ server: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
+        }
+    }
+
+    fun generateDescriptionStream(request: GenerateDescriptionRequest): Flow<String> = flow {
+        val responseBody = aiApiService.generateDescriptionStream(request)
+        val reader = responseBody.byteStream().bufferedReader(Charsets.UTF_8)
+
+        val buffer = CharArray(128)
+        var charsRead: Int
+        while (reader.read(buffer).also { charsRead = it } != -1) {
+            if (charsRead > 0) {
+                val chunk = String(buffer, 0, charsRead)
+                emit(chunk)
+            }
+        }
+    }.flowOn(Dispatchers.IO)
 }

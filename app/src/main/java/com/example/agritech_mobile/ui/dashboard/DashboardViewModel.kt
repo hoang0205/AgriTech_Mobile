@@ -5,6 +5,7 @@ import android.util.Log.e
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.agritech_mobile.data.local.TokenManager
+import com.example.agritech_mobile.data.remote.dto.GenerateDescriptionRequest
 import com.example.agritech_mobile.data.remote.dto.ProductResponse
 import com.example.agritech_mobile.data.remote.dto.ReviewModelsResponse
 import com.example.agritech_mobile.data.remote.dto.ReviewSummaryResponse
@@ -17,6 +18,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -382,6 +384,33 @@ class DashboardViewModel @Inject constructor(
             }.onFailure { e ->
                 _reviewSummary.value = null
                 Log.e("DEBUG_REVIEW_SUMMARY", "Lỗi lấy thống kê: ${e.message}")
+            }
+        }
+    }
+
+    fun generateDescriptionStream(
+        productName: String,
+        category: String = "",
+        onToken: (String) -> Unit,
+        onComplete: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val request = GenerateDescriptionRequest(
+                    productName = productName,
+                    category = category
+                )
+                aiRepository.generateDescriptionStream(request)
+                    .catch { e ->
+                        onError(e.localizedMessage ?: "Lỗi kết nối máy chủ AI")
+                    }
+                    .collect { token ->
+                        onToken(token)
+                    }
+                onComplete()
+            } catch (e: Exception) {
+                onError(e.localizedMessage ?: "Lỗi tạo mô tả")
             }
         }
     }

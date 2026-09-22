@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -61,7 +63,8 @@ data class SellProductUiState(
     val quantity: Int = 0,
     val description: String = "",
     val isLoading: Boolean = false,
-    val isPredictingPrice: Boolean = false
+    val isPredictingPrice: Boolean = false,
+    val isGeneratingDescription: Boolean = false
 )
 
 @Composable
@@ -253,6 +256,28 @@ fun SellProductScreen(
             } else {
                 Toast.makeText(context, "Vui lòng nhập tên sản phẩm trước!", Toast.LENGTH_SHORT).show()
             }
+        },
+        onGenerateDescriptionClick = {
+            if (uiState.productName.isBlank()) {
+                Toast.makeText(context, "Vui lòng nhập tên sản phẩm trước!", Toast.LENGTH_SHORT).show()
+            } else {
+                uiState = uiState.copy(isGeneratingDescription = true, description = "")
+                viewModel.generateDescriptionStream(
+                    productName = uiState.productName,
+                    category = uiState.category,
+                    onToken = { token ->
+                        val cleanToken = token.replace("*", "")
+                        uiState = uiState.copy(description = uiState.description + cleanToken)                 },
+                    onComplete = {
+                        uiState = uiState.copy(isGeneratingDescription = false)
+                        Toast.makeText(context, "AI đã soạn xong mô tả!", Toast.LENGTH_SHORT).show()
+                    },
+                    onError = { err ->
+                        uiState = uiState.copy(isGeneratingDescription = false)
+                        Toast.makeText(context, "Lỗi: $err", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
         }
     )
 }
@@ -273,6 +298,7 @@ fun SellProductContent(
     onBackClick: () -> Unit,
     onPublishClick: () -> Unit,
     onPredictPriceClick: () -> Unit,
+    onGenerateDescriptionClick: () -> Unit
 ) {
     val backgroundColor = Color(0xFFFAFBFA)
     val primaryGreen = Color(0xFF1E7032)
@@ -640,12 +666,70 @@ fun SellProductContent(
                 color = textDark
             )
             Spacer(modifier = Modifier.height(8.dp))
+
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFF1F8E9),
+                border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = primaryGreen,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Chưa biết viết mô tả như thế nào?",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = primaryGreen
+                        )
+                        Text(
+                            text = "Hãy để AI AgriTech giúp bạn soạn bài viết chuẩn nông sản",
+                            fontSize = 11.sp,
+                            color = Color(0xFF2E7D32),
+                            lineHeight = 15.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onGenerateDescriptionClick,
+                        enabled = !uiState.isGeneratingDescription,
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryGreen),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        if (uiState.isGeneratingDescription) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("✨ Tạo ngay", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             TextField(
                 value = uiState.description,
                 onValueChange = onDescriptionChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
+                    .height(130.dp)
                     .border(1.dp, borderGray, RoundedCornerShape(8.dp)),
                 placeholder = { Text(stringResource(R.string.description_hint), color = textGray) },
                 colors = TextFieldDefaults.colors(
@@ -765,7 +849,9 @@ fun FormInputField(
     TextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp)),
         placeholder = { Text(placeholder, color = Color(0xFF757575)) },
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Color(0xFFF5F5F5),
@@ -873,7 +959,8 @@ fun SellProductScreenPreview() {
             onAddCertClick = {},
             onBackClick = {},
             onPublishClick = {},
-            onPredictPriceClick = {}
+            onPredictPriceClick = {},
+            onGenerateDescriptionClick = {}
         )
     }
 }

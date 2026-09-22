@@ -55,5 +55,5 @@ interface AiApiService {
     @POST("/api/generate-description/stream")
     suspend fun generateDescriptionStream(
         @Body request: GenerateDescriptionRequest
-    ): Response<GenerateDescriptionResponse>
+    ): ResponseBody
 }
