@@ -122,9 +122,6 @@ fun ChatListContent(
     }
 }
 
-// ==========================================
-// 3. ITEM & EMPTY STATE COMPOSABLES
-// ==========================================
 @Composable
 fun ChatRoomRowItem(
     room: ChatRoomItem,
@@ -148,7 +145,6 @@ fun ChatRoomRowItem(
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
-            // Chấm xanh trạng thái
             Box(
                 modifier = Modifier
                     .size(12.dp)

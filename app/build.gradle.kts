@@ -16,7 +16,7 @@ if (localPropertiesFile.exists()) {
 }
 android {
     namespace = "com.example.agritech_mobile"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.example.agritech_mobile"
@@ -67,6 +67,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.10.0")
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.ui.text)
+    implementation(libs.androidx.animation)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

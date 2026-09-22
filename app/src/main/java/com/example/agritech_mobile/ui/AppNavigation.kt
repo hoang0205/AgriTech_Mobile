@@ -21,6 +21,7 @@ import com.example.agritech_mobile.ui.auth.VerifyEmailScreen
 import com.example.agritech_mobile.ui.chat.ChatListScreen
 import com.example.agritech_mobile.ui.chat.ChatScreen
 import com.example.agritech_mobile.ui.cart.CheckoutScreen
+import com.example.agritech_mobile.ui.chat.AiChatScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.main.MainScreen
@@ -194,6 +195,33 @@ fun AppNavigation(
                                 "productPrice=$pPrice&" +
                                 "productImage=${Uri.encode(pImage ?: "")}"
                     )
+                },
+                onAiChatClick = { pId, pName ->
+                    val encodedName = Uri.encode(pName)
+                    navController.navigate("ai_chat/$pId?productName=$encodedName")
+                }
+            )
+        }
+
+        composable(
+            route = "ai_chat/{productId}?productName={productName}",
+            arguments = listOf(
+                navArgument("productId") { type = NavType.StringType },
+                navArgument("productName") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId") ?: ""
+            val productName = backStackEntry.arguments?.getString("productName") ?: ""
+
+            AiChatScreen(
+                productId = productId,
+                productName = productName,
+                onBackClick = { navController.popBackStack() },
+                onProductClick = { pId ->
+                    navController.navigate("product_detail/$pId")
                 }
             )
         }

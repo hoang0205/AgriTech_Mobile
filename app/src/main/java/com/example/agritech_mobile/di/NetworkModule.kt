@@ -19,6 +19,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -27,9 +28,10 @@ object NetworkModule {
 
 //    private const val BASE_URL = "https://agritech-wtqr.onrender.com/"
 
+    private const val IP_ADDRESS = "192.168.2.4"
     private const val BASE_URL = "http://192.168.2.4:2507/"
 
-    private const val BASE_AI_URL = "http://10.10.10.213:8000/"
+    private const val BASE_AI_URL = "http://192.168.2.4:8000/"
     @Provides
     @Singleton
     fun provideOkHttpClient(
@@ -105,10 +107,18 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideAiApiService(): AiApiService {
+        val aiOkHttpClient = OkHttpClient.Builder()
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .build()
+
         val aiRetrofit = Retrofit.Builder()
             .baseUrl(BASE_AI_URL)
+            .client(aiOkHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
+
         return aiRetrofit.create(AiApiService::class.java)
     }
 }

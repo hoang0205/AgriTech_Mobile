@@ -3,6 +3,11 @@ package com.example.agritech_mobile.ui.dashboard
 import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -19,14 +24,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardBackspace
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarHalf
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -51,6 +59,7 @@ import com.example.agritech_mobile.data.remote.dto.ReviewSummaryResponse
 import com.example.agritech_mobile.ui.cart.CartState
 import com.example.agritech_mobile.ui.cart.CartViewModel
 import com.example.agritech_mobile.ui.theme.AgritechTheme
+import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -90,6 +99,7 @@ fun ProductDetailScreen(
         productPrice: Double,
         productImage: String?
     ) -> Unit = { _, _, _, _, _, _, _, _ -> },
+    onAiChatClick: (productId: String, productName: String) -> Unit = { _, _ -> },
     viewModel: DashboardViewModel = hiltViewModel(),
     cartViewModel: CartViewModel = hiltViewModel()
 ) {
@@ -194,6 +204,9 @@ fun ProductDetailScreen(
                 uiState.imageUrls.firstOrNull()
             )
         },
+        onAiChatClick = {
+            onAiChatClick(uiState.id, uiState.name)
+        },
         onAddToCartClick = {
             cartViewModel.addToCart(uiState.id, uiState.quantity)
         },
@@ -222,6 +235,7 @@ fun ProductDetailContent(
     onFavoriteClick: () -> Unit,
     onViewShopClick: () -> Unit,
     onChatClick: () -> Unit,
+    onAiChatClick: () -> Unit = {},
     onAddToCartClick: () -> Unit,
     onIncreaseQuantity: () -> Unit,
     onDecreaseQuantity: () -> Unit,
@@ -234,6 +248,16 @@ fun ProductDetailContent(
     val textDark = Color(0xFF212121)
     val textGray = Color(0xFF757575)
     val bgGray = Color(0xFFF5F5F5)
+
+    var showAiTooltip by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(800)
+        showAiTooltip = true
+        delay(2500)
+        showAiTooltip = false
+    }
+
 
     Scaffold(
         bottomBar = {
@@ -548,6 +572,52 @@ fun ProductDetailContent(
 //                    }
 //
 //                    Spacer(modifier = Modifier.height(32.dp))
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
+            ) {
+                AnimatedVisibility(
+                    visible = showAiTooltip,
+                    enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+                    exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = primaryGreen,
+                        shadowElevation = 6.dp,
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .clickable { onAiChatClick() }
+                    ) {
+                        Text(
+                            text = "Hỏi AgriBot về sản phẩm này",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+
+                FloatingActionButton(
+                    onClick = onAiChatClick,
+                    shape = CircleShape,
+                    containerColor = primaryGreen,
+                    contentColor = Color.White,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SupportAgent,
+                        contentDescription = "AI Chatbot",
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 

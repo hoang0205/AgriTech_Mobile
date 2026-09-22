@@ -76,6 +76,7 @@ class ChatRepository @Inject constructor() {
             roomRef.set(roomUpdates, SetOptions.merge()).await()
             Result.success(Unit)
         } catch (e: Exception) {
+            android.util.Log.e("ChatRepository", "Lỗi Firestore sendMessage: ${e.message}", e)
             Result.failure(e)
         }
     }
