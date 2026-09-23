@@ -66,6 +66,7 @@ class UserViewModel @Inject constructor(
     private val _wards = MutableStateFlow<List<WardResponse>>(emptyList())
     val wards: StateFlow<List<WardResponse>> = _wards.asStateFlow()
 
+    private var isLoggingOut = false
 
     fun getUserAddresses() {
         _addressState.value = AddressState.Loading
@@ -196,27 +197,34 @@ class UserViewModel @Inject constructor(
     }
 
     fun performLogout(onNavigateToLogin: () -> Unit) {
+        if (isLoggingOut) return
+        isLoggingOut = true
+
         viewModelScope.launch {
-            val token = tokenManager.getAccessToken()
+            try {
+                val token = tokenManager.getAccessToken()
 
-            if (!token.isNullOrEmpty()) {
-                try {
-                    authRepository.logout(token)
-                } catch (e: Exception) {
+                if (!token.isNullOrEmpty()) {
+                    try {
+                        authRepository.logout(token)
+                    } catch (e: Exception) {
+                    }
                 }
+
+                try {
+                    FirebaseAuth.getInstance().signOut()
+                } catch (_: Exception) {}
+
+                try {
+                    FirebaseMessaging.getInstance().deleteToken()
+                } catch (_: Exception) {}
+
+                tokenManager.clearAll()
+
+                onNavigateToLogin()
+            } finally {
+                isLoggingOut = false
             }
-
-            try {
-                FirebaseAuth.getInstance().signOut()
-            } catch (_: Exception) {}
-
-            try {
-                FirebaseMessaging.getInstance().deleteToken()
-            } catch (_: Exception) {}
-
-            tokenManager.clearAll()
-
-            onNavigateToLogin()
         }
     }
 

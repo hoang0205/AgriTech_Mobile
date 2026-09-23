@@ -56,7 +56,31 @@ fun AppNavigation(
 
     NavHost(
         navController = navController,
-        startDestination = startRoute
+        startDestination = startRoute,
+        enterTransition = {
+            slideInHorizontally(
+                initialOffsetX = { fullWidth -> fullWidth },
+                animationSpec = tween(350)
+            ) + fadeIn(animationSpec = tween(350))
+        },
+        exitTransition = {
+            slideOutHorizontally(
+                targetOffsetX = { fullWidth -> -fullWidth / 4 },
+                animationSpec = tween(350)
+            ) + fadeOut(animationSpec = tween(350))
+        },
+        popEnterTransition = {
+            slideInHorizontally(
+                initialOffsetX = { fullWidth -> -fullWidth / 4 },
+                animationSpec = tween(350)
+            ) + fadeIn(animationSpec = tween(350))
+        },
+        popExitTransition = {
+            slideOutHorizontally(
+                targetOffsetX = { fullWidth -> fullWidth },
+                animationSpec = tween(350)
+            ) + fadeOut(animationSpec = tween(350))
+        }
     ) {
         navigation(
             route = "auth_graph",
@@ -158,8 +182,11 @@ fun AppNavigation(
                     navController.navigate("checkout/$selectedIds")
                 },
                 onLogoutSuccess = {
-                    navController.navigate("login") {
-                        popUpTo(0) { inclusive = true }
+                    navController.navigate("auth_graph") {
+                        popUpTo("main_screen") {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
                     }
                 },
                 onNavigateToBuyerOrders = { status ->

@@ -8,7 +8,9 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -35,6 +38,8 @@ import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -83,6 +88,8 @@ data class ProductDetailUiState(
     val isLoading: Boolean = false,
     val imageUrls: List<String> = emptyList(),
     val quantity: Double = 1.0,
+    val aiPros: String? = null,
+    val aiCons: String? = null
 )
 
 @Composable
@@ -142,6 +149,8 @@ fun ProductDetailScreen(
                     sellerPhone = productRes.farmerPhone,
                     stock = productRes.quantity.toString(),
                     imageUrls = productRes.imageUrls,
+                    aiPros = productRes.aiPros,
+                    aiCons = productRes.aiCons
                 )
             }
 
@@ -495,6 +504,8 @@ fun ProductDetailContent(
                     ProductReviewsSection(
                         rating = uiState.rating,
                         reviewCount = uiState.reviewCount,
+                        aiPros = uiState.aiPros,
+                        aiCons = uiState.aiCons,
                         primaryGreen = primaryGreen,
                         textDark = textDark,
                         textGray = textGray,
@@ -668,6 +679,8 @@ fun ProductDetailContent(
 fun ProductReviewsSection(
     rating: Double,
     reviewCount: Int,
+    aiPros: String?,
+    aiCons: String?,
     reviews: List<ReviewModelsResponse>,
     reviewSummary: ReviewSummaryResponse?,
     primaryGreen: Color,
@@ -693,29 +706,21 @@ fun ProductReviewsSection(
                     color = textGray
                 )
             }
-//            Row(
-//                verticalAlignment = Alignment.CenterVertically,
-//                modifier = Modifier.clickable { /* TODO: Go to all reviews */ }
-//            ) {
-//                Text(
-//                    text = "Xem tất cả",
-//                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-//                    color = primaryGreen
-//                )
-//                Icon(
-//                    imageVector = Icons.AutoMirrored.Filled.KeyboardBackspace,
-//                    contentDescription = null,
-//                    tint = primaryGreen,
-//                    modifier = Modifier.size(16.dp)
-//                )
-//            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         ReviewSummaryCard(rating, reviewSummary, primaryGreen, textDark)
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        AiReviewSummaryCard(
+            aiPros = aiPros,
+            aiCons = aiCons,
+            primaryGreen = primaryGreen
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (reviews.isEmpty()) {
             Text(
@@ -738,6 +743,202 @@ fun ProductReviewsSection(
                     textGray = textGray
                 )
                 Spacer(modifier = Modifier.height(20.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun AiReviewSummaryCard(
+    aiPros: String?,
+    aiCons: String?,
+    primaryGreen: Color
+) {
+    val prosList = remember(aiPros) {
+        aiPros?.split("\n")
+            ?.map { it.trim().removePrefix("-").removePrefix("•").trim() }
+            ?.filter { it.isNotBlank() } ?: emptyList()
+    }
+    val consList = remember(aiCons) {
+        aiCons?.split("\n")
+            ?.map { it.trim().removePrefix("-").removePrefix("•").trim() }
+            ?.filter { it.isNotBlank() } ?: emptyList()
+    }
+
+    if (prosList.isEmpty() && consList.isEmpty()) return
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, primaryGreen.copy(alpha = 0.25f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFFE8F5E9))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = primaryGreen,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Tổng hợp bởi AgriAI",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = primaryGreen
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF1F8E9))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = "Độ tin cậy cao",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = primaryGreen
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "Tổng hợp tự động từ đánh giá thực tế của khách hàng:",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF424242)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (prosList.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF1F8E9))
+                        .border(1.dp, Color(0xFFC8E6C9), RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.ThumbUp,
+                            contentDescription = null,
+                            tint = primaryGreen,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "ƯU ĐIỂM NỔI BẬT",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = primaryGreen,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    prosList.forEach { pro ->
+                        Row(
+                            modifier = Modifier.padding(vertical = 3.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = primaryGreen,
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .padding(top = 2.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = pro,
+                                fontSize = 12.sp,
+                                color = Color(0xFF1B5E20),
+                                lineHeight = 18.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (prosList.isNotEmpty() && consList.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            if (consList.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF5F5F5))
+                        .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = Color(0xFFD84315),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "ĐIỂM CẦN LƯU Ý",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFD84315),
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    consList.forEach { con ->
+                        Row(
+                            modifier = Modifier.padding(vertical = 3.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = 6.dp, start = 4.dp, end = 8.dp)
+                                    .size(5.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFD84315))
+                            )
+                            Text(
+                                text = con,
+                                fontSize = 12.sp,
+                                color = Color(0xFF424242),
+                                lineHeight = 18.sp
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -1081,26 +1282,29 @@ fun ProductDetailBottomBar(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Preview(
     showBackground = true,
     showSystemUi = true,
-    device = "spec:width=411dp,height=1600dp,dpi=420"
+    device = "spec:width=411dp,height=2400dp,dpi=420"
 )
 @Composable
 fun ProductDetailScreenPreview() {
     AgritechTheme {
         ProductDetailContent(
             uiState = ProductDetailUiState(
-                name = "Heirloom Rainbow Carrots",
+                name = "Cà chua sấy khô thủ công",
                 price = "45000",
                 unit = "kg",
                 category = "RAU CỦ",
-                sellerName = "Meadowbrook Farms",
-                description = "Cà rốt cầu vồng hữu cơ, trồng theo chuẩn organic không sử dụng thuốc trừ sâu hóa học.",
-                imageUrls = listOf("https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=600&auto=format&fit=crop"),
-                quantity = 1.5,
-                rating = 4.5,
-                reviewCount = 1
+                sellerName = "Nguyễn Văn A",
+                description = "Những trái cà chua chín mọng nhất được tuyển chọn trực tiếp từ các nông trại hữu cơ tại Đà Lạt. Quy trình sấy khô thủ công bằng ánh nắng tự nhiên kết hợp sấy lạnh hiện đại.",
+                imageUrls = listOf("https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=600"),
+                quantity = 1.0,
+                rating = 4.9,
+                reviewCount = 120,
+                aiPros = "Cà chua ngọt thanh đậm vị tự nhiên, dẻo và không bị khô cứng gắt.\nĐóng gói hút chân không chuyên nghiệp, bảo quản giòn ngon lâu.\nNguồn gốc organic Đà Lạt rõ ràng, an tâm sử dụng.",
+                aiCons = "Giá thành hơi cao hơn thị trường một chút do làm thủ công khép kín.\nMùa mưa thời gian giao hàng có thể trễ hơn 0.5 - 1 ngày."
             ),
             onBackClick = {},
             onFavoriteClick = {},
@@ -1114,18 +1318,15 @@ fun ProductDetailScreenPreview() {
                 ReviewModelsResponse(
                     id = "mock_id_1",
                     productId = "mock_product_id_1",
-                    userName = "Nguyễn Khánh Ly",
-                    userId = "Nguyễn Khánh Ly",
+                    userName = "Minh Quân",
+                    userId = "Minh Quân",
                     rating = 5,
-                    comment = "Sản phẩm tươi ngon, đóng gói rất cẩn thận. Giao hàng siêu nhanh luôn, 10 điểm không có nhưng! Lần sau sẽ tiếp tục ủng hộ shop.",
-                    imageUrls = listOf(
-                        "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?q=80&w=200",
-                        "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=200"
-                    ),
+                    comment = "Cà chua rất tươi, ngọt, sấy khô vừa tới. Rất đáng tiền, sẽ ủng hộ shop tiếp. Đóng gói rất chuyên nghiệp, giữ được độ giòn.",
+                    imageUrls = emptyList(),
                     createdAt = "2 NGÀY TRƯỚC"
                 )
             ),
-            reviewSummary = ReviewSummaryResponse(1, 5.0, 1, 0, 0, 0, 0)
+            reviewSummary = ReviewSummaryResponse(120, 4.9, 110, 10, 0, 0, 0)
         )
     }
 }

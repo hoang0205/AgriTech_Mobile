@@ -56,4 +56,5 @@ interface AiApiService {
     suspend fun generateDescriptionStream(
         @Body request: GenerateDescriptionRequest
     ): ResponseBody
+
 }

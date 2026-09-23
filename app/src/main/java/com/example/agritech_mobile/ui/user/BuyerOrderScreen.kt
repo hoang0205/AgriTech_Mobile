@@ -29,6 +29,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
 import com.example.agritech_mobile.ui.order.EndOfListIndicator
@@ -44,7 +45,8 @@ data class BuyerOrderItem(
     val name: String,
     val quantityDesc: String,
     val itemTotal: Double,
-    val imageUrl: String
+    val imageUrl: String,
+    val isReviewed: Boolean = false
 )
 
 data class BuyerOrder(
@@ -72,6 +74,11 @@ fun BuyerOrdersScreen(
     var isLoading by remember { mutableStateOf(false) }
 
     val defaultShopName = stringResource(R.string.buyer_order_shop_default)
+
+    LifecycleResumeEffect(Unit) {
+        viewModel.getBuyerOrders()
+        onPauseOrDispose { }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.getBuyerOrders()
@@ -111,7 +118,8 @@ fun BuyerOrdersScreen(
                                 name = item.productName ?: "",
                                 quantityDesc = "${item.quantity ?: 0.0} ${item.unit ?: ""} x ${item.price ?: 0.0}đ",
                                 itemTotal = (item.quantity ?: 0.0) * (item.price ?: 0.0),
-                                imageUrl = item.thumbnail ?: ""
+                                imageUrl = item.thumbnail ?: "",
+                                isReviewed = item.isReviewed ?: false
                             )
                         } ?: emptyList(),
                         totalAmount = res.totalAmount ?: 0.0
@@ -348,7 +356,7 @@ fun BuyerOrderCard(
                         }
                     }
 
-                    if (order.status == OrderStatus.COMPLETED) {
+                    if (order.status == OrderStatus.COMPLETED && !item.isReviewed) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),

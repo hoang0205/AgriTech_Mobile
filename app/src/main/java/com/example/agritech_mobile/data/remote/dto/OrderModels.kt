@@ -35,7 +35,8 @@ data class OrderBuyerItem(
     val quantity: Double,
     val unit: String,
     val price: Double,
-    val thumbnail: String
+    val thumbnail: String,
+    val isReviewed: Boolean? = false
 )
 
 data class OrderResponse(

@@ -28,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -604,6 +605,9 @@ fun MyOrdersSection(
     onNavigateToOrders: (String) -> Unit,
     orderCounts: OrderStatusCountResponse
 ) {
+    var isCompletedViewed by rememberSaveable { mutableStateOf(false) }
+    var isCancelledViewed by rememberSaveable { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -629,7 +633,12 @@ fun MyOrdersSection(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFF1B5E20),
-                    modifier = Modifier.clickable { onNavigateToOrders("ALL") })
+                    modifier = Modifier.clickable {
+                        isCompletedViewed = true
+                        isCancelledViewed = true
+                        onNavigateToOrders("ALL")
+                    }
+                )
             }
             Spacer(modifier = Modifier.height(20.dp))
             Row(
@@ -642,31 +651,41 @@ fun MyOrdersSection(
                     Icons.Default.PendingActions,
                     stringResource(R.string.order_status_pending),
                     badgeCount = orderCounts.pending.toInt(),
-                    { onNavigateToOrders("PENDING") }
+                    onClick = { onNavigateToOrders("PENDING") }
                 )
+
                 OrderStatusItem(
                     Icons.Default.Inventory,
                     stringResource(R.string.order_status_confirmed),
                     badgeCount = orderCounts.confirmed.toInt(),
-                    { onNavigateToOrders("CONFIRMED") }
+                    onClick = { onNavigateToOrders("CONFIRMED") }
                 )
+
                 OrderStatusItem(
                     Icons.Default.LocalShipping,
                     stringResource(R.string.order_status_shipping),
                     badgeCount = orderCounts.shipping.toInt(),
-                    { onNavigateToOrders("SHIPPING") }
+                    onClick = { onNavigateToOrders("SHIPPING") }
                 )
+
                 OrderStatusItem(
                     Icons.Default.CheckCircle,
                     stringResource(R.string.order_status_completed),
-                    badgeCount = orderCounts.completed.toInt(),
-                    { onNavigateToOrders("COMPLETED") }
+                    badgeCount = if (isCompletedViewed) 0 else orderCounts.completed.toInt(),
+                    onClick = {
+                        isCompletedViewed = true
+                        onNavigateToOrders("COMPLETED")
+                    }
                 )
+
                 OrderStatusItem(
                     Icons.Default.Cancel,
                     stringResource(R.string.order_status_cancelled),
-                    badgeCount = orderCounts.cancelled.toInt(),
-                    { onNavigateToOrders("CANCELLED") }
+                    badgeCount = if (isCancelledViewed) 0 else orderCounts.cancelled.toInt(),
+                    onClick = {
+                        isCancelledViewed = true
+                        onNavigateToOrders("CANCELLED")
+                    }
                 )
             }
         }

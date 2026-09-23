@@ -72,6 +72,15 @@ class DashboardViewModel @Inject constructor(
     private val _reviewSummary = MutableStateFlow<ReviewSummaryResponse?>(null)
     val reviewSummary: StateFlow<ReviewSummaryResponse?> = _reviewSummary.asStateFlow()
 
+    private val _aiPros = MutableStateFlow<List<String>>(emptyList())
+    val aiPros: StateFlow<List<String>> = _aiPros.asStateFlow()
+
+    private val _aiCons = MutableStateFlow<List<String>>(emptyList())
+    val aiCons: StateFlow<List<String>> = _aiCons.asStateFlow()
+
+    private val _isAiSummarizing = MutableStateFlow(false)
+    val isAiSummarizing: StateFlow<Boolean> = _isAiSummarizing.asStateFlow()
+
     init {
         loadHomeData()
         viewModelScope.launch {

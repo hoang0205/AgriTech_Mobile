@@ -31,7 +31,9 @@ data class ProductResponse(
     val reviewCount: Int,
     val farmerId: String,
     val farmerAvatar: String?,
-    val farmerPhone: String?
+    val farmerPhone: String?,
+    val aiPros: String? = null,
+    val aiCons: String? = null
 )
 
 
