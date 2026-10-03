@@ -36,6 +36,9 @@ class MainActivity : ComponentActivity() {
 
     private var pendingChatRoomId by mutableStateOf<String?>(null)
 
+    private var pendingTargetScreen by mutableStateOf<String?>(null)
+    private var pendingOrderStatus by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -44,7 +47,7 @@ class MainActivity : ComponentActivity() {
         }
         super.onCreate(savedInstanceState)
 
-        pendingChatRoomId = intent.getStringExtra("chatRoomId")
+        extractNotificationExtras(intent)
 
         val accessToken = tokenManager.getAccessToken()
         val startDestination = if (!accessToken.isNullOrEmpty()) {
@@ -67,7 +70,13 @@ class MainActivity : ComponentActivity() {
                     AppNavigation(
                         startRoute = startDestination,
                         pendingChatRoomId = pendingChatRoomId,
-                        onChatNavigated = { pendingChatRoomId = null }
+                        onChatNavigated = { pendingChatRoomId = null },
+                        pendingTargetScreen = pendingTargetScreen,
+                        pendingOrderStatus = pendingOrderStatus,
+                        onOrderNavigated = {
+                            pendingTargetScreen = null
+                            pendingOrderStatus = null
+                        }
                     )
                 }
             }
@@ -77,6 +86,12 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        pendingChatRoomId = intent.getStringExtra("chatRoomId")
+        extractNotificationExtras(intent)
+    }
+
+    private fun extractNotificationExtras(intent: Intent?) {
+        pendingChatRoomId = intent?.getStringExtra("chatRoomId")
+        pendingTargetScreen = intent?.getStringExtra("targetScreen")
+        pendingOrderStatus = intent?.getStringExtra("orderStatus")
     }
 }

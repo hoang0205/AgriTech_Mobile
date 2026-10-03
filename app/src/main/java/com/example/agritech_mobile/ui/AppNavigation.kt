@@ -40,7 +40,10 @@ import java.nio.charset.StandardCharsets
 fun AppNavigation(
     startRoute: String,
     pendingChatRoomId: String? = null,
-    onChatNavigated: () -> Unit = {}
+    onChatNavigated: () -> Unit = {},
+    pendingTargetScreen: String? = null,
+    pendingOrderStatus: String? = null,
+    onOrderNavigated: () -> Unit = {}
 ) {
     val navController = rememberNavController()
 
@@ -51,6 +54,16 @@ fun AppNavigation(
 
             navController.navigate("chat/$pendingChatRoomId/$partnerId/${Uri.encode("Tin nhắn")}")
             onChatNavigated()
+        }
+    }
+
+    LaunchedEffect(pendingTargetScreen, pendingOrderStatus) {
+        if (pendingTargetScreen == "buyer_orders" && startRoute == "main_screen") {
+            val status = pendingOrderStatus ?: "ALL"
+            navController.navigate("buyer_orders/$status") {
+                launchSingleTop = true
+            }
+            onOrderNavigated()
         }
     }
 
