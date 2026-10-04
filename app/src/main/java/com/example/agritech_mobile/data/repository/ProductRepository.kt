@@ -169,4 +169,22 @@ class ProductRepository @Inject constructor(
             Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
         }
     }
+
+    suspend fun getProductsByFarmerId(farmerId: String): Result<PageResponse<ProductResponse>> {
+        return try {
+            val response = apiService.getProductsByFarmerId(farmerId)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Phản hồi từ server bị rỗng!"))
+                }
+                } else {
+                Result.failure(Exception("Lỗi từ server: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
+        }
+    }
 }

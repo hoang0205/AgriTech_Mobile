@@ -47,6 +47,8 @@ class MainActivity : ComponentActivity() {
         }
         super.onCreate(savedInstanceState)
 
+        ensureFirebaseAuth()
+
         extractNotificationExtras(intent)
 
         val accessToken = tokenManager.getAccessToken()
@@ -80,6 +82,22 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    private fun ensureFirebaseAuth() {
+        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+        if (auth.currentUser == null) {
+            android.util.Log.d("CHAT_DEBUG", "Chưa có Firebase User, đang đăng nhập Anonymous...")
+            auth.signInAnonymously()
+                .addOnSuccessListener { result ->
+                    android.util.Log.d("CHAT_DEBUG", "Đăng nhập Firebase thành công! UID = ${result.user?.uid}")
+                }
+                .addOnFailureListener { e ->
+                    android.util.Log.e("CHAT_DEBUG", "Đăng nhập Firebase thất bại: ${e.message}", e)
+                }
+        } else {
+            android.util.Log.d("CHAT_DEBUG", "Đã có Firebase User sẵn: UID = ${auth.currentUser?.uid}")
         }
     }
 

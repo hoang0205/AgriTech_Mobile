@@ -1,5 +1,6 @@
 package com.example.agritech_mobile.data.repository
 
+import android.util.Log
 import com.example.agritech_mobile.data.remote.dto.ChatMessage
 import com.example.agritech_mobile.ui.chat.ChatRoomItem
 import com.google.firebase.firestore.FieldValue
@@ -25,12 +26,14 @@ class ChatRepository @Inject constructor() {
     }
 
     fun getMessages(roomId: String): Flow<List<ChatMessage>> = callbackFlow {
+        Log.d("CHAT_DEBUG", "[ChatRepo.getMessages] Đăng ký snapshot listener cho room: $roomId")
         val listener = firestore.collection("chats")
             .document(roomId)
             .collection("messages")
             .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    Log.e("CHAT_DEBUG", "[ChatRepo.getMessages] LỖI Snapshot: ${error.message} (Code: ${error.code})", error)
                     close(error)
                     return@addSnapshotListener
                 }
@@ -38,10 +41,14 @@ class ChatRepository @Inject constructor() {
                     doc.toObject(ChatMessage::class.java)?.copy(id = doc.id)
                 } ?: emptyList()
 
+                Log.d("CHAT_DEBUG", "[ChatRepo.getMessages] Snapshot trả về ${messages.size} documents")
                 trySend(messages)
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            Log.d("CHAT_DEBUG", "[ChatRepo.getMessages] Đã hủy lắng nghe room: $roomId")
+            listener.remove()
+        }
     }
 
     suspend fun sendMessage(roomId: String, message: ChatMessage, participantIds: List<String>): Result<Unit> {
@@ -74,19 +81,22 @@ class ChatRepository @Inject constructor() {
             }
 
             roomRef.set(roomUpdates, SetOptions.merge()).await()
+            Log.d("CHAT_DEBUG", "[ChatRepo.sendMessage] Đã ghi thành công message vào Firestore (ID: ${finalMessage.id})")
             Result.success(Unit)
         } catch (e: Exception) {
-            android.util.Log.e("ChatRepository", "Lỗi Firestore sendMessage: ${e.message}", e)
+            Log.e("CHAT_DEBUG", "[ChatRepo.sendMessage] Lỗi ghi Firestore: ${e.message}", e)
             Result.failure(e)
         }
     }
 
     fun getChatRooms(currentUserId: String): Flow<List<ChatRoomItem>> = callbackFlow {
+        Log.d("CHAT_DEBUG", "[ChatRepo.getChatRooms] Lắng nghe danh sách phòng của user: $currentUserId")
         val listener = firestore.collection("chats")
             .whereArrayContains("participants", currentUserId)
             .orderBy("lastUpdated", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    Log.e("CHAT_DEBUG", "[ChatRepo.getChatRooms] LỖI Snapshot phòng: ${error.message} (Code: ${error.code})", error)
                     close(error)
                     return@addSnapshotListener
                 }
@@ -111,6 +121,7 @@ class ChatRepository @Inject constructor() {
                     )
                 } ?: emptyList()
 
+                Log.d("CHAT_DEBUG", "[ChatRepo.getChatRooms] Tìm thấy ${rooms.size} phòng chat")
                 trySend(rooms)
             }
 
@@ -122,7 +133,9 @@ class ChatRepository @Inject constructor() {
             firestore.collection("chats").document(roomId)
                 .update("unreadCount_$currentUserId", 0)
                 .await()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.w("CHAT_DEBUG", "[ChatRepo.markRoomAsRead] Không thể cập nhật unreadCount: ${e.message}")
+        }
     }
 
     suspend fun saveChatRoomMetadata(
@@ -153,6 +166,9 @@ class ChatRepository @Inject constructor() {
             }
 
             roomRef.set(updates, SetOptions.merge()).await()
-        } catch (_: Exception) {}
+            Log.d("CHAT_DEBUG", "[ChatRepo.saveChatRoomMetadata] Đã cập nhật metadata phòng $roomId thành công")
+        } catch (e: Exception) {
+            Log.e("CHAT_DEBUG", "[ChatRepo.saveChatRoomMetadata] LỖI cập nhật metadata: ${e.message}", e)
+        }
     }
 }

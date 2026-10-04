@@ -6,6 +6,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -24,6 +28,7 @@ import com.example.agritech_mobile.ui.cart.CheckoutScreen
 import com.example.agritech_mobile.ui.chat.AiChatScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
+import com.example.agritech_mobile.ui.dashboard.SellerStoreScreen
 import com.example.agritech_mobile.ui.main.MainScreen
 import com.example.agritech_mobile.ui.order.AddressSelectionScreen
 import com.example.agritech_mobile.ui.order.MapPickerScreen
@@ -47,6 +52,8 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
 
+    var targetMainTab by remember { mutableStateOf<Int?>(null) }
+
     LaunchedEffect(pendingChatRoomId) {
         if (!pendingChatRoomId.isNullOrBlank() && startRoute == "main_screen") {
             val myId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
@@ -58,12 +65,21 @@ fun AppNavigation(
     }
 
     LaunchedEffect(pendingTargetScreen, pendingOrderStatus) {
-        if (pendingTargetScreen == "buyer_orders" && startRoute == "main_screen") {
-            val status = pendingOrderStatus ?: "ALL"
-            navController.navigate("buyer_orders/$status") {
-                launchSingleTop = true
+        if (startRoute == "main_screen") {
+            when (pendingTargetScreen) {
+                "buyer_orders" -> {
+                    val status = pendingOrderStatus ?: "ALL"
+                    navController.navigate("buyer_orders/$status") {
+                        launchSingleTop = true
+                    }
+                    onOrderNavigated()
+                }
+                "seller_orders" -> {
+                    targetMainTab = 1
+                    navController.popBackStack("main_screen", inclusive = false)
+                    onOrderNavigated()
+                }
             }
-            onOrderNavigated()
         }
     }
 
@@ -185,6 +201,8 @@ fun AppNavigation(
             exitTransition = { fadeOut() }
         ) {
             MainScreen(
+                targetTab = targetMainTab,
+                onTabHandled = { targetMainTab = null },
                 onNavigateToDetail = { productId ->
                     navController.navigate("product_detail/$productId")
                 },
@@ -222,6 +240,12 @@ fun AppNavigation(
             ProductDetailScreen(
                 productId = productId,
                 onBackClick = { navController.popBackStack() },
+                onViewShopClick = { sellerId, sellerName, sellerAvatar, sellerPhone ->
+                    val encodedName = Uri.encode(sellerName)
+                    val encodedAvatar = Uri.encode(sellerAvatar ?: "")
+                    val phone = sellerPhone ?: ""
+                    navController.navigate("seller_store/$sellerId?sellerName=$encodedName&sellerAvatar=$encodedAvatar&sellerPhone=$phone")
+                },
                 onChatClick = { sellerId, sellerName, sellerAvatar, sellerPhone, pId, pName, pPrice, pImage ->
                     val myUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
                     val roomId = com.example.agritech_mobile.data.repository.ChatRepository.generateRoomId(myUserId, sellerId)
@@ -578,6 +602,53 @@ fun AppNavigation(
                 },
                 onBackClick = {
                     navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = "seller_store/{sellerId}?sellerName={sellerName}&sellerAvatar={sellerAvatar}&sellerPhone={sellerPhone}",
+            arguments = listOf(
+                navArgument("sellerId") { type = NavType.StringType },
+                navArgument("sellerName") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument("sellerAvatar") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("sellerPhone") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val sellerId = backStackEntry.arguments?.getString("sellerId") ?: ""
+            val sellerName = backStackEntry.arguments?.getString("sellerName") ?: ""
+            val sellerAvatar = backStackEntry.arguments?.getString("sellerAvatar")
+            val sellerPhone = backStackEntry.arguments?.getString("sellerPhone")
+
+            SellerStoreScreen(
+                sellerId = sellerId,
+                sellerName = sellerName,
+                sellerAvatar = sellerAvatar,
+                sellerPhone = sellerPhone,
+                onBackClick = { navController.popBackStack() },
+                onProductClick = { productId ->
+                    navController.navigate("product_detail/$productId")
+                },
+                onChatClick = {
+                    val myUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                    val roomId = com.example.agritech_mobile.data.repository.ChatRepository.generateRoomId(myUserId, sellerId)
+
+                    navController.navigate(
+                        "chat/$roomId/$sellerId/${Uri.encode(sellerName)}?" +
+                                "partnerAvatar=${Uri.encode(sellerAvatar ?: "")}&" +
+                                "partnerPhone=${sellerPhone ?: ""}"
+                    )
                 }
             )
         }

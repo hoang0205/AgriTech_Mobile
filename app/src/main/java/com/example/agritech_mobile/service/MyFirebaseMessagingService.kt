@@ -99,9 +99,11 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(channel)
         }
 
+        val targetScreen = if (status == "NEW_ORDER_SELLER") "seller_orders" else "buyer_orders"
+
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra("targetScreen", "buyer_orders")
+            putExtra("targetScreen", targetScreen)
             putExtra("orderStatus", status)
             putExtra("orderId", orderId)
         }
@@ -124,6 +126,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
 
         when (status) {
+            "NEW_ORDER_SELLER" -> {
+                builder.setSubText("Đơn hàng mới cần duyệt")
+            }
             "PENDING" -> {
                 builder.setSubText("Chờ xác nhận")
             }

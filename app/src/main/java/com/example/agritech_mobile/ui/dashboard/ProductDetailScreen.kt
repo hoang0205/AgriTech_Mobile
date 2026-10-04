@@ -96,6 +96,7 @@ data class ProductDetailUiState(
 fun ProductDetailScreen(
     onBackClick: () -> Unit = {},
     productId: String = "",
+    onViewShopClick: (sellerId: String, sellerName: String, sellerAvatar: String?, sellerPhone: String?) -> Unit = { _, _, _, _ -> },
     onChatClick: (
         sellerId: String,
         sellerName: String,
@@ -200,7 +201,14 @@ fun ProductDetailScreen(
         uiState = uiState,
         onBackClick = onBackClick,
         onFavoriteClick = { uiState = uiState.copy(isFavorite = !uiState.isFavorite) },
-        onViewShopClick = { /* TODO*/ },
+        onViewShopClick = {
+            onViewShopClick(
+                uiState.sellerId,
+                uiState.sellerName,
+                uiState.sellerAvatar,
+                uiState.sellerPhone
+            )
+        },
         onChatClick = {
             onChatClick(
                 uiState.sellerId,
@@ -456,20 +464,20 @@ fun ProductDetailContent(
                                 color = textDark
                             )
                         }
-//                        Box(
-//                            modifier = Modifier
-//                                .clip(RoundedCornerShape(8.dp))
-//                                .background(Color(0xFFE0E0E0))
-//                                .clickable { onViewShopClick() }
-//                                .padding(horizontal = 16.dp, vertical = 8.dp)
-//                        ) {
-//                            Text(
-//                                text = stringResource(R.string.view_shop_btn),
-//                                style = MaterialTheme.typography.labelMedium,
-//                                color = textDark,
-//                                fontWeight = FontWeight.Bold
-//                            )
-//                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFE0E0E0))
+                                .clickable { onViewShopClick() }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.view_shop_btn),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = textDark,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))

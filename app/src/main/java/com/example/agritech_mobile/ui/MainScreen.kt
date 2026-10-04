@@ -42,6 +42,8 @@ import kotlin.math.roundToInt
 
 @Composable
 fun MainScreen(
+    targetTab: Int? = null,
+    onTabHandled: () -> Unit = {},
     onNavigateToDetail: (String) -> Unit,
     onNavigateToCreateProduct: () -> Unit,
     onNavigateToCheckout: (String) -> Unit,
@@ -50,6 +52,13 @@ fun MainScreen(
     onNavigateToChat: () -> Unit
 ) {
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
+
+    LaunchedEffect(targetTab) {
+        targetTab?.let { tabIndex ->
+            selectedIndex = tabIndex
+            onTabHandled()
+        }
+    }
 
     val bottomBarHeight = 130.dp
     val bottomBarHeightPx = with(LocalDensity.current) { bottomBarHeight.toPx() }

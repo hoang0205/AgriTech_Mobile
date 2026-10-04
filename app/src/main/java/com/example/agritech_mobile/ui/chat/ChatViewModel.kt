@@ -51,17 +51,27 @@ class ChatViewModel @Inject constructor(
     val chatListUiState: StateFlow<ChatListUiState> = _chatListUiState.asStateFlow()
 
     fun loadChatRooms() {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+        Log.d("CHAT_DEBUG", "[loadChatRooms] Bắt đầu tải danh sách. CurrentUser UID = $currentUserId")
+
+        if (currentUserId.isNullOrBlank()) {
+            Log.e("CHAT_DEBUG", "[loadChatRooms] LỖI: FirebaseAuth.currentUser bị NULL!")
+            _chatListUiState.update { it.copy(isLoading = false, errorMessage = "Chưa đăng nhập Firebase Auth") }
+            return
+        }
+
         _chatListUiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
             chatRepository.getChatRooms(currentUserId)
                 .catch { error ->
+                    Log.e("CHAT_DEBUG", "[loadChatRooms] Lỗi Flow getChatRooms: ${error.message}", error)
                     _chatListUiState.update {
                         it.copy(isLoading = false, errorMessage = error.localizedMessage)
                     }
                 }
                 .collect { rooms ->
+                    Log.d("CHAT_DEBUG", "[loadChatRooms] Đã tải ${rooms.size} phòng chat")
                     _chatListUiState.update {
                         it.copy(chatRooms = rooms, isLoading = false, errorMessage = null)
                     }
@@ -83,7 +93,25 @@ class ChatViewModel @Inject constructor(
         myName: String,
         myAvatar: String?
     ) {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+        Log.d("CHAT_DEBUG", "[initChatRoom] Gọi khởi tạo phòng:")
+        Log.d("CHAT_DEBUG", "   -> roomId: $roomId")
+        Log.d("CHAT_DEBUG", "   -> currentUserId: $currentUserId")
+        Log.d("CHAT_DEBUG", "   -> partnerId: $partnerId")
+        Log.d("CHAT_DEBUG", "   -> partnerName: $partnerName")
+
+        if (currentUserId.isNullOrBlank()) {
+            Log.e("CHAT_DEBUG", "[initChatRoom] currentUser bị NULL! App chưa đăng nhập Firebase Auth nên Firestore sẽ chặn.")
+            _uiState.update { it.copy(isLoading = false, errorMessage = "Chưa đăng nhập tài khoản Firebase!") }
+            return
+        }
+
+        if (partnerId.isBlank()) {
+            Log.e("CHAT_DEBUG", "[initChatRoom] partnerId bị rỗng! Kiểm tra lại tham số truyền từ Navigation.")
+            _uiState.update { it.copy(isLoading = false, errorMessage = "ID đối phương không hợp lệ") }
+            return
+        }
+
         currentRoomId = roomId
         participantIds = listOf(currentUserId, partnerId)
 
@@ -101,16 +129,19 @@ class ChatViewModel @Inject constructor(
             chatRepository.markRoomAsRead(roomId, currentUserId)
         }
 
-        _uiState.update { it.copy(isLoading = true) }
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
         viewModelScope.launch {
+            Log.d("CHAT_DEBUG", "[initChatRoom] Bắt đầu lắng nghe tin nhắn Firestore cho roomId: $roomId")
             chatRepository.getMessages(roomId)
                 .catch { error ->
+                    Log.e("CHAT_DEBUG", "[initChatRoom] LỖI getMessages Firestore: ${error.message}", error)
                     _uiState.update {
-                        it.copy(isLoading = false, errorMessage = error.localizedMessage)
+                        it.copy(isLoading = false, errorMessage = "Lỗi Firestore: ${error.localizedMessage}")
                     }
                 }
                 .collect { messageList ->
+                    Log.d("CHAT_DEBUG", "[initChatRoom] Nhận được ${messageList.size} tin nhắn từ Firestore")
                     _uiState.update {
                         it.copy(messages = messageList, isLoading = false)
                     }
@@ -122,91 +153,6 @@ class ChatViewModel @Inject constructor(
         _uiState.update { it.copy(inputText = newText) }
     }
 
-    fun sendTextMessage(senderName: String, senderAvatar: String? = null) {
-        val content = _uiState.value.inputText.trim()
-        if (content.isBlank() || currentRoomId.isBlank()) return
-
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-
-        val message = ChatMessage(
-            senderId = currentUserId,
-            senderName = senderName,
-            senderAvatar = senderAvatar,
-            text = content,
-            timestamp = System.currentTimeMillis()
-        )
-
-        executeSendMessage(message)
-    }
-
-    fun sendProductCard(
-        senderName: String,
-        senderAvatar: String? = null,
-        productId: String,
-        productName: String,
-        productPrice: Double,
-        productImage: String
-    ) {
-        if (currentRoomId.isBlank()) return
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-
-        val message = ChatMessage(
-            senderId = currentUserId,
-            senderName = senderName,
-            senderAvatar = senderAvatar,
-            text = "Tôi quan tâm đến sản phẩm này",
-            productId = productId,
-            productName = productName,
-            productPrice = productPrice,
-            productImage = productImage,
-            timestamp = System.currentTimeMillis()
-        )
-
-        executeSendMessage(message)
-    }
-
-    private fun executeSendMessage(message: ChatMessage) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isSending = true, inputText = "") }
-
-            val result = chatRepository.sendMessage(
-                roomId = currentRoomId,
-                message = message,
-                participantIds = participantIds
-            )
-
-            if (result.isSuccess) {
-                _uiState.update { it.copy(isSending = false) }
-
-                val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
-                val recipientId = participantIds.firstOrNull { it != currentUserId }
-
-                if (!recipientId.isNullOrBlank()) {
-                    try {
-                        val previewText = message.productName?.let { "[Sản phẩm] $it" } ?: message.text
-                        notificationApiService.sendChatNotification(
-                            SendNotificationRequest(
-                                recipientId = recipientId,
-                                senderName = message.senderName.ifBlank { "Tin nhắn mới" },
-                                messageText = previewText,
-                                roomId = currentRoomId
-                            )
-                        )
-                    } catch (e: Exception) {
-                        Log.e("ChatViewModel", "Lỗi kích hoạt thông báo: ${e.localizedMessage}")
-                    }
-                }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isSending = false,
-                        errorMessage = "Không thể gửi tin nhắn. Vui lòng thử lại!"
-                    )
-                }
-            }
-        }
-    }
-
     fun sendMessageWithOptionalProduct(
         product: ChatMessage?,
         senderName: String,
@@ -215,6 +161,8 @@ class ChatViewModel @Inject constructor(
         val content = _uiState.value.inputText.trim()
         if (content.isBlank() || currentRoomId.isBlank()) return
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        Log.d("CHAT_DEBUG", "[sendMessage] Bắt đầu gửi tin nhắn đến roomId: $currentRoomId")
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSending = true, inputText = "") }
@@ -231,7 +179,8 @@ class ChatViewModel @Inject constructor(
                     productImage = product.productImage,
                     timestamp = System.currentTimeMillis()
                 )
-                chatRepository.sendMessage(currentRoomId, prodMessage, participantIds)
+                val prodResult = chatRepository.sendMessage(currentRoomId, prodMessage, participantIds)
+                Log.d("CHAT_DEBUG", "[sendMessage] Gửi kèm thẻ sản phẩm: success = ${prodResult.isSuccess}")
             }
 
             val textMessage = ChatMessage(
@@ -242,6 +191,7 @@ class ChatViewModel @Inject constructor(
                 timestamp = System.currentTimeMillis() + 1
             )
             val result = chatRepository.sendMessage(currentRoomId, textMessage, participantIds)
+            Log.d("CHAT_DEBUG", "[sendMessage] Gửi text message: success = ${result.isSuccess}")
 
             _uiState.update { it.copy(isSending = false) }
 
@@ -257,10 +207,13 @@ class ChatViewModel @Inject constructor(
                                 roomId = currentRoomId
                             )
                         )
+                        Log.d("CHAT_DEBUG", "[sendMessage] Bắn FCM notification thành công tới: $recipientId")
                     } catch (e: Exception) {
-                        Log.e("ChatViewModel", "Lỗi notification: ${e.localizedMessage}")
+                        Log.e("CHAT_DEBUG", "[sendMessage] Lỗi gọi FCM Notification API: ${e.message}")
                     }
                 }
+            } else {
+                _uiState.update { it.copy(errorMessage = "Gửi tin nhắn thất bại!") }
             }
         }
     }

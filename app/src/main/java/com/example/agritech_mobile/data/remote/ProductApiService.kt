@@ -57,5 +57,11 @@ interface ProductApiService {
         @Query("keyword") query: String,
     ) : Response<List<String>>
 
+    @GET("api/products/farmer/{farmerId}")
+    suspend fun getProductsByFarmerId(
+        @Path("farmerId") farmerId: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<PageResponse<ProductResponse>>
 }
 

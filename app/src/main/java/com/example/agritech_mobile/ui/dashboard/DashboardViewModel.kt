@@ -81,6 +81,12 @@ class DashboardViewModel @Inject constructor(
     private val _isAiSummarizing = MutableStateFlow(false)
     val isAiSummarizing: StateFlow<Boolean> = _isAiSummarizing.asStateFlow()
 
+    private val _sellerProducts = MutableStateFlow<List<ProductResponse>>(emptyList())
+    val sellerProducts: StateFlow<List<ProductResponse>> = _sellerProducts.asStateFlow()
+
+    private val _isSellerLoading = MutableStateFlow(false)
+    val isSellerLoading: StateFlow<Boolean> = _isSellerLoading.asStateFlow()
+
     init {
         loadHomeData()
         viewModelScope.launch {
@@ -125,17 +131,36 @@ class DashboardViewModel @Inject constructor(
         _dashboardState.value = DashboardState.Loading
         viewModelScope.launch {
             try {
+                Log.d("LOAD_DATA_DEBUG", "Bắt đầu gọi API lấy sản phẩm trang chủ...")
                 val newProductsDeferred = async { repository.getProducts() }
                 val randomProductsDeferred = async { repository.getRecommendations() }
+
                 val newProductsResult = newProductsDeferred.await()
                 val randomProductsResult = randomProductsDeferred.await()
+
+                // Kiểm tra nếu cả hai request đều thất bại
+                if (newProductsResult.isFailure && randomProductsResult.isFailure) {
+                    val errNew = newProductsResult.exceptionOrNull()?.message
+                    val errRandom = randomProductsResult.exceptionOrNull()?.message
+                    Log.e("LOAD_DATA_DEBUG", "LỖI KẾT NỐI SERVER: new=$errNew | random=$errRandom")
+
+                    _dashboardState.value = DashboardState.Error(
+                        errNew ?: errRandom ?: "Không thể kết nối đến máy chủ Spring Boot"
+                    )
+                    return@launch
+                }
+
                 val newProducts = newProductsResult.getOrNull()?.content ?: emptyList()
                 val suggestedProducts = randomProductsResult.getOrNull() ?: emptyList()
+
+                Log.d("LOAD_DATA_DEBUG", "Tải thành công: ${newProducts.size} sản phẩm mới, ${suggestedProducts.size} gợi ý.")
+
                 _dashboardState.value = DashboardState.HomeDataSuccess(
                     newProducts = newProducts,
                     suggestedProducts = suggestedProducts
                 )
             } catch (e: Exception) {
+                Log.e("LOAD_DATA_DEBUG", "CRASH khi loadHomeData: ${e.localizedMessage}", e)
                 _dashboardState.value = DashboardState.Error(e.message ?: "Lỗi tải dữ liệu")
             }
         }
@@ -182,6 +207,22 @@ class DashboardViewModel @Inject constructor(
                     DashboardState.ActionSuccess("Đăng bán sản phẩm thành công!")
             }.onFailure { exception ->
                 _dashboardState.value = DashboardState.Error(exception.message ?: "Lỗi hệ thống")
+            }
+        }
+    }
+
+    fun getProductsBySeller(sellerId: String) {
+        _isSellerLoading.value = true
+        _sellerProducts.value = emptyList()
+        viewModelScope.launch {
+            val result = repository.getProductsByFarmerId(sellerId)
+            result.onSuccess { response ->
+                _sellerProducts.value = response.content
+                _isSellerLoading.value = false
+            }.onFailure { exception ->
+                Log.e("DashboardViewModel", "Lỗi lấy sản phẩm của người bán: ${exception.message}")
+                _sellerProducts.value = emptyList()
+                _isSellerLoading.value = false
             }
         }
     }

@@ -114,9 +114,9 @@ fun HomeScreen(
                 userAvatar = userAvatar
             )
         }
-        if (uiState.newProducts.isEmpty() && uiState.suggestedProducts.isEmpty()) {
-            viewModel.loadHomeData()
-        }
+//        if (uiState.newProducts.isEmpty() && uiState.suggestedProducts.isEmpty()) {
+//            viewModel.loadHomeData()
+//        }
     }
 
     LaunchedEffect(dashboardState) {
