@@ -13,10 +13,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.firebase.auth.FirebaseAuth
 import com.example.agritech_mobile.data.local.TokenManager
 import com.example.agritech_mobile.data.repository.AuthRepository
 import com.example.agritech_mobile.ui.AppNavigation
@@ -47,8 +50,6 @@ class MainActivity : ComponentActivity() {
         }
         super.onCreate(savedInstanceState)
 
-        ensureFirebaseAuth()
-
         extractNotificationExtras(intent)
 
         val accessToken = tokenManager.getAccessToken()
@@ -64,6 +65,15 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
         )
         setContent {
+            val isLoggedIn by tokenManager.isLoggedIn.collectAsStateWithLifecycle()
+            LaunchedEffect(isLoggedIn) {
+                if (!isLoggedIn) {
+                    FirebaseAuth.getInstance().signOut()
+                    pendingChatRoomId = null
+                    pendingTargetScreen = null
+                    pendingOrderStatus = null
+                }
+            }
             AgritechTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -71,6 +81,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AppNavigation(
                         startRoute = startDestination,
+                        isLoggedIn = isLoggedIn,
                         pendingChatRoomId = pendingChatRoomId,
                         onChatNavigated = { pendingChatRoomId = null },
                         pendingTargetScreen = pendingTargetScreen,
@@ -82,22 +93,6 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
-        }
-    }
-
-    private fun ensureFirebaseAuth() {
-        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-        if (auth.currentUser == null) {
-            android.util.Log.d("CHAT_DEBUG", "Chưa có Firebase User, đang đăng nhập Anonymous...")
-            auth.signInAnonymously()
-                .addOnSuccessListener { result ->
-                    android.util.Log.d("CHAT_DEBUG", "Đăng nhập Firebase thành công! UID = ${result.user?.uid}")
-                }
-                .addOnFailureListener { e ->
-                    android.util.Log.e("CHAT_DEBUG", "Đăng nhập Firebase thất bại: ${e.message}", e)
-                }
-        } else {
-            android.util.Log.d("CHAT_DEBUG", "Đã có Firebase User sẵn: UID = ${auth.currentUser?.uid}")
         }
     }
 

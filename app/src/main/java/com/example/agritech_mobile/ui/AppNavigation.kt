@@ -12,6 +12,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
@@ -44,6 +46,7 @@ import java.nio.charset.StandardCharsets
 @Composable
 fun AppNavigation(
     startRoute: String,
+    isLoggedIn: Boolean,
     pendingChatRoomId: String? = null,
     onChatNavigated: () -> Unit = {},
     pendingTargetScreen: String? = null,
@@ -51,11 +54,22 @@ fun AppNavigation(
     onOrderNavigated: () -> Unit = {}
 ) {
     val navController = rememberNavController()
+    val currentEntry by navController.currentBackStackEntryAsState()
+
+    LaunchedEffect(isLoggedIn, currentEntry) {
+        val destination = currentEntry?.destination ?: return@LaunchedEffect
+        if (!isLoggedIn && destination.hierarchy.none { it.route == "auth_graph" }) {
+            navController.navigate("auth_graph") {
+                popUpTo(navController.graph.id) { inclusive = false }
+                launchSingleTop = true
+            }
+        }
+    }
 
     var targetMainTab by remember { mutableStateOf<Int?>(null) }
 
-    LaunchedEffect(pendingChatRoomId) {
-        if (!pendingChatRoomId.isNullOrBlank() && startRoute == "main_screen") {
+    LaunchedEffect(pendingChatRoomId, isLoggedIn) {
+        if (!pendingChatRoomId.isNullOrBlank() && isLoggedIn) {
             val myId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
             val partnerId = pendingChatRoomId.split("_").firstOrNull { it != myId } ?: ""
 
@@ -64,8 +78,8 @@ fun AppNavigation(
         }
     }
 
-    LaunchedEffect(pendingTargetScreen, pendingOrderStatus) {
-        if (startRoute == "main_screen") {
+    LaunchedEffect(pendingTargetScreen, pendingOrderStatus, isLoggedIn) {
+        if (isLoggedIn) {
             when (pendingTargetScreen) {
                 "buyer_orders" -> {
                     val status = pendingOrderStatus ?: "ALL"
@@ -213,12 +227,6 @@ fun AppNavigation(
                     navController.navigate("checkout/$selectedIds")
                 },
                 onLogoutSuccess = {
-                    navController.navigate("auth_graph") {
-                        popUpTo("main_screen") {
-                            inclusive = true
-                        }
-                        launchSingleTop = true
-                    }
                 },
                 onNavigateToBuyerOrders = { status ->
                     navController.navigate("buyer_orders/$status")

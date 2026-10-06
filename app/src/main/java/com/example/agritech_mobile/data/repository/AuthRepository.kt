@@ -19,6 +19,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.gson.Gson
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
 class AuthRepository @Inject constructor(
@@ -33,18 +34,26 @@ class AuthRepository @Inject constructor(
             if (response.isSuccessful && response.body() != null) {
                 val loginResponse = response.body()!!
 
-                tokenManager.saveTokens(loginResponse.accessToken, loginResponse.refreshToken)
-
+                FirebaseAuth.getInstance().signOut()
                 loginResponse.firebaseToken?.let { token ->
                     try {
                         FirebaseAuth.getInstance().signInWithCustomToken(token).await()
                         Log.d("AuthRepository", "Firebase Auth thành công: ${FirebaseAuth.getInstance().currentUser?.uid}")
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         Log.e("AuthRepository", "Firebase Auth thất bại: ${e.localizedMessage}")
                     }
                 }
 
+                tokenManager.saveUserName(loginResponse.fullName)
+                tokenManager.saveAvatarUrl(loginResponse.avatarUrl)
+                tokenManager.saveTokens(loginResponse.accessToken, loginResponse.refreshToken)
+                val loginSession = tokenManager.sessionTokens()
                 registerFcmToken()
+                if (tokenManager.sessionTokens().generation != loginSession.generation) {
+                    return Result.failure(Exception("Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại."))
+                }
 
                 Result.success(loginResponse)
             } else {
@@ -57,6 +66,8 @@ class AuthRepository @Inject constructor(
                 Log.d("AuthRepository", "Error response: $errorMessage")
                 Result.failure(Exception(errorMessage))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
         }

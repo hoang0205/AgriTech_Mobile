@@ -1,6 +1,7 @@
 package com.example.agritech_mobile.di
 
 import com.example.agritech_mobile.data.local.TokenManager
+import com.example.agritech_mobile.data.local.SessionTokens
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
@@ -16,10 +17,12 @@ class AuthInterceptor @Inject constructor(
         }
 
         val requestBuilder = request.newBuilder()
-        val accessToken = tokenManager.getAccessToken()
+        val session = tokenManager.sessionTokens()
+        val accessToken = session.accessToken
 
         if (!accessToken.isNullOrEmpty()) {
-            requestBuilder.addHeader("Authorization", "Bearer $accessToken")
+            requestBuilder.header("Authorization", "Bearer $accessToken")
+                .tag(SessionTokens::class.java, session)
         }
 
         return chain.proceed(requestBuilder.build())

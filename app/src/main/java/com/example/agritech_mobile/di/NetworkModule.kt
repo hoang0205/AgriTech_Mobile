@@ -21,6 +21,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
+import javax.inject.Named
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -29,9 +30,9 @@ object NetworkModule {
 //    private const val BASE_URL = "https://agritech-wtqr.onrender.com/"
 
     private const val IP_ADDRESS = "192.168.2.4"
-    private const val BASE_URL = "http://192.168.1.64:2507/"
+    private const val BASE_URL = "http://192.168.1.81:2507/"
 
-    private const val BASE_AI_URL = "http://192.168.1.64:8000/"
+    private const val BASE_AI_URL = "http://192.168.1.81:8000/"
     @Provides
     @Singleton
     fun provideOkHttpClient(
@@ -61,6 +62,17 @@ object NetworkModule {
     fun provideAuthApiService(retrofit: Retrofit): AuthApiService {
         return retrofit.create(AuthApiService::class.java)
     }
+
+    @Provides
+    @Singleton
+    @Named("refreshAuth")
+    fun provideRefreshAuthApiService(): AuthApiService = Retrofit.Builder()
+        .baseUrl(BASE_URL)
+        // A separate dispatcher prevents refresh from waiting on blocked authenticated calls.
+        .client(OkHttpClient.Builder().callTimeout(30, TimeUnit.SECONDS).build())
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+        .create(AuthApiService::class.java)
 
     @Provides
     @Singleton
