@@ -3,6 +3,7 @@ package com.example.agritech_mobile.ui.user
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -46,6 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
 import com.example.agritech_mobile.data.remote.dto.OrderStatusCountResponse
@@ -60,12 +62,19 @@ fun ProfileScreen(
     onNavigateToAddress: () -> Unit,
     onNavigateToOrders: (String) -> Unit,
     onLogoutClick: () -> Unit,
+    onNavigateToRevenue: () -> Unit = {},
+    onNavigateToReports: () -> Unit = {},
+    onNavigateToAdminReports: () -> Unit = {},
     userViewModel: UserViewModel = hiltViewModel(),
     orderViewModel: OrderViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val userState by userViewModel.userState.collectAsState()
     val profileState by userViewModel.profileState.collectAsState()
+    val isAdmin by userViewModel.isAdmin.collectAsStateWithLifecycle()
+    LaunchedEffect(isAdmin) {
+        Log.d("AdminRole", "Profile isAdmin=$isAdmin")
+    }
 
     val orderCounts by orderViewModel.orderCounts.collectAsState()
 
@@ -123,7 +132,11 @@ fun ProfileScreen(
             },
             onEditClick = { showEditDialog = true },
             onChangePasswordClick = { showPasswordDialog = true },
-            orderCounts = orderCounts
+            orderCounts = orderCounts,
+            onNavigateToRevenue = onNavigateToRevenue,
+            onNavigateToReports = onNavigateToReports,
+            isAdmin = isAdmin,
+            onNavigateToAdminReports = onNavigateToAdminReports
         )
 
         if (showEditDialog) {
@@ -378,9 +391,8 @@ fun ChangePasswordDialog(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
                     label = {
-                        Text(
-                            stringResource(R.string.common_error_empty_fields)
-                        ) },
+                        Text(stringResource(R.string.profile_change_pwd_confirm))
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -435,7 +447,11 @@ fun ProfileContent(
     onLogoutClick: () -> Unit,
     onEditClick: () -> Unit,
     onChangePasswordClick: () -> Unit,
-    orderCounts: OrderStatusCountResponse = OrderStatusCountResponse()
+    orderCounts: OrderStatusCountResponse = OrderStatusCountResponse(),
+    onNavigateToRevenue: () -> Unit = {},
+    onNavigateToReports: () -> Unit = {},
+    isAdmin: Boolean = false,
+    onNavigateToAdminReports: () -> Unit = {},
 ) {
     Scaffold(
         containerColor = Color(0xFFF8FAF9),
@@ -468,7 +484,11 @@ fun ProfileContent(
 
             AccountSettingsSection(
                 onNavigateToAddress = onNavigateToAddress,
-                onChangePasswordClick = onChangePasswordClick
+                onChangePasswordClick = onChangePasswordClick,
+                onNavigateToRevenue = onNavigateToRevenue,
+                onNavigateToReports = onNavigateToReports,
+                isAdmin = isAdmin,
+                onNavigateToAdminReports = onNavigateToAdminReports
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -744,7 +764,11 @@ fun OrderStatusItem(icon: ImageVector, label: String, badgeCount: Int, onClick: 
 @Composable
 fun AccountSettingsSection(
     onNavigateToAddress: () -> Unit,
-    onChangePasswordClick: () -> Unit
+    onChangePasswordClick: () -> Unit,
+    onNavigateToRevenue: () -> Unit = {},
+    onNavigateToReports: () -> Unit = {},
+    isAdmin: Boolean = false,
+    onNavigateToAdminReports: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -776,10 +800,34 @@ fun AccountSettingsSection(
                     thickness = 1.dp,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
+                if (isAdmin) {
+                    SettingsMenuItem(
+                        Icons.Default.AdminPanelSettings,
+                        "Quản lý báo cáo",
+                        onNavigateToAdminReports
+                    )
+
+                    HorizontalDivider(
+                        color = Color(0xFFF0F0F0),
+                        thickness = 1.dp,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
                 SettingsMenuItem(
-                    Icons.Default.Payments,
-                    stringResource(R.string.profile_menu_payment),
-                    {})
+                    Icons.Default.Flag,
+                    "Báo cáo của tôi",
+                    onNavigateToReports
+                )
+                HorizontalDivider(
+                    color = Color(0xFFF0F0F0),
+                    thickness = 1.dp,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                SettingsMenuItem(
+                    Icons.Default.AttachMoney,
+                    "Doanh thu",
+                    onNavigateToRevenue
+                )
                 HorizontalDivider(
                     color = Color(0xFFF0F0F0),
                     thickness = 1.dp,

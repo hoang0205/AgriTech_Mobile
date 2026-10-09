@@ -10,7 +10,8 @@ data class LoginResponse(
     val refreshToken: String,
     val fullName: String,
     val avatarUrl: String? = null,
-    val firebaseToken: String? = null
+    val firebaseToken: String? = null,
+    val role: String? = null
 )
 
 data class RegisterResponse(
@@ -40,7 +41,8 @@ data class VerifyEmail(
 )
 data class ResetPasswordRequest(
     val email: String,
-    val newPassword: String
+    val newPassword: String,
+    val otp: String
 )
 
 data class MessageResponse(
@@ -50,4 +52,5 @@ data class MessageResponse(
 
 data class LogoutRequest(
     val accessToken: String,
+    val refreshToken: String
 )

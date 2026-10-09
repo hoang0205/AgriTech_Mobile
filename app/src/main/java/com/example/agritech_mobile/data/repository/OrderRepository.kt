@@ -6,9 +6,11 @@ import com.example.agritech_mobile.data.remote.dto.OrderBuyerResponse
 import com.example.agritech_mobile.data.remote.dto.OrderMessageResponse
 import com.example.agritech_mobile.data.remote.dto.OrderResponse
 import com.example.agritech_mobile.data.remote.dto.OrderStatusCountResponse
+import com.example.agritech_mobile.data.remote.dto.RevenueSummaryDto
 import com.example.agritech_mobile.data.remote.dto.StatusRequest
 import okhttp3.Address
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 
 class OrderRepository @Inject constructor(
     private val orderApiService: OrderApiService
@@ -150,6 +152,31 @@ class OrderRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    suspend fun getRevenueSummary(): Result<RevenueSummaryDto> {
+        return try {
+            val response = orderApiService.getRevenueSummary()
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Phản hồi từ server bị rỗng!"))
+                }
+            } else {
+                Result.failure(
+                    Exception("Không thể tải doanh thu (${response.code()})")
+                )
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(
+                Exception("Không thể kết nối đến server: ${e.localizedMessage}")
+            )
         }
     }
 }

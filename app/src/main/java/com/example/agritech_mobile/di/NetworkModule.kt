@@ -8,6 +8,7 @@ import com.example.agritech_mobile.data.remote.CartApiService
 import com.example.agritech_mobile.data.remote.NotificationApiService
 import com.example.agritech_mobile.data.remote.OrderApiService
 import com.example.agritech_mobile.data.remote.ProductApiService
+import com.example.agritech_mobile.data.remote.ReportApiService
 import com.example.agritech_mobile.data.remote.ReviewApiService
 import com.example.agritech_mobile.data.remote.UploadApiService
 import com.example.agritech_mobile.data.remote.UserApiService
@@ -30,9 +31,9 @@ object NetworkModule {
 //    private const val BASE_URL = "https://agritech-wtqr.onrender.com/"
 
     private const val IP_ADDRESS = "192.168.2.4"
-    private const val BASE_URL = "http://192.168.1.81:2507/"
+    private const val BASE_URL = "http://192.168.1.92:2507/"
 
-    private const val BASE_AI_URL = "http://192.168.1.81:8000/"
+    private const val BASE_AI_URL = "http://192.168.1.92:8000/"
     @Provides
     @Singleton
     fun provideOkHttpClient(
@@ -114,6 +115,14 @@ object NetworkModule {
     @Singleton
     fun provideNotificationApiService(retrofit: Retrofit): NotificationApiService {
         return retrofit.create(NotificationApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideReportApiService(
+        retrofit: Retrofit
+    ): ReportApiService {
+        return retrofit.create(ReportApiService::class.java)
     }
 
     @Provides

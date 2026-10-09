@@ -46,6 +46,7 @@ class UserViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val tokenManager: TokenManager
 ) : ViewModel() {
+    val isAdmin: StateFlow<Boolean> = tokenManager.isAdmin
 
     private val _addressState = MutableStateFlow<AddressState>(AddressState.Idle)
     val addressState: StateFlow<AddressState> = _addressState.asStateFlow()

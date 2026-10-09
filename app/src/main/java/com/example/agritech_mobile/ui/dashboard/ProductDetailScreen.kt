@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Remove
@@ -57,12 +58,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
 import com.example.agritech_mobile.data.remote.dto.ReviewModelsResponse
 import com.example.agritech_mobile.data.remote.dto.ReviewSummaryResponse
 import com.example.agritech_mobile.ui.cart.CartState
 import com.example.agritech_mobile.ui.cart.CartViewModel
+import com.example.agritech_mobile.ui.report.ReportEligibilityViewModel
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
@@ -108,18 +111,24 @@ fun ProductDetailScreen(
         productImage: String?
     ) -> Unit = { _, _, _, _, _, _, _, _ -> },
     onAiChatClick: (productId: String, productName: String) -> Unit = { _, _ -> },
+    onReportClick: (productId: String, productName: String) -> Unit = { _, _ -> },
     viewModel: DashboardViewModel = hiltViewModel(),
-    cartViewModel: CartViewModel = hiltViewModel()
+    cartViewModel: CartViewModel = hiltViewModel(),
+    reportEligibilityViewModel: ReportEligibilityViewModel = hiltViewModel()
 ) {
     var uiState by remember { mutableStateOf(ProductDetailUiState()) }
     val dashboardState by viewModel.dashboardState.collectAsState()
     val cartState by cartViewModel.cartState.collectAsState()
+    val reportEligibility by reportEligibilityViewModel
+        .uiState
+        .collectAsStateWithLifecycle()
     var showAddToCartError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     val reviewsList by viewModel.reviews.collectAsState()
     val reviewSummary by viewModel.reviewSummary.collectAsState()
 
     LaunchedEffect(productId) {
+        reportEligibilityViewModel.checkEligibility(productId)
         viewModel.getProductById(productId)
         viewModel.getProductReviews(productId)
         viewModel.getReviewSummary(productId)
@@ -197,6 +206,16 @@ fun ProductDetailScreen(
         )
     }
 
+    val loadedProduct =
+        (dashboardState as? DashboardState.ProductDetailSuccess)?.product
+
+    val canReportProduct =
+        loadedProduct?.id == productId &&
+                uiState.id == productId &&
+                reportEligibility.productId == productId &&
+                !reportEligibility.isLoading &&
+                reportEligibility.canReport
+
     ProductDetailContent(
         uiState = uiState,
         onBackClick = onBackClick,
@@ -241,7 +260,13 @@ fun ProductDetailScreen(
             uiState = uiState.copy(quantity = newQty)
         },
         reviews = reviewsList,
-        reviewSummary = reviewSummary
+        reviewSummary = reviewSummary,
+        onReportClick = {
+            if (canReportProduct) {
+                onReportClick(uiState.id, uiState.name)
+            }
+        },
+        canReport = canReportProduct
     )
 }
 
@@ -258,7 +283,9 @@ fun ProductDetailContent(
     onDecreaseQuantity: () -> Unit,
     onQuantityChange: (String) -> Unit,
     reviews: List<ReviewModelsResponse>,
-    reviewSummary: ReviewSummaryResponse?
+    reviewSummary: ReviewSummaryResponse?,
+    onReportClick: () -> Unit = {},
+    canReport: Boolean = false
 ) {
     val primaryGreen = Color(0xFF1B5E20)
     val lightGreen = Color(0xFFE8F5E9)
@@ -427,6 +454,20 @@ fun ProductDetailContent(
                         style = MaterialTheme.typography.bodyMedium,
                         color = textDark
                     )
+
+                    TextButton(
+                        onClick = onReportClick,
+                        enabled = canReport
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Flag,
+                            contentDescription = null
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Text("Báo cáo sản phẩm")
+                    }
 
                     Spacer(modifier = Modifier.height(24.dp))
 

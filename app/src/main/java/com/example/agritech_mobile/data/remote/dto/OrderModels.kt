@@ -67,3 +67,13 @@ data class OrderStatusCountResponse(
     @SerializedName("COMPLETED") val completed: Long = 0,
     @SerializedName("CANCELLED") val cancelled: Long = 0
 )
+
+data class CategoryRevenueDto(
+    val category: String,
+    val revenue: Double
+)
+
+data class RevenueSummaryDto(
+    val totalRevenue: Double,
+    val categoryRevenues: List<CategoryRevenueDto>
+)

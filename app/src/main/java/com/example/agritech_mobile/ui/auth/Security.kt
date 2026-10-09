@@ -162,6 +162,7 @@ fun ForgotPasswordContent(
                     value = uiState.email,
                     onValueChange = onEmailChange,
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isLoading,
                     placeholder = {
                         Text(
                             text = stringResource(R.string.enter_email_hint),
@@ -190,13 +191,32 @@ fun ForgotPasswordContent(
             Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = onSendCodeClick,
+                enabled = !uiState.isLoading && uiState.email.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text(text = stringResource(id = R.string.send_code), style = Typography.labelLarge)
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = LocalContentColor.current,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Đang gửi OTP...",
+                        style = Typography.labelLarge
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.send_code),
+                        style = Typography.labelLarge
+                    )
+                }
             }
         }
     }
@@ -396,18 +416,21 @@ fun ResetPasswordScreen(
         }
     }
 
+    val passwordPolicyText = stringResource(R.string.security_policy_text)
+    val passwordMismatchText = stringResource(R.string.password_error)
+
     fun handleResetPassword() {
         var passError: String? = null
         var isValid = true
         var confirmError: String? = null
-        val passwordRegex = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$".toRegex()
+        val passwordRegex = Regex("^(?=.*[A-Za-z])(?=.*\\d)\\S{8,}$")
         if (!passwordRegex.matches(uiState.newPassword)) {
-            passError = R.string.security_policy_text.toString()
+            passError = passwordPolicyText
             isValid = false
         }
 
         if (uiState.newPassword != uiState.confirmPassword) {
-            confirmError = R.string.password_error.toString()
+            confirmError = passwordMismatchText
             isValid = false
         }
 
@@ -417,7 +440,11 @@ fun ResetPasswordScreen(
         )
 
         if (isValid) {
-            viewModel.resetPassword(uiState.email, uiState.newPassword)
+            viewModel.resetPassword(
+                email = uiState.email,
+                newPassword = uiState.newPassword,
+                otp = uiState.otpCode
+            )
         }
     }
 

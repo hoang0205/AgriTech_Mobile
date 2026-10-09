@@ -5,6 +5,7 @@ import com.example.agritech_mobile.data.remote.dto.OrderBuyerResponse
 import com.example.agritech_mobile.data.remote.dto.OrderMessageResponse
 import com.example.agritech_mobile.data.remote.dto.OrderResponse
 import com.example.agritech_mobile.data.remote.dto.OrderStatusCountResponse
+import com.example.agritech_mobile.data.remote.dto.RevenueSummaryDto
 import com.example.agritech_mobile.data.remote.dto.StatusRequest
 import retrofit2.Response
 import retrofit2.http.Body
@@ -52,4 +53,7 @@ interface OrderApiService {
     suspend fun cancelOrderByBuyer(
         @Path("orderId") orderId: Long
     ): Response<OrderMessageResponse>
+
+    @GET("api/statistics/revenue")
+    suspend fun getRevenueSummary(): Response<RevenueSummaryDto>
 }

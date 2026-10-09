@@ -48,7 +48,11 @@ class AuthRepository @Inject constructor(
 
                 tokenManager.saveUserName(loginResponse.fullName)
                 tokenManager.saveAvatarUrl(loginResponse.avatarUrl)
-                tokenManager.saveTokens(loginResponse.accessToken, loginResponse.refreshToken)
+                tokenManager.saveTokens(
+                    accessToken = loginResponse.accessToken,
+                    refreshToken = loginResponse.refreshToken,
+                    role = loginResponse.role
+                )
                 val loginSession = tokenManager.sessionTokens()
                 registerFcmToken()
                 if (tokenManager.sessionTokens().generation != loginSession.generation) {
@@ -93,22 +97,36 @@ class AuthRepository @Inject constructor(
     }
     suspend fun logout(accessToken: String): Result<MessageResponse> {
         return try {
-            FirebaseAuth.getInstance().signOut()
+            val refreshToken = tokenManager.getRefreshToken()
 
-            val request = LogoutRequest(accessToken)
-            val response = apiService.logout(request)
-
-            tokenManager.clearTokens()
-
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+            if (refreshToken.isNullOrBlank()) {
+                Result.failure(Exception("Không còn refresh token"))
             } else {
-                Result.failure(Exception("Lỗi đăng xuất từ Server: ${response.code()}"))
+                val request = LogoutRequest(
+                    accessToken = accessToken,
+                    refreshToken = refreshToken
+                )
+
+                val response = apiService.logout(request)
+                val body = response.body()
+
+                if (response.isSuccessful && body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(
+                        Exception("Logout thất bại: ${response.code()}")
+                    )
+                }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
+            Result.failure(
+                Exception("Không thể kết nối server: ${e.localizedMessage}")
+            )
+        } finally {
             FirebaseAuth.getInstance().signOut()
             tokenManager.clearTokens()
-            Result.failure(Exception("Lỗi kết nối: ${e.localizedMessage}"))
         }
     }
 
@@ -186,9 +204,19 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun resetPassword(email: String, newPassword: String): Result<MessageResponse> {
+    suspend fun resetPassword(
+        email: String,
+        newPassword: String,
+        otp: String
+    ): Result<MessageResponse> {
         return try {
-            val response = apiService.resetPassword(ResetPasswordRequest(email, newPassword))
+            val response = apiService.resetPassword(
+                ResetPasswordRequest(
+                    email = email,
+                    newPassword = newPassword,
+                    otp = otp
+                )
+            )
 
             if (response.isSuccessful) {
                 val body = response.body()

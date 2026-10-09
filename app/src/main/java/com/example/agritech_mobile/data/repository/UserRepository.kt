@@ -2,6 +2,7 @@ package com.example.agritech_mobile.data.repository
 
 import com.example.agritech_mobile.data.remote.UserApiService
 import com.example.agritech_mobile.data.remote.dto.AddressRequest
+import com.example.agritech_mobile.data.remote.dto.MessageResponse
 import com.example.agritech_mobile.data.remote.dto.ProvinceResponse
 import com.example.agritech_mobile.data.remote.dto.ShippingAddressResponce
 import com.example.agritech_mobile.data.remote.dto.ShippingDetails
@@ -35,7 +36,7 @@ class UserRepository @Inject constructor(
     suspend fun updateUserProfile(
         fullName: String,
         avatarUrl: String
-    ): Result<UpdateProfileResponse> {
+    ): Result<MessageResponse> {
         return try {
             val request = UpdateProfileRequest(fullName, avatarUrl)
             val response = userApiService.updateUserProfile(request)
@@ -154,7 +155,7 @@ class UserRepository @Inject constructor(
         currentPassword: String,
         newPassword: String,
         confirmPassword: String
-    ): Result<UpdateProfileResponse> {
+    ): Result<MessageResponse> {
         return try {
             val request = UpdatePasswordRequest(currentPassword, newPassword, confirmPassword)
             val response = userApiService.updateUserPassword(request)

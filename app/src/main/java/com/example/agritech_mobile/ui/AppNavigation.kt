@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -29,6 +30,7 @@ import com.example.agritech_mobile.ui.chat.ChatScreen
 import com.example.agritech_mobile.ui.cart.CheckoutScreen
 import com.example.agritech_mobile.ui.chat.AiChatScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
+import com.example.agritech_mobile.ui.dashboard.RevenueReportScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.dashboard.SellerStoreScreen
 import com.example.agritech_mobile.ui.main.MainScreen
@@ -36,9 +38,13 @@ import com.example.agritech_mobile.ui.order.AddressSelectionScreen
 import com.example.agritech_mobile.ui.order.MapPickerScreen
 import com.example.agritech_mobile.ui.order.OrderViewModel
 import com.example.agritech_mobile.ui.order.VnpayPaymentScreen
+import com.example.agritech_mobile.ui.report.AdminReportScreen
+import com.example.agritech_mobile.ui.report.ReportHistoryScreen
+import com.example.agritech_mobile.ui.report.ReportScreen
 import com.example.agritech_mobile.ui.user.BuyerOrdersScreen
 import com.example.agritech_mobile.ui.user.AddAddressScreen
 import com.example.agritech_mobile.ui.user.ReviewProductScreen
+import com.example.agritech_mobile.ui.user.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
@@ -233,7 +239,22 @@ fun AppNavigation(
                 },
                 onNavigateToChat = {
                     navController.navigate("chat_list")
-                }
+                },
+                onNavigateToReports = {
+                    navController.navigate("my_reports") {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToRevenue = {
+                    navController.navigate("revenue_report") {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToAdminReports = {
+                    navController.navigate("admin_reports") {
+                        launchSingleTop = true
+                    }
+                },
             )
         }
 
@@ -248,6 +269,12 @@ fun AppNavigation(
             ProductDetailScreen(
                 productId = productId,
                 onBackClick = { navController.popBackStack() },
+                onReportClick = { reportProductId, reportProductName ->
+                    navController.navigate(
+                        "report_product/${Uri.encode(reportProductId)}" +
+                                "?productName=${Uri.encode(reportProductName)}"
+                    )
+                },
                 onViewShopClick = { sellerId, sellerName, sellerAvatar, sellerPhone ->
                     val encodedName = Uri.encode(sellerName)
                     val encodedAvatar = Uri.encode(sellerAvatar ?: "")
@@ -659,6 +686,82 @@ fun AppNavigation(
                     )
                 }
             )
+        }
+
+        composable(route = "revenue_report") {
+            RevenueReportScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = "report_product/{productId}?productName={productName}",
+            arguments = listOf(
+                navArgument("productId") {
+                    type = NavType.StringType
+                },
+                navArgument("productName") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { backStackEntry ->
+            val reportProductId = backStackEntry.arguments
+                ?.getString("productId")
+                .orEmpty()
+
+            val reportProductName = backStackEntry.arguments
+                ?.getString("productName")
+                .orEmpty()
+
+            ReportScreen(
+                productId = reportProductId,
+                productName = reportProductName,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onReportSuccess = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = "my_reports") {
+            ReportHistoryScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = "admin_reports") {
+            val accessViewModel: UserViewModel = hiltViewModel()
+            val isAdmin by accessViewModel.isAdmin.collectAsStateWithLifecycle()
+
+            if (isLoggedIn && isAdmin) {
+                AdminReportScreen(
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            } else {
+                LaunchedEffect(isLoggedIn, isAdmin) {
+                    if (isLoggedIn && !isAdmin) {
+                        val returned = navController.popBackStack()
+
+                        if (!returned) {
+                            navController.navigate("main_screen") {
+                                popUpTo("admin_reports") {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

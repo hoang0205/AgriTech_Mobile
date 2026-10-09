@@ -49,7 +49,10 @@ fun MainScreen(
     onNavigateToCheckout: (String) -> Unit,
     onLogoutSuccess: () -> Unit,
     onNavigateToBuyerOrders: (String) -> Unit,
-    onNavigateToChat: () -> Unit
+    onNavigateToChat: () -> Unit,
+    onNavigateToRevenue: () -> Unit = {},
+    onNavigateToReports: () -> Unit = {},
+    onNavigateToAdminReports: () -> Unit = {}
 ) {
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
 
@@ -163,8 +166,13 @@ fun MainScreen(
 
                 "ACCOUNT" -> ProfileScreen(
                     onNavigateToAddress = { /* TODO: */ },
-                    onNavigateToOrders = { status -> onNavigateToBuyerOrders(status) },
-                    onLogoutClick = onLogoutSuccess
+                    onNavigateToOrders = { status ->
+                        onNavigateToBuyerOrders(status)
+                    },
+                    onLogoutClick = onLogoutSuccess,
+                    onNavigateToRevenue = onNavigateToRevenue,
+                    onNavigateToReports = onNavigateToReports,
+                    onNavigateToAdminReports = onNavigateToAdminReports
                 )
             }
         }

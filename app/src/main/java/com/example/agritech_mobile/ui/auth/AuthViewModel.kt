@@ -104,11 +104,18 @@ class AuthViewModel @Inject constructor(
 
     fun resetPassword(
         email: String,
-        newPassword: String
+        newPassword: String,
+        otp: String
     ) {
         _authState.value = AuthState.Loading
+
         viewModelScope.launch {
-            val result = repository.resetPassword(email, newPassword)
+            val result = repository.resetPassword(
+                email = email,
+                newPassword = newPassword,
+                otp = otp
+            )
+
             result.onSuccess { response ->
                 if (response.success) {
                     _authState.value = AuthState.Success(response.message)
@@ -116,7 +123,9 @@ class AuthViewModel @Inject constructor(
                     _authState.value = AuthState.Error(response.message)
                 }
             }.onFailure { exception ->
-                _authState.value = AuthState.Error(exception.message ?: "Lỗi hệ thống")
+                _authState.value = AuthState.Error(
+                    exception.message ?: "Lỗi hệ thống"
+                )
             }
         }
     }

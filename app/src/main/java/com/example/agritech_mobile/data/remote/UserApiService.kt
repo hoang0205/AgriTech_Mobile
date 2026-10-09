@@ -1,6 +1,7 @@
 package com.example.agritech_mobile.data.remote
 
 import com.example.agritech_mobile.data.remote.dto.AddressRequest
+import com.example.agritech_mobile.data.remote.dto.MessageResponse
 import com.example.agritech_mobile.data.remote.dto.ProvinceResponse
 import com.example.agritech_mobile.data.remote.dto.ShippingAddressResponce
 import com.example.agritech_mobile.data.remote.dto.ShippingDetails
@@ -23,12 +24,12 @@ interface UserApiService {
     @PUT("api/user/profile")
     suspend fun updateUserProfile(
         @Body request: UpdateProfileRequest
-    ): Response<UpdateProfileResponse>
+    ): Response<MessageResponse>
 
     @PUT("api/user/password")
     suspend fun updateUserPassword(
         @Body request: UpdatePasswordRequest
-    ): Response<UpdateProfileResponse>
+    ): Response<MessageResponse>
 
     @GET("api/user/addresses")
     suspend fun getUserAddresses(): Response<List<ShippingDetails>>

@@ -54,7 +54,14 @@ class TokenAuthenticator @Inject constructor(
                     if (refreshResponse.isSuccessful) {
                         val newTokens = refreshResponse.body()
                         if (newTokens != null && newTokens.accessToken.isNotBlank() && newTokens.refreshToken.isNotBlank()) {
-                            if (!tokenManager.rotateTokens(session, newTokens.accessToken, newTokens.refreshToken)) {
+                            val rotated = tokenManager.rotateTokens(
+                                expected = session,
+                                accessToken = newTokens.accessToken,
+                                refreshToken = newTokens.refreshToken,
+                                role = newTokens.role
+                            )
+
+                            if (!rotated) {
                                 return@runBlocking null
                             }
 
