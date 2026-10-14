@@ -203,12 +203,6 @@ fun SignUpContent(
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(id = R.string.join_digital_arboretum),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyLarge
-                )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -264,8 +258,8 @@ fun SignUpContent(
                     onValueChange = onConfirmPasswordChange,
                     placeholder = stringResource(id = R.string.password_placeholder),
                     isPasswordField = true,
-                    isPasswordVisible = uiState.isPasswordVisible,
-                    onVisibilityToggle = onTogglePasswordVisibility,
+                    isPasswordVisible = uiState.isConfirmPasswordVisible,
+                    onVisibilityToggle = onToggleConfirmPasswordVisibility,
                     errorMessage = uiState.confirmPasswordError
                 )
 

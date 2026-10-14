@@ -718,7 +718,7 @@ fun AiChatBottomBar(
             }
 
             Text(
-                text = "Bảo chứng bởi AgriTech • Kết nối dữ liệu nông nghiệp thời gian thực",
+                text = "AgriBot",
                 fontSize = 9.sp,
                 color = Color.LightGray,
                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 6.dp)

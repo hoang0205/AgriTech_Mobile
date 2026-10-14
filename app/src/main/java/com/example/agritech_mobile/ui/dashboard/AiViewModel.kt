@@ -110,6 +110,7 @@ class AiViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            var failed = false
             aiRepository.chatBotStream(
                 query = query,
                 productName = productName,
@@ -117,6 +118,7 @@ class AiViewModel @Inject constructor(
                 sessionId = _uiState.value.sessionId
             )
                 .catch { error ->
+                    failed = true
                     _uiState.update { state ->
                         val updated = state.messages.map { msg ->
                             if (msg.id == botMessageId) {
@@ -140,13 +142,20 @@ class AiViewModel @Inject constructor(
                     }
                 }
 
-            _uiState.update { state ->
-                val updated = state.messages.map { msg ->
-                    if (msg.id == botMessageId) {
-                        msg.copy(subNote = "Dữ liệu đối chiếu Cẩm nang Nông sản")
-                    } else msg
+            if (!failed) {
+                _uiState.update { state ->
+                    val updated = state.messages.map { msg ->
+                        if (msg.id == botMessageId) {
+                            msg.copy(
+                                subNote = "Dữ liệu đối chiếu cẩm nang sản phẩm"
+                            )
+                        } else {
+                            msg
+                        }
+                    }
+
+                    state.copy(messages = updated, isStreaming = false)
                 }
-                state.copy(messages = updated, isStreaming = false)
             }
         }
     }

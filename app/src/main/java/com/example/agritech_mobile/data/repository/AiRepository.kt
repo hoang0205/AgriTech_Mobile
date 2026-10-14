@@ -63,15 +63,19 @@ class AiRepository @Inject constructor(
         sessionId: String
     ): Flow<String> = flow {
         val request = ChatBotRequest(query, productName, userId, sessionId)
-        val responseBody = aiApiService.chatBotStream(request)
-        val reader = responseBody.byteStream().bufferedReader(Charsets.UTF_8)
 
-        val buffer = CharArray(128)
-        var charsRead: Int
-        while (reader.read(buffer).also { charsRead = it } != -1) {
-            if (charsRead > 0) {
-                val chunk = String(buffer, 0, charsRead)
-                emit(chunk)
+        aiApiService.chatBotStream(request).use { body ->
+            body.byteStream().bufferedReader(Charsets.UTF_8).use { reader ->
+                val buffer = CharArray(128)
+
+                while (true) {
+                    val count = reader.read(buffer)
+                    if (count == -1) break
+
+                    if (count > 0) {
+                        emit(String(buffer, 0, count))
+                    }
+                }
             }
         }
     }.flowOn(Dispatchers.IO)
@@ -126,16 +130,21 @@ class AiRepository @Inject constructor(
         }
     }
 
-    fun generateDescriptionStream(request: GenerateDescriptionRequest): Flow<String> = flow {
-        val responseBody = aiApiService.generateDescriptionStream(request)
-        val reader = responseBody.byteStream().bufferedReader(Charsets.UTF_8)
+    fun generateDescriptionStream(
+        request: GenerateDescriptionRequest
+    ): Flow<String> = flow {
+        aiApiService.generateDescriptionStream(request).use { body ->
+            body.byteStream().bufferedReader(Charsets.UTF_8).use { reader ->
+                val buffer = CharArray(128)
 
-        val buffer = CharArray(128)
-        var charsRead: Int
-        while (reader.read(buffer).also { charsRead = it } != -1) {
-            if (charsRead > 0) {
-                val chunk = String(buffer, 0, charsRead)
-                emit(chunk)
+                while (true) {
+                    val count = reader.read(buffer)
+                    if (count == -1) break
+
+                    if (count > 0) {
+                        emit(String(buffer, 0, count))
+                    }
+                }
             }
         }
     }.flowOn(Dispatchers.IO)

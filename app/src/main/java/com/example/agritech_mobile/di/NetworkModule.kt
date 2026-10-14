@@ -31,9 +31,9 @@ object NetworkModule {
 //    private const val BASE_URL = "https://agritech-wtqr.onrender.com/"
 
     private const val IP_ADDRESS = "192.168.2.4"
-    private const val BASE_URL = "http://192.168.1.92:2507/"
+    private const val BASE_URL = "http://192.168.2.5:2507/"
 
-    private const val BASE_AI_URL = "http://192.168.1.92:8000/"
+    private const val BASE_AI_URL = "http://192.168.1.128:8000/"
     @Provides
     @Singleton
     fun provideOkHttpClient(
@@ -69,7 +69,6 @@ object NetworkModule {
     @Named("refreshAuth")
     fun provideRefreshAuthApiService(): AuthApiService = Retrofit.Builder()
         .baseUrl(BASE_URL)
-        // A separate dispatcher prevents refresh from waiting on blocked authenticated calls.
         .client(OkHttpClient.Builder().callTimeout(30, TimeUnit.SECONDS).build())
         .addConverterFactory(GsonConverterFactory.create())
         .build()
@@ -127,11 +126,17 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideAiApiService(): AiApiService {
+    fun provideAiApiService(
+        authInterceptor: AuthInterceptor,
+        tokenAuthenticator: TokenAuthenticator
+    ): AiApiService {
         val aiOkHttpClient = OkHttpClient.Builder()
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(120, TimeUnit.SECONDS)
+            .addInterceptor(authInterceptor)
+            .authenticator(tokenAuthenticator)
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(240, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
+            .callTimeout(300, TimeUnit.SECONDS)
             .build()
 
         val aiRetrofit = Retrofit.Builder()

@@ -11,7 +11,9 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.agritech_mobile.MainActivity
 import com.example.agritech_mobile.R
+import com.example.agritech_mobile.data.local.TokenManager
 import com.example.agritech_mobile.data.repository.AuthRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
@@ -27,6 +29,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject
     lateinit var authRepository: AuthRepository
+
+    @Inject
+    lateinit var tokenManager: TokenManager
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -46,17 +51,36 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
 
+        if (tokenManager.getAccessToken().isNullOrBlank()) {
+            return
+        }
+
+        val recipientId = remoteMessage.data["recipientId"]
+            ?: return
+
+        val currentUserId =
+            FirebaseAuth.getInstance().currentUser?.uid
+                ?: return
+
+        if (recipientId != currentUserId) {
+            return
+        }
+
         val type = remoteMessage.data["type"]
 
         if (type == "ORDER_STATUS") {
             val title = remoteMessage.data["title"]
-                ?: remoteMessage.notification?.title
                 ?: "Cập nhật đơn hàng"
+
             val body = remoteMessage.data["body"]
-                ?: remoteMessage.notification?.body
                 ?: "Trạng thái đơn hàng của bạn đã có thay đổi."
-            val status = remoteMessage.data["status"] ?: "PENDING"
-            val orderId = remoteMessage.data["orderId"]?.toLongOrNull() ?: System.currentTimeMillis()
+
+            val status = remoteMessage.data["status"]
+                ?: "PENDING"
+
+            val orderId = remoteMessage.data["orderId"]
+                ?.toLongOrNull()
+                ?: System.currentTimeMillis()
 
             showOrderStatusNotification(
                 title = title,
@@ -65,11 +89,13 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 orderId = orderId
             )
         } else {
-            val title = remoteMessage.notification?.title
+            val title = remoteMessage.data["title"]
                 ?: remoteMessage.data["senderName"]
                 ?: "Tin nhắn mới"
-            val body = remoteMessage.notification?.body
+
+            val body = remoteMessage.data["body"]
                 ?: "Bạn có tin nhắn mới"
+
             val roomId = remoteMessage.data["roomId"]
 
             showNotification(title, body, roomId)

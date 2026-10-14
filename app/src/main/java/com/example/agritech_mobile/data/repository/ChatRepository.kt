@@ -169,6 +169,7 @@ class ChatRepository @Inject constructor() {
             Log.d("CHAT_DEBUG", "[ChatRepo.saveChatRoomMetadata] Đã cập nhật metadata phòng $roomId thành công")
         } catch (e: Exception) {
             Log.e("CHAT_DEBUG", "[ChatRepo.saveChatRoomMetadata] LỖI cập nhật metadata: ${e.message}", e)
+            throw e
         }
     }
 }

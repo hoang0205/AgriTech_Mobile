@@ -14,6 +14,7 @@ import com.example.agritech_mobile.data.repository.ProductRepository
 import com.example.agritech_mobile.data.repository.ReviewRepository
 import com.example.agritech_mobile.data.repository.UploadRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,6 +56,13 @@ class DashboardViewModel @Inject constructor(
 
     private val _productState = MutableStateFlow<ProductResponse?>(null)
     val productState: StateFlow<ProductResponse?> = _productState.asStateFlow()
+
+    private val _homeUiState = MutableStateFlow(HomeUiState())
+    val homeUiState: StateFlow<HomeUiState> = _homeUiState.asStateFlow()
+
+    fun updateHomeUiState(transform: (HomeUiState) -> HomeUiState) {
+        _homeUiState.update(transform)
+    }
 
     private val _searchQuery = MutableStateFlow("")
     private val _textSuggestions = MutableStateFlow<List<String>>(emptyList())
@@ -138,7 +146,6 @@ class DashboardViewModel @Inject constructor(
                 val newProductsResult = newProductsDeferred.await()
                 val randomProductsResult = randomProductsDeferred.await()
 
-                // Kiểm tra nếu cả hai request đều thất bại
                 if (newProductsResult.isFailure && randomProductsResult.isFailure) {
                     val errNew = newProductsResult.exceptionOrNull()?.message
                     val errRandom = randomProductsResult.exceptionOrNull()?.message
@@ -302,40 +309,47 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    fun getPricePrediction(productName: String, onResult: (String?, String) -> Unit) {
+    fun getPricePrediction(
+        productName: String,
+        onResult: (String?, String) -> Unit
+    ) {
         viewModelScope.launch {
-            val result = aiRepository.predictPrice(productName)
-            result.onSuccess { response ->
-                if (response.success && response.price != null) {
+            aiRepository.predictPrice(productName)
+                .onSuccess { response ->
+                    val low = response.priceLow
+                    val high = response.priceHigh
 
-                    val cleanString = response.price.replace(".", "").replace(",", "")
-
-                    val numberRegex = "\\d+".toRegex()
-                    val numbers = numberRegex.findAll(cleanString)
-                        .mapNotNull { it.value.toDoubleOrNull() }
-                        .toList()
-
-                    if (numbers.size >= 2) {
-                        val min = numbers[0]
-                        val max = numbers[1]
-                        val average = ((min + max) / 2).toLong().toString()
-
-                        val msg = "AI gợi ý: ${response.price}. Đã tự điền mức giá trung bình!"
-                        onResult(average, msg)
-
-                    } else if (numbers.size == 1) {
-                        val price = numbers[0].toLong().toString()
-                        onResult(price, "AI đã gợi ý giá thành công!")
-
-                    } else {
-                        onResult(null, "AI không tìm thấy mức giá cụ thể!")
+                    if (!response.success ||
+                        low == null || high == null ||
+                        low <= 0 || high < low
+                    ) {
+                        onResult(
+                            null,
+                            response.error ?: "Chưa có giá tham khảo phù hợp."
+                        )
+                        return@onSuccess
                     }
-                } else {
-                    onResult(null, "AI không nhận diện được giá!")
+
+                    val dateNote = response.dataDate
+                        ?.let { "\nNgày dữ liệu: $it." }
+                        .orEmpty()
+
+                    if (low == high) {
+                        onResult(
+                            low.toString(),
+                            "Giá tham khảo: ${response.priceRange}$dateNote"
+                        )
+                    } else {
+                        onResult(
+                            null,
+                            "Khoảng giá tham khảo: ${response.priceRange}." +
+                                    "\nBạn hãy chọn giá bán phù hợp.$dateNote"
+                        )
+                    }
                 }
-            }.onFailure {
-                onResult(null, "Lỗi kết nối đến máy chủ AI!")
-            }
+                .onFailure {
+                    onResult(null, "Lỗi kết nối đến máy chủ AI.")
+                }
         }
     }
 
@@ -451,14 +465,15 @@ class DashboardViewModel @Inject constructor(
                     productName = productName,
                     category = category
                 )
+
                 aiRepository.generateDescriptionStream(request)
-                    .catch { e ->
-                        onError(e.localizedMessage ?: "Lỗi kết nối máy chủ AI")
-                    }
                     .collect { token ->
                         onToken(token)
                     }
+
                 onComplete()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 onError(e.localizedMessage ?: "Lỗi tạo mô tả")
             }

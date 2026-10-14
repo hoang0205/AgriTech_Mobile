@@ -9,6 +9,8 @@ import com.example.agritech_mobile.data.remote.dto.SendNotificationRequest
 import com.example.agritech_mobile.data.repository.ChatRepository
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -85,6 +87,8 @@ class ChatViewModel @Inject constructor(
     private var currentRoomId: String = ""
     private var participantIds: List<String> = emptyList()
 
+    private var roomJob: Job? = null
+
     fun initChatRoom(
         roomId: String,
         partnerId: String,
@@ -115,37 +119,54 @@ class ChatViewModel @Inject constructor(
         currentRoomId = roomId
         participantIds = listOf(currentUserId, partnerId)
 
-        viewModelScope.launch {
-            chatRepository.saveChatRoomMetadata(
-                roomId = roomId,
-                participantIds = participantIds,
-                myId = currentUserId,
-                myName = myName,
-                myAvatar = myAvatar,
-                partnerId = partnerId,
-                partnerName = partnerName,
-                partnerAvatar = partnerAvatar
+        roomJob?.cancel()
+
+        val roomParticipants = participantIds.toList()
+
+        _uiState.update {
+            it.copy(
+                messages = emptyList(),
+                isLoading = true,
+                errorMessage = null
             )
-            chatRepository.markRoomAsRead(roomId, currentUserId)
         }
 
-        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        roomJob = viewModelScope.launch {
+            try {
+                chatRepository.saveChatRoomMetadata(
+                    roomId = roomId,
+                    participantIds = roomParticipants,
+                    myId = currentUserId,
+                    myName = myName,
+                    myAvatar = myAvatar,
+                    partnerId = partnerId,
+                    partnerName = partnerName,
+                    partnerAvatar = partnerAvatar
+                )
 
-        viewModelScope.launch {
-            Log.d("CHAT_DEBUG", "[initChatRoom] Bắt đầu lắng nghe tin nhắn Firestore cho roomId: $roomId")
-            chatRepository.getMessages(roomId)
-                .catch { error ->
-                    Log.e("CHAT_DEBUG", "[initChatRoom] LỖI getMessages Firestore: ${error.message}", error)
-                    _uiState.update {
-                        it.copy(isLoading = false, errorMessage = "Lỗi Firestore: ${error.localizedMessage}")
+                chatRepository.markRoomAsRead(roomId, currentUserId)
+
+                chatRepository.getMessages(roomId)
+                    .collect { messageList ->
+                        _uiState.update {
+                            it.copy(
+                                messages = messageList,
+                                isLoading = false,
+                                errorMessage = null
+                            )
+                        }
                     }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage =
+                            e.localizedMessage ?: "Không mở được phòng chat"
+                    )
                 }
-                .collect { messageList ->
-                    Log.d("CHAT_DEBUG", "[initChatRoom] Nhận được ${messageList.size} tin nhắn từ Firestore")
-                    _uiState.update {
-                        it.copy(messages = messageList, isLoading = false)
-                    }
-                }
+            }
         }
     }
 
@@ -158,6 +179,10 @@ class ChatViewModel @Inject constructor(
         senderName: String,
         senderAvatar: String? = null
     ) {
+        if (_uiState.value.isLoading || _uiState.value.isSending) {
+            return
+        }
+
         val content = _uiState.value.inputText.trim()
         if (content.isBlank() || currentRoomId.isBlank()) return
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return

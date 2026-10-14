@@ -20,11 +20,14 @@ data class PricePredictionRequest(
 
 data class PricePredictionResponse(
     val success: Boolean,
-    val productName: String? = null,
-    val price: String? = null,
+    @SerializedName("product_name") val productName: String? = null,
+    @SerializedName("price_low") val priceLow: Long? = null,
+    @SerializedName("price_high") val priceHigh: Long? = null,
+    @SerializedName("price_range") val priceRange: String? = null,
+    @SerializedName("data_date") val dataDate: String? = null,
+    val message: String? = null,
     val error: String? = null
 )
-
 data class ChatBotRequest(
     @SerializedName("query") val query: String,
     @SerializedName("product_name") val productName: String,

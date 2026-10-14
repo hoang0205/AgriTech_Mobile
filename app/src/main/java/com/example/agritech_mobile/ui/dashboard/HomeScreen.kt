@@ -70,12 +70,9 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val dashboardState by viewModel.dashboardState.collectAsStateWithLifecycle()
-
+    val uiState by viewModel.homeUiState.collectAsStateWithLifecycle()
     val textSuggestions by viewModel.textSuggestions.collectAsStateWithLifecycle()
     val searchResultsRes by viewModel.searchResults.collectAsStateWithLifecycle()
-
-    var uiState by remember { mutableStateOf(HomeUiState()) }
-
     val userName by viewModel.userName.collectAsStateWithLifecycle()
     val userAvatar by viewModel.userAvatar.collectAsStateWithLifecycle()
 
@@ -96,94 +93,116 @@ fun HomeScreen(
             R.string.cat_vegetables,
             R.drawable.vegetable_food_salad_lettuce_cabbage_svgrepo_com
         ),
-        CategoryItem("Trái cây", R.string.cat_fruits, R.drawable.fruit_fruits_grape_svgrepo_com),
-        CategoryItem("Thịt", R.string.cat_meat, R.drawable.meat_svgrepo_com),
+        CategoryItem(
+            "Trái cây",
+            R.string.cat_fruits,
+            R.drawable.fruit_fruits_grape_svgrepo_com
+        ),
+        CategoryItem(
+            "Thịt",
+            R.string.cat_meat,
+            R.drawable.meat_svgrepo_com
+        ),
         CategoryItem(
             "Thủy hải sản",
             R.string.cat_seafood,
             R.drawable.seafood_prawn_shrimp_lobster_svgrepo_com
         ),
-        CategoryItem("Khác", R.string.cat_others, R.drawable.food_delivery_bot_svgrepo_com),
+        CategoryItem(
+            "Khác",
+            R.string.cat_others,
+            R.drawable.food_delivery_bot_svgrepo_com
+        )
     )
 
     LaunchedEffect(Unit) {
-        if (uiState.categories.isEmpty()) {
-            uiState = uiState.copy(
-                categories = defaultCategories,
-                userName = userName,
-                userAvatar = userAvatar
-            )
+        viewModel.updateHomeUiState {
+            it.copy(categories = defaultCategories)
         }
-//        if (uiState.newProducts.isEmpty() && uiState.suggestedProducts.isEmpty()) {
-//            viewModel.loadHomeData()
-//        }
+    }
+
+    LaunchedEffect(userName, userAvatar) {
+        viewModel.updateHomeUiState {
+            it.copy(userName = userName, userAvatar = userAvatar)
+        }
     }
 
     LaunchedEffect(dashboardState) {
-        when (dashboardState) {
-            is DashboardState.Loading -> uiState = uiState.copy(isLoading = true)
+        when (val state = dashboardState) {
+            is DashboardState.Loading -> {
+                viewModel.updateHomeUiState {
+                    it.copy(isLoading = true)
+                }
+            }
+
             is DashboardState.HomeDataSuccess -> {
-                val state = dashboardState as DashboardState.HomeDataSuccess
                 val mappedNew = state.newProducts.map { res ->
                     Product(
-                        res.id,
-                        res.name,
-                        "${res.price.toLong()} đ",
-                        res.farmerName,
-                        false,
-                        true,
-                        res.imageUrls.firstOrNull() ?: ""
+                        id = res.id,
+                        name = res.name,
+                        priceStr = "${res.price.toLong()} đ",
+                        seller = res.farmerName,
+                        isNew = true,
+                        imageUrl = res.imageUrls.firstOrNull() ?: ""
                     )
                 }
-                val mappedSuggestedProducts = state.suggestedProducts.map { res ->
+
+                val mappedSuggested = state.suggestedProducts.map { res ->
                     Product(
-                        res.id,
-                        res.name,
-                        "${res.price.toLong()} đ",
-                        res.farmerName,
-                        false,
-                        false,
-                        res.imageUrls.firstOrNull() ?: ""
+                        id = res.id,
+                        name = res.name,
+                        priceStr = "${res.price.toLong()} đ",
+                        seller = res.farmerName,
+                        imageUrl = res.imageUrls.firstOrNull() ?: ""
                     )
                 }
-                uiState = uiState.copy(
-                    isLoading = false,
-                    newProducts = mappedNew,
-                    suggestedProducts = mappedSuggestedProducts
-                )
+
+                viewModel.updateHomeUiState {
+                    it.copy(
+                        isLoading = false,
+                        newProducts = mappedNew,
+                        suggestedProducts = mappedSuggested
+                    )
+                }
             }
 
             is DashboardState.ProductListSuccess -> {
-                val state = dashboardState as DashboardState.ProductListSuccess
                 val mappedProducts = state.products.map { res ->
                     Product(
-                        res.id,
-                        res.name,
-                        "${res.price.toLong()} đ",
-                        res.farmerName,
-                        false,
-                        false,
-                        res.imageUrls.firstOrNull() ?: ""
+                        id = res.id,
+                        name = res.name,
+                        priceStr = "${res.price.toLong()} đ",
+                        seller = res.farmerName,
+                        imageUrl = res.imageUrls.firstOrNull() ?: ""
                     )
                 }
-                uiState = uiState.copy(
-                    isLoading = false,
-                    suggestedProducts = mappedProducts
-                )
+
+                viewModel.updateHomeUiState {
+                    it.copy(
+                        isLoading = false,
+                        suggestedProducts = mappedProducts
+                    )
+                }
                 viewModel.resetState()
             }
 
             is DashboardState.Error -> {
-                uiState = uiState.copy(isLoading = false)
+                viewModel.updateHomeUiState {
+                    it.copy(isLoading = false)
+                }
                 Toast.makeText(
                     context,
-                    (dashboardState as DashboardState.Error).error,
+                    state.error,
                     Toast.LENGTH_LONG
                 ).show()
                 viewModel.resetState()
             }
 
-            else -> uiState = uiState.copy(isLoading = false)
+            else -> {
+                viewModel.updateHomeUiState {
+                    it.copy(isLoading = false)
+                }
+            }
         }
     }
 
@@ -192,20 +211,30 @@ fun HomeScreen(
         textSuggestions = textSuggestions,
         searchResults = finalSearchResults,
         onSearchChange = { newQuery ->
-            uiState = uiState.copy(searchQuery = newQuery)
+            viewModel.updateHomeUiState {
+                it.copy(searchQuery = newQuery)
+            }
             viewModel.onSearchQueryChanged(newQuery)
         },
-        onExecuteSearch = { queryToSearch ->
-            uiState = uiState.copy(searchQuery = queryToSearch)
-            viewModel.executeSearch(queryToSearch)
+        onExecuteSearch = { query ->
+            viewModel.updateHomeUiState {
+                it.copy(searchQuery = query)
+            }
+            viewModel.executeSearch(query)
         },
         onCategoryClick = { category ->
-            uiState = uiState.copy(selectedCategory = category.name)
+            viewModel.updateHomeUiState {
+                it.copy(selectedCategory = category.name)
+            }
             viewModel.getProductsByCategory(category.name)
         },
-        onProductClick = { product -> onNavigateToDetail(product.id) },
+        onProductClick = { product ->
+            onNavigateToDetail(product.id)
+        },
         onSeeAllClick = {
-            uiState = uiState.copy(selectedCategory = null)
+            viewModel.updateHomeUiState {
+                it.copy(selectedCategory = null)
+            }
             viewModel.getProducts()
         },
         onResetCategoryClick = {},

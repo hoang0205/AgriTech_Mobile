@@ -64,8 +64,15 @@ data class SellProductUiState(
     val description: String = "",
     val isLoading: Boolean = false,
     val isPredictingPrice: Boolean = false,
-    val isGeneratingDescription: Boolean = false
+    val isGeneratingDescription: Boolean = false,
+    val priceSuggestion: String? = null,
 )
+
+private fun parseProductPrice(value: String): Double? {
+    return value.trim()
+        .toDoubleOrNull()
+        ?.takeIf { it.isFinite() && it > 0.0 }
+}
 
 @Composable
 fun SellProductScreen(
@@ -168,10 +175,17 @@ fun SellProductScreen(
             Toast.makeText(context, "Vui lòng chọn danh mục!", Toast.LENGTH_SHORT).show()
             return
         }
-        if (uiState.price.isBlank()) {
-            Toast.makeText(context, "Vui lòng nhập giá bán!", Toast.LENGTH_SHORT).show()
+        val safePrice = parseProductPrice(uiState.price)
+
+        if (safePrice == null) {
+            Toast.makeText(
+                context,
+                "Giá bán phải là số lớn hơn 0. Ví dụ: 20000",
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
+
         if (uiState.unit.isBlank()) {
             Toast.makeText(
                 context,
@@ -189,7 +203,6 @@ fun SellProductScreen(
                 .show()
             return
         }
-        val safePrice = uiState.price.toDoubleOrNull() ?: 0.0
         val safeQuantity = uiState.quantity.toDouble()
         val imageParts = uiState.images.mapNotNull { uri ->
             uriToMultipartBodyPart(context, uri, paramName = "files")
@@ -211,7 +224,12 @@ fun SellProductScreen(
 
     SellProductContent(
         uiState = uiState,
-        onNameChange = { uiState = uiState.copy(productName = it) },
+        onNameChange = {
+            uiState = uiState.copy(
+                productName = it,
+                priceSuggestion = null
+            )
+        },
         onPriceChange = { uiState = uiState.copy(price = it) },
         onUnitChange = { uiState = uiState.copy(unit = it) },
         onQuantityChange = { uiState = uiState.copy(quantity = it) },
@@ -239,22 +257,39 @@ fun SellProductScreen(
             }
         },
         onPredictPriceClick = {
-            if (uiState.productName.isNotBlank()) {
-                uiState = uiState.copy(isPredictingPrice = true)
+            if (uiState.productName.isBlank()) {
+                Toast.makeText(
+                    context,
+                    "Vui lòng nhập tên sản phẩm trước!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else if (!uiState.isPredictingPrice) {
+                val requestedName = uiState.productName
 
-                viewModel.getPricePrediction(uiState.productName) { predictedPrice, message ->
+                uiState = uiState.copy(
+                    isPredictingPrice = true,
+                    priceSuggestion = null
+                )
+
+                viewModel.getPricePrediction(requestedName) { predictedPrice, message ->
                     uiState = uiState.copy(isPredictingPrice = false)
 
-                    if (predictedPrice != null) {
-                        uiState = uiState.copy(price = predictedPrice)
-                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    if (uiState.productName == requestedName) {
+                        val isKg = uiState.unit.trim()
+                            .equals("kg", ignoreCase = true)
+
+                        val unitNote = if (isKg) "" else
+                            "\nGiá tham khảo tính theo kg. Bạn cần tự quy đổi theo đơn vị bán."
+
+                        uiState = uiState.copy(
+                            priceSuggestion = message + unitNote,
+                            price = if (predictedPrice != null && isKg)
+                                predictedPrice
+                            else
+                                uiState.price
+                        )
                     }
                 }
-
-            } else {
-                Toast.makeText(context, "Vui lòng nhập tên sản phẩm trước!", Toast.LENGTH_SHORT).show()
             }
         },
         onGenerateDescriptionClick = {
@@ -604,9 +639,19 @@ fun SellProductContent(
                     if (uiState.isPredictingPrice) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), color = primaryGreen, strokeWidth = 2.dp)
                     } else {
-                        Text("✨ Gợi ý AI", color = primaryGreen, fontWeight = FontWeight.Bold)
+                        Text("Gợi ý AI", color = primaryGreen, fontWeight = FontWeight.Bold)
                     }
                 }
+            }
+            uiState.priceSuggestion?.let { suggestion ->
+                Text(
+                    text = suggestion,
+                    color = primaryGreen,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                )
             }
 
             FormInputField(
@@ -679,13 +724,6 @@ fun SellProductContent(
                         .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = null,
-                        tint = primaryGreen,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Chưa biết viết mô tả như thế nào?",
@@ -694,7 +732,7 @@ fun SellProductContent(
                             color = primaryGreen
                         )
                         Text(
-                            text = "Hãy để AI AgriTech giúp bạn soạn bài viết chuẩn nông sản",
+                            text = "Hãy để AI AgriTech giúp bạn soạn một đoạn mô tả sản phẩm tương ứng",
                             fontSize = 11.sp,
                             color = Color(0xFF2E7D32),
                             lineHeight = 15.sp
@@ -716,7 +754,7 @@ fun SellProductContent(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("✨ Tạo ngay", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Tạo ngay", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -786,13 +824,13 @@ fun SellProductContent(
 //            Spacer(modifier = Modifier.height(100.dp))
         }
         val isFormValid = uiState.images.isNotEmpty() &&
-                uiState.invalidImages.isEmpty() &&
-                uiState.productName.isNotBlank() &&
-                uiState.category.isNotBlank() &&
-                uiState.price.isNotBlank() &&
-                uiState.unit.isNotBlank() &&
-                uiState.quantity > 0 &&
-                uiState.description.isNotBlank()
+                    uiState.invalidImages.isEmpty() &&
+                    uiState.productName.isNotBlank() &&
+                    uiState.category.isNotBlank() &&
+                    parseProductPrice(uiState.price) != null &&
+                    uiState.unit.isNotBlank() &&
+                    uiState.quantity > 0 &&
+                    uiState.description.isNotBlank()
         Box(
             modifier = Modifier
                 .fillMaxWidth()

@@ -455,20 +455,6 @@ fun ProductDetailContent(
                         color = textDark
                     )
 
-                    TextButton(
-                        onClick = onReportClick,
-                        enabled = canReport
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Flag,
-                            contentDescription = null
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Text("Báo cáo sản phẩm")
-                    }
-
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Row(
@@ -694,6 +680,7 @@ fun ProductDetailContent(
                         .size(40.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.8f))
+                        .border(1.dp, primaryGreen, CircleShape)
                         .clickable { onBackClick() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -709,13 +696,18 @@ fun ProductDetailContent(
                         .size(40.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.8f))
-                        .clickable { onFavoriteClick() },
+                        .border(
+                            width = 1.dp,
+                            color = if (canReport) Color(0xFFD84315) else Color.Gray,
+                            shape = CircleShape
+                        )
+                        .clickable(enabled = canReport) { onReportClick() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = "Favorite",
-                        tint = if (uiState.isFavorite) primaryGreen else Color.Gray
+                        imageVector = Icons.Default.Flag,
+                        contentDescription = "Báo cáo sản phẩm",
+                        tint = if (canReport) Color(0xFFD84315) else Color.Gray
                     )
                 }
             }

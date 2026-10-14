@@ -19,7 +19,7 @@
     <string name="full_name">HỌ VÀ TÊN</string>
     <string name="full_name_placeholder">Nguyễn Văn A</string>
     <string name="email_address">ĐỊA CHỈ EMAIL</string>
-    <string name="email_placeholder">nguyenvana@example.com</string>
+    <string name="email_placeholder">abc@example.com</string>
     <string name="confirm_password">XÁC NHẬN MẬT KHẨU</string>
     <string name="password_placeholder">••••••••</string>
     <string name="phone_placeholder">+84 000 000 000</string>
