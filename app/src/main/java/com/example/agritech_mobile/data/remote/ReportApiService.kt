@@ -6,6 +6,7 @@ import com.example.agritech_mobile.data.remote.dto.ProductReportResponse
 import com.example.agritech_mobile.data.remote.dto.ReportEligibilityResponse
 import com.example.agritech_mobile.data.remote.dto.ReportStatus
 import com.example.agritech_mobile.data.remote.dto.UpdateProductReportRequest
+import com.example.agritech_mobile.data.remote.dto.UpdateProductVisibilityRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -43,5 +44,11 @@ interface ReportApiService {
     suspend fun updateReport(
         @Path("id") reportId: Long,
         @Body request: UpdateProductReportRequest
+    ): Response<ProductReportResponse>
+
+    @PATCH("api/admin/reports/{id}/product-visibility")
+    suspend fun updateProductVisibility(
+        @Path("id") reportId: Long,
+        @Body request: UpdateProductVisibilityRequest
     ): Response<ProductReportResponse>
 }

@@ -62,7 +62,8 @@ fun ProfileScreen(
     onNavigateToAddress: () -> Unit,
     onNavigateToOrders: (String) -> Unit,
     onLogoutClick: () -> Unit,
-    onNavigateToRevenue: () -> Unit = {},
+    onNavigateToStatistics: () -> Unit = {},
+    onNavigateToMyProducts: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
     onNavigateToAdminReports: () -> Unit = {},
     userViewModel: UserViewModel = hiltViewModel(),
@@ -133,10 +134,11 @@ fun ProfileScreen(
             onEditClick = { showEditDialog = true },
             onChangePasswordClick = { showPasswordDialog = true },
             orderCounts = orderCounts,
-            onNavigateToRevenue = onNavigateToRevenue,
+            onNavigateToStatistics = onNavigateToStatistics,
             onNavigateToReports = onNavigateToReports,
             isAdmin = isAdmin,
-            onNavigateToAdminReports = onNavigateToAdminReports
+            onNavigateToAdminReports = onNavigateToAdminReports,
+            onNavigateToMyProducts = onNavigateToMyProducts,
         )
 
         if (showEditDialog) {
@@ -448,7 +450,8 @@ fun ProfileContent(
     onEditClick: () -> Unit,
     onChangePasswordClick: () -> Unit,
     orderCounts: OrderStatusCountResponse = OrderStatusCountResponse(),
-    onNavigateToRevenue: () -> Unit = {},
+    onNavigateToStatistics: () -> Unit = {},
+    onNavigateToMyProducts: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
     isAdmin: Boolean = false,
     onNavigateToAdminReports: () -> Unit = {},
@@ -485,10 +488,11 @@ fun ProfileContent(
             AccountSettingsSection(
                 onNavigateToAddress = onNavigateToAddress,
                 onChangePasswordClick = onChangePasswordClick,
-                onNavigateToRevenue = onNavigateToRevenue,
+                onNavigateToStatistics = onNavigateToStatistics,
                 onNavigateToReports = onNavigateToReports,
                 isAdmin = isAdmin,
-                onNavigateToAdminReports = onNavigateToAdminReports
+                onNavigateToAdminReports = onNavigateToAdminReports,
+                onNavigateToMyProducts = onNavigateToMyProducts,
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -765,7 +769,8 @@ fun OrderStatusItem(icon: ImageVector, label: String, badgeCount: Int, onClick: 
 fun AccountSettingsSection(
     onNavigateToAddress: () -> Unit,
     onChangePasswordClick: () -> Unit,
-    onNavigateToRevenue: () -> Unit = {},
+    onNavigateToStatistics: () -> Unit = {},
+    onNavigateToMyProducts: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
     isAdmin: Boolean = false,
     onNavigateToAdminReports: () -> Unit = {},
@@ -824,9 +829,20 @@ fun AccountSettingsSection(
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 SettingsMenuItem(
+                    Icons.Default.Storefront,
+                    "Sản phẩm của tôi",
+                    onNavigateToMyProducts
+                )
+
+                HorizontalDivider(
+                    color = Color(0xFFF0F0F0),
+                    thickness = 1.dp,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                SettingsMenuItem(
                     Icons.Default.AttachMoney,
-                    "Doanh thu",
-                    onNavigateToRevenue
+                    "Thống kê",
+                    onNavigateToStatistics
                 )
                 HorizontalDivider(
                     color = Color(0xFFF0F0F0),
@@ -838,15 +854,15 @@ fun AccountSettingsSection(
                     stringResource(R.string.profile_menu_password),
                     onClick = onChangePasswordClick
                 )
-                HorizontalDivider(
-                    color = Color(0xFFF0F0F0),
-                    thickness = 1.dp,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                SettingsMenuItem(
-                    Icons.Default.HelpCenter,
-                    stringResource(R.string.profile_menu_help),
-                    {})
+//                HorizontalDivider(
+//                    color = Color(0xFFF0F0F0),
+//                    thickness = 1.dp,
+//                    modifier = Modifier.padding(horizontal = 16.dp)
+//                )
+//                SettingsMenuItem(
+//                    Icons.Default.HelpCenter,
+//                    stringResource(R.string.profile_menu_help),
+//                    {})
             }
         }
     }

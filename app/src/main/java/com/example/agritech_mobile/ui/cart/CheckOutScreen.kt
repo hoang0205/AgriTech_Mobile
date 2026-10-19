@@ -64,7 +64,8 @@ data class CheckoutUiState(
     val shippingFee: Double = 0.0,
     val discount: Double = 0.0,
     val totalAmount: Double = 0.0,
-    val selectedPaymentMethod: PaymentMethodType = PaymentMethodType.COD
+    val selectedPaymentMethod: PaymentMethodType = PaymentMethodType.COD,
+    val stockAvailable: Boolean = false
 )
 
 @Composable
@@ -131,6 +132,7 @@ fun CheckoutScreen(
             val totalAmount = subtotal + shippingFee - discount
 
             uiState = uiState.copy(
+                stockAvailable = selectedItems.size == selectedCartItemIds.distinct().size && selectedItems.isNotEmpty() && selectedItems.all { it.available && it.quantity > 0.0 && it.quantity <= it.availableQuantity },
                 items = mappedItems,
                 subtotal = subtotal,
                 shippingFee = shippingFee,
@@ -232,6 +234,10 @@ fun CheckoutScreen(
                 uiState = uiState.copy(selectedPaymentMethod = method)
             },
             onPlaceOrderClick = {
+                if (!uiState.stockAvailable) {
+                    Toast.makeText(context, "Có sản phẩm hết hàng hoặc không đủ tồn kho. Vui lòng quay lại giỏ hàng.", Toast.LENGTH_LONG).show()
+                    return@CheckoutContent
+                }
                 if (uiState.address.isBlank() || uiState.phone.isBlank()) {
                     Toast.makeText(context, "Vui lòng chọn địa chỉ nhận hàng", Toast.LENGTH_SHORT)
                         .show()
@@ -295,10 +301,20 @@ fun CheckoutContent(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { CheckoutTopBar(onBackClick) },
         bottomBar = {
-            CheckoutBottomBar(
-                buttonText = buttonText,
-                onPlaceOrderClick = onPlaceOrderClick
-            )
+            Column {
+                if (!uiState.stockAvailable && uiState.items.isNotEmpty()) {
+                    Text(
+                        "Có sản phẩm hết hàng hoặc không đủ tồn kho. Vui lòng quay lại giỏ hàng.",
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
+                }
+                CheckoutBottomBar(
+                    buttonText = buttonText,
+                    enabled = uiState.stockAvailable,
+                    onPlaceOrderClick = onPlaceOrderClick
+                )
+            }
         }
     ) { paddingValues ->
         LazyColumn(
@@ -677,7 +693,8 @@ fun SummaryLine(label: String, value: String, isGreen: Boolean = false) {
 @Composable
 fun CheckoutBottomBar(
     buttonText: String,
-    onPlaceOrderClick: () -> Unit
+    onPlaceOrderClick: () -> Unit,
+    enabled: Boolean = false
 ) {
     Surface(
         shadowElevation = 24.dp,
@@ -691,6 +708,7 @@ fun CheckoutBottomBar(
         ) {
             Button(
                 onClick = onPlaceOrderClick,
+                enabled = enabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),

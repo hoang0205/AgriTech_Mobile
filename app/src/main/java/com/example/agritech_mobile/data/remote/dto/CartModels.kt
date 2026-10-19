@@ -13,6 +13,8 @@ data class CartResponse(
     val farmerId: String,
     val farmerName: String,
     val farmerPhone: String,
+    val availableQuantity: Double = 0.0,
+    val available: Boolean = false,
 )
 
 data class CartRequest(

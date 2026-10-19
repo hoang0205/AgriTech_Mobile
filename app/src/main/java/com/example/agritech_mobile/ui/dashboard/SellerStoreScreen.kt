@@ -38,7 +38,11 @@ data class SellerProductItem(
     val name: String,
     val priceStr: String,
     val unit: String = "kg",
-    val imageUrl: String = ""
+    val imageUrl: String = "",
+    val seller: String = "",
+    val rating: Double = 0.0,
+    val reviewCount: Int = 0,
+    val availableQuantity: Double = 0.0
 )
 
 data class SellerStoreUiState(
@@ -47,7 +51,11 @@ data class SellerStoreUiState(
     val sellerAvatar: String? = null,
     val sellerPhone: String? = null,
     val products: List<SellerProductItem> = emptyList(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val totalProducts: Int? = null,
+    val isLoadingMore: Boolean = false,
+    val hasMore: Boolean = false,
+    val error: String? = null
 )
 
 @Composable
@@ -73,9 +81,13 @@ fun SellerStoreScreen(
             SellerProductItem(
                 id = res.id,
                 name = res.name,
-                priceStr = "${res.price.toLong()} đ",
+                priceStr = formatProductPrice(res.price),
                 unit = res.unit,
-                imageUrl = res.imageUrls.firstOrNull() ?: ""
+                imageUrl = res.imageUrls.firstOrNull().orEmpty(),
+                seller = res.farmerName,
+                rating = res.rating,
+                reviewCount = res.reviewCount,
+                availableQuantity = res.quantity
             )
         }
     }
@@ -103,7 +115,11 @@ fun SellerStoreContent(
     uiState: SellerStoreUiState,
     onBackClick: () -> Unit,
     onProductClick: (String) -> Unit,
-    onChatClick: () -> Unit
+    onChatClick: () -> Unit,
+    isOwnStore: Boolean = false,
+    onLoadMore: () -> Unit = {},
+    onRetry: () -> Unit = {},
+    onEditStock: ((SellerProductItem) -> Unit)? = null
 ) {
     val primaryGreen = Color(0xFF1E7032)
     val lightGreen = Color(0xFFE8F3EA)
@@ -115,7 +131,7 @@ fun SellerStoreContent(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Gian hàng",
+                        text = if (isOwnStore) "Sản phẩm của tôi" else "Gian hàng",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     )
@@ -199,7 +215,9 @@ fun SellerStoreContent(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
                                             text = uiState.sellerName.ifBlank { "Nhà vườn AgriTech" },
-                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold
+                                            ),
                                             color = textDark,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -213,7 +231,10 @@ fun SellerStoreContent(
                                         )
                                     }
 
-                                    if (!uiState.sellerPhone.isNullOrBlank()) {
+                                    if (
+                                        !isOwnStore &&
+                                        !uiState.sellerPhone.isNullOrBlank()
+                                    ) {
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(
@@ -233,35 +254,36 @@ fun SellerStoreContent(
 
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "${uiState.products.size} sản phẩm đang bán",
-                                        fontSize = 12.sp,
+                                        text = "${uiState.totalProducts ?: uiState.products.size} sản phẩm đang bán",                                        fontSize = 12.sp,
                                         color = primaryGreen,
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(14.dp))
+                            if (!isOwnStore) {
+                                Spacer(modifier = Modifier.height(14.dp))
 
-                            Button(
-                                onClick = onChatClick,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(42.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = primaryGreen)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Chat,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Chat",
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp
-                                )
+                                Button(
+                                    onClick = onChatClick,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(42.dp),
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = primaryGreen)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Chat,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Chat",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp
+                                    )
+                                }
                             }
                         }
                     }
@@ -269,14 +291,38 @@ fun SellerStoreContent(
 
                 item {
                     Text(
-                        text = "Tất cả nông sản (${uiState.products.size})",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        text = "Tất cả sản phẩm (${uiState.totalProducts ?: uiState.products.size})",                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = textDark,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
                 }
 
-                if (uiState.products.isEmpty()) {
+                uiState.error?.let { error ->
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = error,
+                                color = MaterialTheme.colorScheme.error
+                            )
+
+                            TextButton(
+                                onClick = onRetry,
+                                enabled = !uiState.isLoadingMore
+                            ) {
+                                Text("Thử lại")
+                            }
+                        }
+                    }
+                }
+
+                if (
+                    uiState.products.isEmpty() &&
+                    uiState.error == null
+                ) {
                     item {
                         Box(
                             modifier = Modifier
@@ -285,8 +331,11 @@ fun SellerStoreContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Nhà vườn hiện chưa có sản phẩm nào khác.",
-                                color = textGray,
+                                text = if (isOwnStore) {
+                                    "Bạn chưa có sản phẩm đang bán."
+                                } else {
+                                    "Gian hàng chưa có sản phẩm."
+                                },                                color = textGray,
                                 fontSize = 14.sp
                             )
                         }
@@ -300,14 +349,40 @@ fun SellerStoreContent(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             for (product in rowProducts) {
-                                SellerProductCard(
-                                    product = product,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onProductClick(product.id) }
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    SellerProductCard(
+                                        product = product,
+                                        onClick = { onProductClick(product.id) }
+                                    )
+                                    if (isOwnStore && onEditStock != null) {
+                                        TextButton(onClick = { onEditStock(product) }) {
+                                            Text("Sửa tồn kho")
+                                        }
+                                    }
+                                }
                             }
                             if (rowProducts.size == 1) {
                                 Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+                if (uiState.hasMore || uiState.isLoadingMore) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (uiState.isLoadingMore) {
+                                CircularProgressIndicator(
+                                    color = primaryGreen
+                                )
+                            } else {
+                                OutlinedButton(onClick = onLoadMore) {
+                                    Text("Xem thêm sản phẩm")
+                                }
                             }
                         }
                     }
@@ -323,61 +398,21 @@ fun SellerProductCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp)
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .background(Color(0xFFF0F0F0))
-            ) {
-                AsyncImage(
-                    model = product.imageUrl,
-                    contentDescription = product.name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    placeholder = painterResource(R.drawable.ic_launcher_background),
-                    error = painterResource(R.drawable.ic_launcher_background)
-                )
-            }
-            Column(modifier = Modifier.padding(10.dp)) {
-                Text(
-                    text = product.name,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                    color = Color(0xFF1D1D1D),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = product.priceStr,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1E7032),
-                        fontSize = 13.sp
-                    )
-                    if (product.unit.isNotBlank()) {
-                        Text(
-                            text = "/ ${product.unit}",
-                            fontSize = 11.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
-            }
-        }
-    }
+    ProductCard(
+        product = Product(
+            id = product.id,
+            name = product.name,
+            priceStr = product.priceStr,
+            seller = product.seller,
+            imageUrl = product.imageUrl,
+            unit = product.unit,
+            rating = product.rating,
+            reviewCount = product.reviewCount,
+            availableQuantity = product.availableQuantity
+        ),
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick
+    )
 }
 
 @Preview(showBackground = true, showSystemUi = true)

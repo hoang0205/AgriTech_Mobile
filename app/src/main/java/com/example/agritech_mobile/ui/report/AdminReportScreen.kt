@@ -53,7 +53,8 @@ fun AdminReportScreen(
         onSelectReport = viewModel::selectReport,
         onDismissReport = viewModel::dismissReport,
         onReplyChange = viewModel::onReplyChange,
-        onUpdateStatus = viewModel::updateStatus
+        onUpdateStatus = viewModel::updateStatus,
+        onUpdateProductVisibility = viewModel::updateProductVisibility
     )
 }
 
@@ -69,7 +70,8 @@ fun AdminReportContent(
     onSelectReport: (Long) -> Unit = {},
     onDismissReport: () -> Unit = {},
     onReplyChange: (String) -> Unit = {},
-    onUpdateStatus: (ReportStatus) -> Unit = {}
+    onUpdateStatus: (ReportStatus) -> Unit = {},
+    onUpdateProductVisibility: (Boolean) -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -282,7 +284,8 @@ fun AdminReportContent(
             state = state,
             onDismiss = onDismissReport,
             onReplyChange = onReplyChange,
-            onUpdateStatus = onUpdateStatus
+            onUpdateStatus = onUpdateStatus,
+            onUpdateProductVisibility = onUpdateProductVisibility
         )
     }
 }
@@ -320,9 +323,14 @@ fun AdminReportDetailDialog(
     state: AdminReportUiState,
     onDismiss: () -> Unit = {},
     onReplyChange: (String) -> Unit = {},
-    onUpdateStatus: (ReportStatus) -> Unit = {}
+    onUpdateStatus: (ReportStatus) -> Unit = {},
+    onUpdateProductVisibility: (Boolean) -> Unit = {}
 ) {
     val report = state.selectedReport ?: return
+
+    var pendingVisibility by remember(report.id) {
+        mutableStateOf<Boolean?>(null)
+    }
 
     val canProcess =
         report.status == ReportStatus.PENDING.name ||
@@ -392,6 +400,33 @@ fun AdminReportDetailDialog(
                             }
                         }
                     }
+                }
+
+                HorizontalDivider()
+
+                Text(
+                    text = when (report.productHidden) {
+                        true -> "Hiển thị sản phẩm: Đang ẩn"
+                        false -> "Hiển thị sản phẩm: Đang hiện"
+                        null -> "Chưa có trạng thái hiển thị sản phẩm"
+                    },
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                OutlinedButton(
+                    onClick = {
+                        pendingVisibility = report.productHidden != true
+                    },
+                    enabled = !state.isBusy && report.productHidden != null,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (report.productHidden == true) {
+                            "Hiện lại sản phẩm"
+                        } else {
+                            "Ẩn sản phẩm"
+                        }
+                    )
                 }
 
                 HorizontalDivider()
@@ -495,6 +530,52 @@ fun AdminReportDetailDialog(
             }
         }
     )
+    pendingVisibility?.let { hidden ->
+        AlertDialog(
+            onDismissRequest = {
+                pendingVisibility = null
+            },
+            title = {
+                Text(
+                    if (hidden) {
+                        "Ẩn sản phẩm?"
+                    } else {
+                        "Hiện lại sản phẩm?"
+                    }
+                )
+            },
+            text = {
+                Text(
+                    if (hidden) {
+                        "Sản phẩm sẽ ngừng hiển thị và không thể đặt mua. " +
+                                "Đơn hàng cũ vẫn được giữ."
+                    } else {
+                        "Sản phẩm sẽ xuất hiện trở lại và có thể đặt mua."
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !state.isBusy,
+                    onClick = {
+                        pendingVisibility = null
+                        onUpdateProductVisibility(hidden)
+                    }
+                ) {
+                    Text("Xác nhận")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        pendingVisibility = null
+                    }
+                ) {
+                    Text("Hủy")
+                }
+            }
+        )
+    }
 }
 
 @Preview(showBackground = true, widthDp = 411, heightDp = 850)

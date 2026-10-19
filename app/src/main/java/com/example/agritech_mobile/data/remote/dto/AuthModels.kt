@@ -28,7 +28,8 @@ data class RegisterRequest(
     val phoneNumber: String,
     val email: String,
     val password: String,
-    val role: String = "FARMER"
+    val role: String = "FARMER",
+    val otp: String = ""
 )
 
 data class ForgotPasswordRequest(

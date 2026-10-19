@@ -223,4 +223,53 @@ class AdminReportViewModel @Inject constructor(
             )
         }
     }
+
+    fun updateProductVisibility(hidden: Boolean) {
+        val state = _uiState.value
+        if (state.isBusy) return
+
+        val report = state.selectedReport ?: return
+        if (report.productHidden == null) return
+
+        _uiState.value = state.copy(
+            isSubmitting = true,
+            error = null,
+            successMessage = null
+        )
+
+        viewModelScope.launch {
+            reportRepository.updateProductVisibility(report.id, hidden).fold(
+                onSuccess = { updatedReport ->
+                    val current = _uiState.value
+
+                    _uiState.value = current.copy(
+                        isSubmitting = false,
+                        selectedReport = updatedReport,
+                        reports = current.reports.map { item ->
+                            if (item.productId == updatedReport.productId) {
+                                item.copy(
+                                    productHidden = updatedReport.productHidden
+                                )
+                            } else {
+                                item
+                            }
+                        },
+                        successMessage =
+                            if (updatedReport.productHidden == true) {
+                                "Đã ẩn sản phẩm"
+                            } else {
+                                "Đã hiện lại sản phẩm"
+                            }
+                    )
+                },
+                onFailure = { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isSubmitting = false,
+                        error = exception.message
+                            ?: "Không cập nhật được hiển thị sản phẩm"
+                    )
+                }
+            )
+        }
+    }
 }

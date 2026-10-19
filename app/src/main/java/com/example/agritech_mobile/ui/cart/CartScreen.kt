@@ -31,6 +31,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
@@ -47,8 +49,12 @@ data class CartItem(
     val farmerId: String,
     val quantity: Double,
     val imageUrl: String,
-    val isSelected: Boolean = false
-)
+    val isSelected: Boolean = false,
+    val availableQuantity: Double = 0.0,
+    val available: Boolean = false
+) {
+    val canCheckout: Boolean get() = available && quantity > 0.0 && quantity <= availableQuantity
+}
 
 @Composable
 fun CartScreen(
@@ -61,7 +67,7 @@ fun CartScreen(
     var cartItems by remember { mutableStateOf<List<CartItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         cartViewModel.loadCartItems()
     }
 
@@ -85,7 +91,9 @@ fun CartScreen(
                         farmerId = res.farmerId,
                         quantity = res.quantity,
                         imageUrl = res.thumbnail,
-                        isSelected = oldItem?.isSelected ?: false
+                        availableQuantity = res.availableQuantity,
+                        available = res.available,
+                        isSelected = (oldItem?.isSelected ?: false) && res.available && res.quantity <= res.availableQuantity
                     )
                 }
             }
@@ -111,12 +119,12 @@ fun CartScreen(
         isLoading = isLoading,
         onShopCheckedChange = { sellerId, isChecked ->
             cartItems = cartItems.map {
-                if (it.farmerId == sellerId) it.copy(isSelected = isChecked) else it
+                if (it.farmerId == sellerId) it.copy(isSelected = isChecked && it.canCheckout) else it
             }
         },
         onItemCheckedChange = { itemId, isChecked ->
             cartItems =
-                cartItems.map { if (it.id == itemId) it.copy(isSelected = isChecked) else it }
+                cartItems.map { if (it.id == itemId) it.copy(isSelected = isChecked && it.canCheckout) else it }
         },
         onIncrease = { item -> cartViewModel.updateQuantity(item.id, item.quantity + 1.0) },
         onDecrease = { item ->
@@ -127,7 +135,7 @@ fun CartScreen(
         },
         onRemove = { itemId -> cartViewModel.deleteCartItem(itemId) },
         onCheckout = {
-            val selectedItems = cartItems.filter { it.isSelected }
+            val selectedItems = cartItems.filter { it.isSelected && it.canCheckout }
             val selectedCartItemIds = selectedItems.joinToString(",") { it.id }
 
             if (selectedCartItemIds.isNotEmpty()) {
@@ -148,7 +156,7 @@ fun CartContent(
     onRemove: (String) -> Unit,
     onCheckout: () -> Unit
 ) {
-    val selectedItems = cartItems.filter { it.isSelected }
+    val selectedItems = cartItems.filter { it.isSelected && it.canCheckout }
     val subtotal = selectedItems.sumOf { it.price * it.quantity }
     val deliveryFee = if (selectedItems.isEmpty()) 0.0 else 25000.0
     val tax = 0.00
@@ -173,7 +181,7 @@ fun CartContent(
 
                     item {
                         val isAllShopItemSelected =
-                            itemsOfSeller.isNotEmpty() && itemsOfSeller.all { it.isSelected }
+                            itemsOfSeller.any { it.canCheckout } && itemsOfSeller.filter { it.canCheckout }.all { it.isSelected }
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -183,6 +191,7 @@ fun CartContent(
                         ) {
                             Checkbox(
                                 checked = isAllShopItemSelected,
+                                enabled = itemsOfSeller.any { it.canCheckout },
                                 onCheckedChange = { isChecked ->
                                     onShopCheckedChange(sellerId, isChecked)
                                 },
@@ -229,7 +238,7 @@ fun CartContent(
                         deliveryFee = deliveryFee,
                         tax = tax,
                         total = total,
-                        isButtonEnabled = selectedItems.isNotEmpty(),
+                        isButtonEnabled = selectedItems.isNotEmpty() && !isLoading,
                         onCheckout = onCheckout
                     )
                     Spacer(modifier = Modifier.height(24.dp))
@@ -323,7 +332,8 @@ fun CartItemCard(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
-            checked = item.isSelected,
+            checked = item.isSelected && item.canCheckout,
+            enabled = item.canCheckout,
             onCheckedChange = { onCheckedChange(it) },
             colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
         )
@@ -347,6 +357,13 @@ fun CartItemCard(
                 )
 
                 Column(modifier = Modifier.padding(16.dp)) {
+                    if (item.availableQuantity <= 0.0) {
+                        Text("Hết hàng", color = MaterialTheme.colorScheme.error)
+                    } else if (!item.available) {
+                        Text("Sản phẩm đã ngừng bán", color = MaterialTheme.colorScheme.error)
+                    } else if (!item.canCheckout) {
+                        Text("Chỉ còn ${item.availableQuantity} ${item.unit}. Vui lòng giảm số lượng.", color = MaterialTheme.colorScheme.error)
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -382,7 +399,7 @@ fun CartItemCard(
                                 .padding(horizontal = 4.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(onClick = onDecrease, modifier = Modifier.size(32.dp)) {
+                            IconButton(onClick = onDecrease, enabled = item.available && item.quantity > 1.0, modifier = Modifier.size(32.dp)) {
                                 Icon(
                                     Icons.Default.Remove,
                                     contentDescription = "Decrease",
@@ -395,7 +412,7 @@ fun CartItemCard(
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 modifier = Modifier.padding(horizontal = 12.dp)
                             )
-                            IconButton(onClick = onIncrease, modifier = Modifier.size(32.dp)) {
+                            IconButton(onClick = onIncrease, enabled = item.available && item.quantity + 1.0 <= item.availableQuantity, modifier = Modifier.size(32.dp)) {
                                 Icon(
                                     Icons.Default.Add,
                                     contentDescription = "Increase",

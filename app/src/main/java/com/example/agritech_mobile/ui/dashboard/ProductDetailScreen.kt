@@ -158,6 +158,7 @@ fun ProductDetailScreen(
                     sellerAvatar = productRes.farmerAvatar,
                     sellerPhone = productRes.farmerPhone,
                     stock = productRes.quantity.toString(),
+                    quantity = uiState.quantity.coerceIn(0.0, productRes.quantity.coerceAtLeast(0.0)),
                     imageUrls = productRes.imageUrls,
                     aiPros = productRes.aiPros,
                     aiCons = productRes.aiCons
@@ -244,10 +245,14 @@ fun ProductDetailScreen(
             onAiChatClick(uiState.id, uiState.name)
         },
         onAddToCartClick = {
-            cartViewModel.addToCart(uiState.id, uiState.quantity)
+            val stock = uiState.stock.toDoubleOrNull() ?: 0.0
+            if (uiState.quantity > 0.0 && uiState.quantity <= stock) {
+                cartViewModel.addToCart(uiState.id, uiState.quantity)
+            }
         },
         onIncreaseQuantity = {
-            uiState = uiState.copy(quantity = uiState.quantity + 1.0)
+            val stock = uiState.stock.toDoubleOrNull() ?: 0.0
+            uiState = uiState.copy(quantity = (uiState.quantity + 1.0).coerceAtMost(stock))
         },
         onDecreaseQuantity = {
             if (uiState.quantity > 1.0) {
@@ -257,7 +262,8 @@ fun ProductDetailScreen(
         onQuantityChange = { input ->
             val filtered = input.filter { it.isDigit() || it == '.' }
             val newQty = filtered.toDoubleOrNull() ?: 0.0
-            uiState = uiState.copy(quantity = newQty)
+            val stock = uiState.stock.toDoubleOrNull() ?: 0.0
+            uiState = uiState.copy(quantity = newQty.coerceIn(0.0, stock.coerceAtLeast(0.0)))
         },
         reviews = reviewsList,
         reviewSummary = reviewSummary,
@@ -307,6 +313,7 @@ fun ProductDetailContent(
         bottomBar = {
             ProductDetailBottomBar(
                 quantity = uiState.quantity,
+                availableQuantity = uiState.stock.toDoubleOrNull() ?: 0.0,
                 unit = uiState.unit,
                 onChatClick = onChatClick,
                 onAddToCartClick = onAddToCartClick,
@@ -1190,6 +1197,7 @@ fun formatReviewTime(rawTime: String): String {
 @Composable
 fun ProductDetailBottomBar(
     quantity: Double,
+    availableQuantity: Double = 0.0,
     unit: String,
     onChatClick: () -> Unit,
     onAddToCartClick: () -> Unit,
@@ -1243,6 +1251,7 @@ fun ProductDetailBottomBar(
             ) {
                 IconButton(
                     onClick = onDecreaseQuantity,
+                    enabled = availableQuantity > 0.0 && quantity > 0.0,
                     modifier = Modifier.size(28.dp)
                 ) {
                     Icon(
@@ -1255,6 +1264,7 @@ fun ProductDetailBottomBar(
 
                 BasicTextField(
                     value = displayQuantity,
+                    enabled = availableQuantity > 0.0,
                     onValueChange = onQuantityChange,
                     modifier = Modifier.widthIn(min = 28.dp, max = 45.dp),
                     textStyle = androidx.compose.ui.text.TextStyle(
@@ -1277,6 +1287,7 @@ fun ProductDetailBottomBar(
 
                 IconButton(
                     onClick = onIncreaseQuantity,
+                    enabled = availableQuantity > quantity,
                     modifier = Modifier.size(28.dp)
                 ) {
                     Icon(
@@ -1292,6 +1303,7 @@ fun ProductDetailBottomBar(
 
             Button(
                 onClick = onAddToCartClick,
+                enabled = quantity > 0.0 && quantity <= availableQuantity,
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp),
@@ -1311,7 +1323,7 @@ fun ProductDetailBottomBar(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Thêm vào giỏ",
+                        text = if (availableQuantity <= 0.0) "Hết hàng" else "Thêm vào giỏ",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,

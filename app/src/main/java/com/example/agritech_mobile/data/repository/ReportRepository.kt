@@ -8,6 +8,7 @@ import com.example.agritech_mobile.data.remote.dto.ProductReportResponse
 import com.example.agritech_mobile.data.remote.dto.ReportEligibilityResponse
 import com.example.agritech_mobile.data.remote.dto.ReportStatus
 import com.example.agritech_mobile.data.remote.dto.UpdateProductReportRequest
+import com.example.agritech_mobile.data.remote.dto.UpdateProductVisibilityRequest
 import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import retrofit2.Response
@@ -58,6 +59,18 @@ class ReportRepository @Inject constructor(
     ): Result<ProductReportResponse> {
         return executeRequest {
             apiService.updateReport(reportId, request)
+        }
+    }
+
+    suspend fun updateProductVisibility(
+        reportId: Long,
+        hidden: Boolean
+    ): Result<ProductReportResponse> {
+        return executeRequest {
+            apiService.updateProductVisibility(
+                reportId,
+                UpdateProductVisibilityRequest(hidden)
+            )
         }
     }
 

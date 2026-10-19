@@ -66,12 +66,19 @@ data class SellProductUiState(
     val isPredictingPrice: Boolean = false,
     val isGeneratingDescription: Boolean = false,
     val priceSuggestion: String? = null,
+    val costPrice: String = "",
 )
 
 private fun parseProductPrice(value: String): Double? {
     return value.trim()
         .toDoubleOrNull()
         ?.takeIf { it.isFinite() && it > 0.0 }
+}
+
+private fun parseProductCost(value: String): Double? {
+    return value.trim()
+        .toDoubleOrNull()
+        ?.takeIf { it.isFinite() && it >= 0.0 }
 }
 
 @Composable
@@ -186,6 +193,17 @@ fun SellProductScreen(
             return
         }
 
+        val safeCost = parseProductCost(uiState.costPrice)
+
+        if (uiState.costPrice.isNotBlank() && safeCost == null) {
+            Toast.makeText(
+                context,
+                "Giá vốn phải là số không âm. Ví dụ: 15000",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
         if (uiState.unit.isBlank()) {
             Toast.makeText(
                 context,
@@ -215,7 +233,8 @@ fun SellProductScreen(
                 quantity = safeQuantity,
                 unit = uiState.unit,
                 description = uiState.description,
-                imageParts = imageParts
+                imageParts = imageParts,
+                costPrice = safeCost
             )
         } else {
             Toast.makeText(context, "Lỗi xử lý ảnh, vui lòng thử lại!", Toast.LENGTH_SHORT).show()
@@ -231,6 +250,9 @@ fun SellProductScreen(
             )
         },
         onPriceChange = { uiState = uiState.copy(price = it) },
+        onCostPriceChange = {
+            uiState = uiState.copy(costPrice = it)
+        },
         onUnitChange = { uiState = uiState.copy(unit = it) },
         onQuantityChange = { uiState = uiState.copy(quantity = it) },
         onDescriptionChange = { uiState = uiState.copy(description = it) },
@@ -333,7 +355,8 @@ fun SellProductContent(
     onBackClick: () -> Unit,
     onPublishClick: () -> Unit,
     onPredictPriceClick: () -> Unit,
-    onGenerateDescriptionClick: () -> Unit
+    onGenerateDescriptionClick: () -> Unit,
+    onCostPriceChange: (String) -> Unit = {}
 ) {
     val backgroundColor = Color(0xFFFAFBFA)
     val primaryGreen = Color(0xFF1E7032)
@@ -643,6 +666,69 @@ fun SellProductContent(
                     }
                 }
             }
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                color = Color(0xFFF0FDF4),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Giá vốn sản phẩm",
+                        fontWeight = FontWeight.Bold,
+                        color = primaryGreen
+                    )
+
+                    FormInputField(
+                        label = "Vốn / ${uiState.unit.ifBlank { "đơn vị bán" }}",
+                        value = uiState.costPrice,
+                        onValueChange = onCostPriceChange,
+                        placeholder = "Ví dụ: 15000",
+                        keyboardType = KeyboardType.Decimal,
+                        trailingText = "đ"
+                    )
+
+                    val cost = parseProductCost(uiState.costPrice)
+                    val sellingPrice = parseProductPrice(uiState.price)
+
+                    if (uiState.costPrice.isNotBlank() && cost == null) {
+                        Text(
+                            text = "Giá vốn phải là số không âm.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    } else if (cost != null && sellingPrice != null) {
+                        val profit = sellingPrice - cost
+
+                        val formattedProfit = java.text.NumberFormat
+                            .getNumberInstance(java.util.Locale("vi", "VN"))
+                            .format(profit)
+
+                        Text(
+                            text = "Lãi gộp dự kiến/đơn vị: $formattedProfit đ",
+                            fontWeight = FontWeight.Medium,
+                            color = if (profit < 0) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                primaryGreen
+                            }
+                        )
+                    }
+
+                    Text(
+                        text = "Không bắt buộc. Nhập vốn cho 1 đơn vị bán " +
+                                "(kg, hộp…). Có thể bổ sung trong Quản lý giá vốn.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF6B7280)
+                    )
+                }
+            }
+
             uiState.priceSuggestion?.let { suggestion ->
                 Text(
                     text = suggestion,
@@ -828,6 +914,9 @@ fun SellProductContent(
                     uiState.productName.isNotBlank() &&
                     uiState.category.isNotBlank() &&
                     parseProductPrice(uiState.price) != null &&
+                    (uiState.costPrice.isBlank() ||
+                        parseProductCost(uiState.costPrice) != null) &&
+                    uiState.unit.isNotBlank() &&
                     uiState.unit.isNotBlank() &&
                     uiState.quantity > 0 &&
                     uiState.description.isNotBlank()

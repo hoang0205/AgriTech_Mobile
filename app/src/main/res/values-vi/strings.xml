@@ -22,7 +22,7 @@
     <string name="email_placeholder">abc@example.com</string>
     <string name="confirm_password">XÁC NHẬN MẬT KHẨU</string>
     <string name="password_placeholder">••••••••</string>
-    <string name="phone_placeholder">+84 000 000 000</string>
+    <string name="phone_placeholder">+84 012 234 567</string>
     <string name="already_have_account">Đã có tài khoản? </string>
     <string name="security">Bảo mật</string>
 

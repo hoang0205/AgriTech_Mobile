@@ -29,8 +29,8 @@ import com.example.agritech_mobile.ui.chat.ChatListScreen
 import com.example.agritech_mobile.ui.chat.ChatScreen
 import com.example.agritech_mobile.ui.cart.CheckoutScreen
 import com.example.agritech_mobile.ui.chat.AiChatScreen
+import com.example.agritech_mobile.ui.dashboard.MyProductsScreen
 import com.example.agritech_mobile.ui.dashboard.ProductDetailScreen
-import com.example.agritech_mobile.ui.dashboard.RevenueReportScreen
 import com.example.agritech_mobile.ui.dashboard.SellProductScreen
 import com.example.agritech_mobile.ui.dashboard.SellerStoreScreen
 import com.example.agritech_mobile.ui.main.MainScreen
@@ -43,7 +43,9 @@ import com.example.agritech_mobile.ui.report.ReportHistoryScreen
 import com.example.agritech_mobile.ui.report.ReportScreen
 import com.example.agritech_mobile.ui.user.BuyerOrdersScreen
 import com.example.agritech_mobile.ui.user.AddAddressScreen
+import com.example.agritech_mobile.ui.user.ProductCostsScreen
 import com.example.agritech_mobile.ui.user.ReviewProductScreen
+import com.example.agritech_mobile.ui.user.StatisticsScreen
 import com.example.agritech_mobile.ui.user.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
 import java.net.URLDecoder
@@ -226,6 +228,11 @@ fun AppNavigation(
                 onNavigateToDetail = { productId ->
                     navController.navigate("product_detail/$productId")
                 },
+                onNavigateToAddress = {
+                    navController.navigate("address_selection") {
+                        launchSingleTop = true
+                    }
+                },
                 onNavigateToCreateProduct = {
                     navController.navigate("create_product")
                 },
@@ -245,13 +252,18 @@ fun AppNavigation(
                         launchSingleTop = true
                     }
                 },
-                onNavigateToRevenue = {
-                    navController.navigate("revenue_report") {
+                onNavigateToStatistics = {
+                    navController.navigate("statistics") {
                         launchSingleTop = true
                     }
                 },
                 onNavigateToAdminReports = {
                     navController.navigate("admin_reports") {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToMyProducts = {
+                    navController.navigate("my_products") {
                         launchSingleTop = true
                     }
                 },
@@ -688,14 +700,6 @@ fun AppNavigation(
             )
         }
 
-        composable(route = "revenue_report") {
-            RevenueReportScreen(
-                onBackClick = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
         composable(
             route = "report_product/{productId}?productName={productName}",
             arguments = listOf(
@@ -762,6 +766,38 @@ fun AppNavigation(
                     }
                 }
             }
+        }
+
+        composable(route = "statistics") {
+            StatisticsScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onManageCosts = {
+                    navController.navigate("product_costs") {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable(route = "product_costs") {
+            ProductCostsScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = "my_products") {
+            MyProductsScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onProductClick = { productId ->
+                    navController.navigate("product_detail/$productId")
+                }
+            )
         }
     }
 }

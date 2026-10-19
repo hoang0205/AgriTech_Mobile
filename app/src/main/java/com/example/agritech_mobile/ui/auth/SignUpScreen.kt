@@ -1,6 +1,9 @@
 package com.example.agritech_mobile.ui.auth
 
 import android.widget.Toast
+import android.util.Patterns
+import kotlinx.coroutines.delay
+import java.util.Locale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,7 +61,12 @@ data class SignUpUiState(
 
     val passwordError: String? = null,
     val confirmPasswordError: String? = null,
-    val backendError: String? = null
+    val backendError: String? = null,
+    val phoneError: String? = null,
+    val emailError: String? = null,
+    val otp: String = "",
+    val codeSent: Boolean = false,
+    val resendInSeconds: Int = 0
 )
 
 @Composable
@@ -73,8 +81,17 @@ fun SignUpScreen(
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     LaunchedEffect(authState) {
         when (authState) {
+            is AuthState.RegistrationCodeSent -> {
+                val sent = authState as AuthState.RegistrationCodeSent
+                if (sent.email == uiState.email.trim().lowercase(Locale.ROOT)) {
+                    uiState = uiState.copy(codeSent = true, otp = "", resendInSeconds = 60, backendError = null)
+                    Toast.makeText(context, sent.message, Toast.LENGTH_LONG).show()
+                }
+                viewModel.resetState()
+            }
             is AuthState.Success -> {
                 Toast.makeText(context, (authState as AuthState.Success).message, Toast.LENGTH_SHORT).show()
+                viewModel.resetState()
                 onRegisterSucces()
             }
             is AuthState.Error -> {
@@ -86,7 +103,15 @@ fun SignUpScreen(
             else -> {}
         }
     }
-    fun validateAndSignUp() {
+    LaunchedEffect(uiState.resendInSeconds) {
+        if (uiState.resendInSeconds > 0) {
+            delay(1000)
+            uiState = uiState.copy(resendInSeconds = (uiState.resendInSeconds - 1).coerceAtLeast(0))
+        }
+    }
+
+    fun validateAndSignUp(resend: Boolean = false) {
+        if (authState is AuthState.Loading) return
         var isValid = true
         var passError: String? = null
         var confirmError: String? = null
@@ -94,7 +119,8 @@ fun SignUpScreen(
 
         uiState = uiState.copy(backendError = null)
 
-        val passwordRegex = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$".toRegex()
+        val passwordRegex =
+            """^(?=.*[A-Za-z])(?=.*[0-9])\S{8,}$""".toRegex()
         if (!passwordRegex.matches(uiState.password)) {
             passError = "Mật khẩu phải từ 8 kí tự, bao gồm số và chữ"
             isValid = false
@@ -110,22 +136,52 @@ fun SignUpScreen(
             isValid = false
         }
 
+        val normalizedEmail = uiState.email.trim().lowercase(Locale.ROOT)
+        val normalizedPhone = uiState.phone.trim()
+        val phoneError = if (!Regex("""^(?:0|\+84)[35789][0-9]{8}$""").matches(normalizedPhone)) {
+            isValid = false
+            "Số di động phải gồm 10 số, bắt đầu bằng 03, 05, 07, 08 hoặc 09; hỗ trợ +84."
+        } else null
+        val emailError = if (normalizedEmail.length > 254 || !Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
+            isValid = false
+            "Địa chỉ email không hợp lệ"
+        } else null
+        if (uiState.codeSent && !resend && !uiState.otp.matches(Regex("[0-9]{6}"))) {
+            beError = "Vui lòng nhập đủ mã xác minh 6 số"
+            isValid = false
+        }
+
         uiState = uiState.copy(
+            phoneError = phoneError,
+            emailError = emailError,
             passwordError = passError,
             confirmPasswordError = confirmError,
             backendError = beError
         )
 
         if (isValid) {
-            viewModel.register(uiState.fullName, uiState.phone, uiState.email, uiState.password)
+            if (!uiState.codeSent || resend) {
+                if (resend && uiState.resendInSeconds > 0) return
+                viewModel.requestRegistrationCode(uiState.fullName.trim(), normalizedPhone, normalizedEmail, uiState.password)
+            } else {
+                viewModel.register(uiState.fullName.trim(), normalizedPhone, normalizedEmail, uiState.password, uiState.otp)
+            }
         }
     }
 
     SignUpContent(
         uiState = uiState.copy(isLoading = authState is AuthState.Loading),
         onFullNameChange = { uiState = uiState.copy(fullName = it) },
-        onEmailChange = { uiState = uiState.copy(email = it) },
-        onPhoneChange = { uiState = uiState.copy(phone = it) },
+        onEmailChange = {
+            val changed = it.trim().lowercase(Locale.ROOT) != uiState.email.trim().lowercase(Locale.ROOT)
+            uiState = uiState.copy(
+                email = it, emailError = null, backendError = null,
+                codeSent = uiState.codeSent && !changed,
+                otp = if (changed) "" else uiState.otp,
+                resendInSeconds = if (changed) 0 else uiState.resendInSeconds
+            )
+        },
+        onPhoneChange = { uiState = uiState.copy(phone = it, phoneError = null, backendError = null) },
         onPasswordChange = {
             uiState = uiState.copy(password = it, passwordError = null)
         },
@@ -138,6 +194,8 @@ fun SignUpScreen(
         onToggleConfirmPasswordVisibility = {
             uiState = uiState.copy(isConfirmPasswordVisible = !uiState.isConfirmPasswordVisible)
         },
+        onOtpChange = { uiState = uiState.copy(otp = it.filter { char -> char in '0'..'9' }.take(6), backendError = null) },
+        onResendCode = { validateAndSignUp(resend = true) },
         onSignUpClick = { validateAndSignUp() },
         onLoginClick = onLoginClick
     )
@@ -154,7 +212,9 @@ fun SignUpContent(
     onTogglePasswordVisibility: () -> Unit,
     onToggleConfirmPasswordVisibility: () -> Unit,
     onSignUpClick: () -> Unit,
-    onLoginClick: () -> Unit
+    onLoginClick: () -> Unit,
+    onOtpChange: (String) -> Unit = {},
+    onResendCode: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
 
@@ -222,7 +282,8 @@ fun SignUpContent(
                     onValueChange = onEmailChange,
                     placeholder = stringResource(id = R.string.email_placeholder),
                     icon = Icons.Default.Email,
-                    keyboardType = KeyboardType.Email
+                    keyboardType = KeyboardType.Email,
+                    errorMessage = uiState.emailError
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -233,7 +294,8 @@ fun SignUpContent(
                     onValueChange = onPhoneChange,
                     placeholder = stringResource(id = R.string.phone_placeholder),
                     icon = Icons.Default.Phone,
-                    keyboardType = KeyboardType.Phone
+                    keyboardType = KeyboardType.Phone,
+                    errorMessage = uiState.phoneError
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -265,6 +327,30 @@ fun SignUpContent(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                if (uiState.codeSent) {
+                    Text(
+                        "Mã xác minh cho ${uiState.email.trim()} được gửi tới 23021558@vnu.edu.vn (demo). Mã có hiệu lực trong 5 phút.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = uiState.otp,
+                        onValueChange = onOtpChange,
+                        label = { Text("Mã xác minh 6 số") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        singleLine = true,
+                        enabled = !uiState.isLoading,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    TextButton(
+                        onClick = onResendCode,
+                        enabled = !uiState.isLoading && uiState.resendInSeconds == 0
+                    ) {
+                        Text(if (uiState.resendInSeconds > 0) "Gửi lại mã sau ${uiState.resendInSeconds}s" else "Gửi lại mã")
+                    }
+                }
+
                 if (uiState.backendError != null) {
                     Text(
                         text = uiState.backendError,
@@ -276,6 +362,7 @@ fun SignUpContent(
 
                 Button(
                     onClick = onSignUpClick,
+                    enabled = !uiState.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
@@ -287,7 +374,7 @@ fun SignUpContent(
                     } else {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = stringResource(id = R.string.create_account),
+                                text = if (uiState.codeSent) "Xác minh và tạo tài khoản" else "Gửi mã xác minh",
                                 style = MaterialTheme.typography.labelLarge
                             )
                             Spacer(modifier = Modifier.width(8.dp))

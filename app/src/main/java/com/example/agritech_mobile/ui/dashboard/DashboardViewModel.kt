@@ -15,7 +15,11 @@ import com.example.agritech_mobile.data.repository.ReviewRepository
 import com.example.agritech_mobile.data.repository.UploadRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +47,20 @@ sealed class DashboardState {
     data class Error(val error: String) : DashboardState()
 }
 
+data class ProductSearchUiState(
+    val query: String = "",
+    val farmerId: String? = null,
+    val suggestions: List<String> = emptyList(),
+    val products: List<ProductResponse> = emptyList(),
+    val isSuggesting: Boolean = false,
+    val isSearching: Boolean = false,
+    val hasSearched: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val hasMore: Boolean = false,
+    val totalElements: Int = 0,
+    val error: String? = null
+)
+
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val repository: ProductRepository,
@@ -64,12 +82,17 @@ class DashboardViewModel @Inject constructor(
         _homeUiState.update(transform)
     }
 
-    private val _searchQuery = MutableStateFlow("")
-    private val _textSuggestions = MutableStateFlow<List<String>>(emptyList())
-    val textSuggestions: StateFlow<List<String>> = _textSuggestions.asStateFlow()
+    private val _searchUiState = MutableStateFlow(ProductSearchUiState())
+    val searchUiState: StateFlow<ProductSearchUiState> =
+        _searchUiState.asStateFlow()
 
-    private val _searchResults = MutableStateFlow<List<ProductResponse>>(emptyList())
-    val searchResults: StateFlow<List<ProductResponse>> = _searchResults.asStateFlow()
+    private var searchJob: Job? = null
+    private var nextSearchPage = 0
+    private val searchPageSize = 10
+
+    private fun publishSearchState(state: ProductSearchUiState) {
+        _searchUiState.value = state
+    }
 
     val userName: StateFlow<String> = tokenManager.userNameFlow
     val userAvatar: StateFlow<String> = tokenManager.avatarUrlFlow
@@ -97,42 +120,173 @@ class DashboardViewModel @Inject constructor(
 
     init {
         loadHomeData()
-        viewModelScope.launch {
-            _searchQuery
-                .debounce(300)
-                .distinctUntilChanged()
-                .collectLatest { query ->
-                    if (query.isNotBlank()) {
-                        val result = repository.getSuggestedProducts(query)
-                        result.onSuccess { suggestions ->
-                            _textSuggestions.value = suggestions
-                        }.onFailure {
-                            _textSuggestions.value = emptyList()
-                        }
-                    } else {
-                        _textSuggestions.value = emptyList()
-                    }
+    }
+
+    fun onSearchQueryChanged(
+        query: String,
+        farmerId: String? = null
+    ) {
+        searchJob?.cancel()
+        nextSearchPage = 0
+
+        val keyword = query.trim()
+        val initialState = ProductSearchUiState(
+            query = query,
+            farmerId = farmerId,
+            isSuggesting = keyword.isNotEmpty()
+        )
+        publishSearchState(initialState)
+
+        if (!validateSearchKeyword(keyword, initialState)) return
+        if (keyword.isEmpty()) return
+
+        searchJob = viewModelScope.launch {
+            delay(300)
+
+            val result = repository.getSuggestedProducts(
+                query = keyword,
+                farmerId = farmerId
+            )
+
+            currentCoroutineContext().ensureActive()
+
+            result.fold(
+                onSuccess = { suggestions ->
+                    publishSearchState(
+                        initialState.copy(
+                            suggestions = suggestions,
+                            isSuggesting = false
+                        )
+                    )
+                },
+                onFailure = {
+                    publishSearchState(
+                        initialState.copy(
+                            isSuggesting = false,
+                            error = "Không tải được gợi ý. Bạn vẫn có thể bấm tìm kiếm."
+                        )
+                    )
                 }
+            )
         }
     }
 
-    fun onSearchQueryChanged(query: String) {
-        _searchQuery.value = query
-        _searchResults.value = emptyList()
+    fun executeSearch(
+        query: String,
+        farmerId: String? = null
+    ) {
+        searchJob?.cancel()
+        nextSearchPage = 0
+
+        val keyword = query.trim()
+        val initialState = ProductSearchUiState(
+            query = keyword,
+            farmerId = farmerId,
+            isSearching = keyword.isNotEmpty()
+        )
+        publishSearchState(initialState)
+
+        if (!validateSearchKeyword(keyword, initialState)) return
+        if (keyword.isEmpty()) return
+
+        searchJob = viewModelScope.launch {
+            val result = repository.searchProducts(
+                query = keyword,
+                page = 0,
+                size = searchPageSize,
+                farmerId = farmerId
+            )
+
+            currentCoroutineContext().ensureActive()
+
+            result.fold(
+                onSuccess = { response ->
+                    nextSearchPage = 1
+
+                    publishSearchState(
+                        initialState.copy(
+                            products = response.content,
+                            isSearching = false,
+                            hasSearched = true,
+                            hasMore = !response.last,
+                            totalElements = response.totalElements
+                        )
+                    )
+                },
+                onFailure = {
+                    publishSearchState(
+                        initialState.copy(
+                            isSearching = false,
+                            error = "Không tìm kiếm được sản phẩm. Vui lòng thử lại."
+                        )
+                    )
+                }
+            )
+        }
     }
 
-    fun executeSearch(query: String) {
-        _dashboardState.value = DashboardState.Loading
-        viewModelScope.launch {
-            val result = repository.searchProducts(query)
-            result.onSuccess { response ->
-                _dashboardState.value = DashboardState.Idle
-                _searchResults.value = response.content
-                _textSuggestions.value = emptyList()
-            }.onFailure { exception ->
-                _dashboardState.value = DashboardState.Error(exception.message ?: "Lỗi hệ thống")
-            }
+    fun loadMoreSearchResults() {
+        val current = _searchUiState.value
+
+        if (
+            !current.hasSearched ||
+            !current.hasMore ||
+            current.isSearching ||
+            current.isLoadingMore ||
+            current.isSuggesting
+        ) {
+            return
         }
+
+        publishSearchState(
+            current.copy(
+                isLoadingMore = true,
+                error = null
+            )
+        )
+
+        searchJob = viewModelScope.launch {
+            val result = repository.searchProducts(
+                query = current.query,
+                page = nextSearchPage,
+                size = searchPageSize,
+                farmerId = current.farmerId
+            )
+
+            currentCoroutineContext().ensureActive()
+
+            result.fold(
+                onSuccess = { response ->
+                    nextSearchPage += 1
+
+                    publishSearchState(
+                        current.copy(
+                            products = (current.products + response.content)
+                                .distinctBy { it.id },
+                            isLoadingMore = false,
+                            hasMore = !response.last,
+                            totalElements = response.totalElements,
+                            error = null
+                        )
+                    )
+                },
+                onFailure = {
+                    publishSearchState(
+                        current.copy(
+                            isLoadingMore = false,
+                            error = "Không tải được trang tiếp theo. Vui lòng thử lại."
+                        )
+                    )
+                }
+            )
+        }
+    }
+
+    fun clearSearch() {
+        searchJob?.cancel()
+        searchJob = null
+        nextSearchPage = 0
+        publishSearchState(ProductSearchUiState())
     }
 
     fun loadHomeData() {
@@ -196,18 +350,20 @@ class DashboardViewModel @Inject constructor(
         quantity: Double,
         unit: String,
         description: String,
-        imageUrls: List<String>
+        imageUrls: List<String>,
+        costPrice: Double? = null
     ) {
         _dashboardState.value = DashboardState.Loading
         viewModelScope.launch {
             val result = repository.createProduct(
-                name,
-                category,
-                price,
-                quantity,
-                unit,
-                description,
-                imageUrls
+                name = name,
+                category = category,
+                price = price,
+                quantity = quantity,
+                unit = unit,
+                description = description,
+                imageUrls = imageUrls,
+                costPrice = costPrice
             )
             result.onSuccess { response ->
                 _dashboardState.value =
@@ -241,7 +397,8 @@ class DashboardViewModel @Inject constructor(
         quantity: Double,
         unit: String,
         description: String,
-        imageParts: List<MultipartBody.Part>
+        imageParts: List<MultipartBody.Part>,
+        costPrice: Double? = null
     ) {
         _dashboardState.value = DashboardState.Loading
         viewModelScope.launch {
@@ -254,7 +411,14 @@ class DashboardViewModel @Inject constructor(
             Log.d("PublishProduct", "Uploaded URLs: $uploadedUrls")
 
             createProduct(
-                name, category, price, quantity, unit, description, uploadedUrls
+                name = name,
+                category = category,
+                price = price,
+                quantity = quantity,
+                unit = unit,
+                description = description,
+                imageUrls = uploadedUrls,
+                costPrice = costPrice
             )
         }
     }
@@ -271,18 +435,6 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    fun searchProducts(query: String) {
-        _dashboardState.value = DashboardState.Loading
-        viewModelScope.launch {
-            val result = repository.searchProducts(query)
-            result.onSuccess { response ->
-                _dashboardState.value = DashboardState.ProductListSuccess(response.content)
-            }.onFailure { exception ->
-                _dashboardState.value = DashboardState.Error(exception.message ?: "Lỗi hệ thống")
-            }
-        }
-    }
-
     fun getProductsByCategory(category: String) {
         _dashboardState.value = DashboardState.Loading
         viewModelScope.launch {
@@ -293,6 +445,22 @@ class DashboardViewModel @Inject constructor(
                 _dashboardState.value = DashboardState.Error(exception.message ?: "Lỗi hệ thống")
             }
         }
+    }
+
+    private fun validateSearchKeyword(
+        keyword: String,
+        state: ProductSearchUiState
+    ): Boolean {
+        if (keyword.length <= 255) return true
+
+        publishSearchState(
+            state.copy(
+                isSuggesting = false,
+                isSearching = false,
+                error = "Từ khóa tìm kiếm không được vượt quá 255 ký tự."
+            )
+        )
+        return false
     }
 
     suspend fun uploadMultipleImages(imageParts: List<MultipartBody.Part>): List<String>? {

@@ -6,6 +6,7 @@ import com.example.agritech_mobile.data.remote.dto.ProductResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -32,8 +33,15 @@ interface ProductApiService {
     suspend fun searchProducts(
         @Query("keyword") query: String,
         @Query("page") page: Int = 0,
-        @Query("size") size: Int = 10
+        @Query("size") size: Int = 10,
+        @Query("farmerId") farmerId: String? = null
     ): Response<PageResponse<ProductResponse>>
+
+    @GET("api/products/suggest")
+    suspend fun getSuggestedProducts(
+        @Query("keyword") query: String,
+        @Query("farmerId") farmerId: String? = null
+    ): Response<List<String>>
 
     @GET("api/products/random")
     suspend fun getRandomProducts(
@@ -51,17 +59,23 @@ interface ProductApiService {
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 10
     ): Response<PageResponse<ProductResponse>>
-
-    @GET("api/products/suggest")
-    suspend fun getSuggestedProducts(
-        @Query("keyword") query: String,
-    ) : Response<List<String>>
-
     @GET("api/products/farmer/{farmerId}")
     suspend fun getProductsByFarmerId(
         @Path("farmerId") farmerId: String,
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 10
+    ): Response<PageResponse<ProductResponse>>
+
+    @PATCH("api/products/{id}/stock")
+    suspend fun updateStock(
+        @Path("id") productId: String,
+        @Body request: Map<String, Double>
+    ): Response<Unit>
+
+    @GET("api/products/mine")
+    suspend fun getMyProducts(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 12
     ): Response<PageResponse<ProductResponse>>
 }
 

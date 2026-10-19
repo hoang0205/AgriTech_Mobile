@@ -12,6 +12,9 @@ interface AuthApiService {
         @Body request: LoginRequest
     ): Response<LoginResponse>
 
+    @POST("api/auth/register/code")
+    suspend fun requestRegistrationCode(@Body request: RegisterRequest): Response<MessageResponse>
+
     @POST("api/auth/register")
     suspend fun register(
         @Body request: RegisterRequest

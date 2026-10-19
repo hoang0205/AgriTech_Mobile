@@ -130,14 +130,33 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun requestRegistrationCode(fullName: String, phone: String, email: String, password: String): Result<MessageResponse> {
+        return try {
+            val response = apiService.requestRegistrationCode(RegisterRequest(fullName, phone, email, password))
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(requireNotNull(response.body()))
+            } else {
+                val message = try {
+                    Gson().fromJson(response.errorBody()?.string(), ErrorResponse::class.java)?.message
+                } catch (e: Exception) { null }
+                Result.failure(Exception(message ?: "Không gửi được mã xác minh. Vui lòng thử lại."))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(Exception("Không kết nối được máy chủ. Vui lòng thử lại."))
+        }
+    }
+
     suspend fun register(
         fullName: String,
         phone: String,
         email: String,
-        password: String
+        password: String,
+        otp: String
     ): Result<RegisterResponse> {
         return try {
-            val response = apiService.register(RegisterRequest(fullName, phone, email, password))
+            val response = apiService.register(RegisterRequest(fullName, phone, email, password, otp = otp))
 
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)

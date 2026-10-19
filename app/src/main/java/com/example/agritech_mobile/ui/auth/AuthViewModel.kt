@@ -15,6 +15,7 @@ sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
     data class Success(val message: String, val token: String = "") : AuthState()
+    data class RegistrationCodeSent(val email: String, val message: String) : AuthState()
     data class Error(val error: String) : AuthState()
 }
 
@@ -43,15 +44,30 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun requestRegistrationCode(fullName: String, phone: String, email: String, password: String) {
+        if (_authState.value is AuthState.Loading) return
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            repository.requestRegistrationCode(fullName, phone, email, password)
+                .onSuccess { response ->
+                    _authState.value = AuthState.RegistrationCodeSent(email, response.message)
+                }.onFailure { exception ->
+                    _authState.value = AuthState.Error(exception.message ?: "Không gửi được mã xác minh")
+                }
+        }
+    }
+
     fun register(
         fullName: String,
         phone: String,
         email: String,
-        password: String
+        password: String,
+        otp: String
     ) {
+        if (_authState.value is AuthState.Loading) return
         _authState.value = AuthState.Loading
         viewModelScope.launch {
-            val result = repository.register(fullName, phone, email, password)
+            val result = repository.register(fullName, phone, email, password, otp)
             result.onSuccess { response ->
                 if (response.success) {
                     _authState.value = AuthState.Success(response.message)

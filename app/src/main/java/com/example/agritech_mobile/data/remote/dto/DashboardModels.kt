@@ -7,9 +7,9 @@ data class ProductRequest(
     val quantity: Double,
     val unit: String,
     val description: String,
-    val imageUrls: List<String>
+    val imageUrls: List<String>,
+    val costPrice: Double? = null
 )
-
 data class PageResponse<T>(
     val content: List<T>,
     val last: Boolean,

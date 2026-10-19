@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -47,14 +48,23 @@ data class Product(
     val seller: String,
     val isFavorite: Boolean = false,
     val isNew: Boolean = false,
-    val imageUrl: String = ""
+    val imageUrl: String = "",
+    val unit: String = "",
+    val rating: Double = 0.0,
+    val reviewCount: Int = 0,
+    val availableQuantity: Double = 0.0
 )
 
-data class CategoryItem(val name: String, val titleRes: Int, val icon: Int)
+data class CategoryItem(
+    val name: String,
+    val titleRes: Int,
+    val icon: Int? = null,
+    val materialIcon: ImageVector? = null
+)
+
 data class HomeUiState(
     val userName: String = "",
     val userAvatar: String = "",
-    val searchQuery: String = "",
     val categories: List<CategoryItem> = emptyList(),
     val newProducts: List<Product> = emptyList(),
     val suggestedProducts: List<Product> = emptyList(),
@@ -71,21 +81,11 @@ fun HomeScreen(
     val context = LocalContext.current
     val dashboardState by viewModel.dashboardState.collectAsStateWithLifecycle()
     val uiState by viewModel.homeUiState.collectAsStateWithLifecycle()
-    val textSuggestions by viewModel.textSuggestions.collectAsStateWithLifecycle()
-    val searchResultsRes by viewModel.searchResults.collectAsStateWithLifecycle()
+    val searchState by viewModel.searchUiState.collectAsStateWithLifecycle()
     val userName by viewModel.userName.collectAsStateWithLifecycle()
     val userAvatar by viewModel.userAvatar.collectAsStateWithLifecycle()
 
-    val finalSearchResults = searchResultsRes.map { res ->
-        Product(
-            id = res.id,
-            name = res.name,
-            priceStr = "${res.price.toLong()} đ",
-            seller = res.farmerName,
-            imageUrl = res.imageUrls.firstOrNull() ?: "",
-            isNew = false
-        )
-    }
+
 
     val defaultCategories = listOf(
         CategoryItem(
@@ -109,9 +109,9 @@ fun HomeScreen(
             R.drawable.seafood_prawn_shrimp_lobster_svgrepo_com
         ),
         CategoryItem(
-            "Khác",
-            R.string.cat_others,
-            R.drawable.food_delivery_bot_svgrepo_com
+            name = "Sản phẩm khác",
+            titleRes = R.string.cat_others,
+            materialIcon = Icons.Default.MoreHoriz
         )
     )
 
@@ -140,10 +140,14 @@ fun HomeScreen(
                     Product(
                         id = res.id,
                         name = res.name,
-                        priceStr = "${res.price.toLong()} đ",
-                        seller = res.farmerName,
                         isNew = true,
-                        imageUrl = res.imageUrls.firstOrNull() ?: ""
+                        priceStr = formatProductPrice(res.price),
+                        seller = res.farmerName,
+                        imageUrl = res.imageUrls.firstOrNull().orEmpty(),
+                        unit = res.unit,
+                        rating = res.rating,
+                        reviewCount = res.reviewCount,
+                        availableQuantity = res.quantity
                     )
                 }
 
@@ -151,9 +155,13 @@ fun HomeScreen(
                     Product(
                         id = res.id,
                         name = res.name,
-                        priceStr = "${res.price.toLong()} đ",
+                        priceStr = formatProductPrice(res.price),
                         seller = res.farmerName,
-                        imageUrl = res.imageUrls.firstOrNull() ?: ""
+                        imageUrl = res.imageUrls.firstOrNull().orEmpty(),
+                        unit = res.unit,
+                        rating = res.rating,
+                        reviewCount = res.reviewCount,
+                        availableQuantity = res.quantity
                     )
                 }
 
@@ -171,9 +179,13 @@ fun HomeScreen(
                     Product(
                         id = res.id,
                         name = res.name,
-                        priceStr = "${res.price.toLong()} đ",
+                        priceStr = formatProductPrice(res.price),
                         seller = res.farmerName,
-                        imageUrl = res.imageUrls.firstOrNull() ?: ""
+                        imageUrl = res.imageUrls.firstOrNull().orEmpty(),
+                        unit = res.unit,
+                        rating = res.rating,
+                        reviewCount = res.reviewCount,
+                        availableQuantity = res.quantity
                     )
                 }
 
@@ -208,20 +220,17 @@ fun HomeScreen(
 
     HomeContent(
         uiState = uiState,
-        textSuggestions = textSuggestions,
-        searchResults = finalSearchResults,
-        onSearchChange = { newQuery ->
-            viewModel.updateHomeUiState {
-                it.copy(searchQuery = newQuery)
-            }
-            viewModel.onSearchQueryChanged(newQuery)
+        searchState = searchState,
+        onSearchChange = { query ->
+            viewModel.onSearchQueryChanged(query)
         },
         onExecuteSearch = { query ->
-            viewModel.updateHomeUiState {
-                it.copy(searchQuery = query)
-            }
             viewModel.executeSearch(query)
         },
+        onLoadMoreSearch = {
+            viewModel.loadMoreSearchResults()
+        },
+        onSearchProductClick = onNavigateToDetail,
         onCategoryClick = { category ->
             viewModel.updateHomeUiState {
                 it.copy(selectedCategory = category.name)
@@ -245,10 +254,11 @@ fun HomeScreen(
 @Composable
 fun HomeContent(
     uiState: HomeUiState,
-    textSuggestions: List<String>,
-    searchResults: List<Product>,
+    searchState: ProductSearchUiState,
     onSearchChange: (String) -> Unit,
     onExecuteSearch: (String) -> Unit,
+    onLoadMoreSearch: () -> Unit,
+    onSearchProductClick: (String) -> Unit,
     onCategoryClick: (CategoryItem) -> Unit,
     onProductClick: (Product) -> Unit,
     onSeeAllClick: () -> Unit,
@@ -280,7 +290,7 @@ fun HomeContent(
         }
 
         HomeSearchBar(
-            query = uiState.searchQuery,
+            query = searchState.query,
             onQueryChange = onSearchChange,
             isSearchMode = isSearchMode,
             onFocusChange = { isFocused -> if (isFocused) isSearchMode = true },
@@ -291,69 +301,21 @@ fun HomeContent(
             },
             onSearchAction = {
                 focusManager.clearFocus()
-                onExecuteSearch(uiState.searchQuery)
+                onExecuteSearch(searchState.query)
             }
         )
 
         if (isSearchMode) {
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-            } else if (searchResults.isNotEmpty()) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
-                ) {
-                    items(searchResults.chunked(2)) { rowProducts ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            for (product in rowProducts) {
-                                SuggestedProductCard(
-                                    product = product,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onProductClick(product) }
-                                )
-                            }
-                            if (rowProducts.size == 1) Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                }
-            }else if (textSuggestions.isNotEmpty()) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surface)
-                ) {
-                    items(textSuggestions) { text ->
-                        TextSuggestionItem(
-                            text = text,
-                            onClick = {
-                                focusManager.clearFocus()
-                                onExecuteSearch(text)
-                            }
-                        )
-                    }
-                }
-            } else if (uiState.searchQuery.isNotBlank()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        stringResource(R.string.search_result_not_found),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        stringResource(R.string.search_noti),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            ProductSearchContent(
+                state = searchState,
+                onExecuteSearch = { query ->
+                    focusManager.clearFocus()
+                    onExecuteSearch(query)
+                },
+                onProductClick = onSearchProductClick,
+                onLoadMore = onLoadMoreSearch,
+                modifier = Modifier.weight(1f)
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -599,13 +561,13 @@ fun HomeHeader(userName: String, userAvatar: String, onNavigateToChat: () -> Uni
                 tint = MaterialTheme.colorScheme.primary
             )
         }
-        IconButton(onClick = { /* TODO: Notification */ }) {
-            Icon(
-                Icons.Default.Notifications,
-                contentDescription = "Notification",
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
+//        IconButton(onClick = { /* TODO: Notification */ }) {
+//            Icon(
+//                Icons.Default.Notifications,
+//                contentDescription = "Notification",
+//                tint = MaterialTheme.colorScheme.primary
+//            )
+//        }
     }
 }
 
@@ -650,12 +612,30 @@ fun CategoryChip(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            painter = painterResource(id = category.icon),
-            contentDescription = null,
-            tint = if (isSelected) Color.White else MaterialTheme.colorScheme.primary,  // ← THAY ĐỔI
-            modifier = Modifier.size(20.dp)
-        )
+        val iconTint = if (isSelected) {
+            Color.White
+        } else {
+            MaterialTheme.colorScheme.primary
+        }
+
+        val materialIcon = category.materialIcon
+        val drawableIcon = category.icon
+
+        if (materialIcon != null) {
+            Icon(
+                imageVector = materialIcon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp)
+            )
+        } else if (drawableIcon != null) {
+            Icon(
+                painter = painterResource(drawableIcon),
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = stringResource(category.titleRes),
@@ -666,128 +646,29 @@ fun CategoryChip(
 }
 
 @Composable
-fun NewProductCard(product: Product, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .width(160.dp)
-            .clickable { onClick() }) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-        ) {
-            AsyncImage(
-                model = product.imageUrl,
-                contentDescription = product.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(R.drawable.ic_launcher_background),
-                error = painterResource(R.drawable.ic_launcher_background)
-            )
-            Box(
-                modifier = Modifier
-                    .padding(8.dp)
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface)
-                    .align(Alignment.TopEnd)
-                    .clickable { /* TODO: Toggle Favorite */ }, contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = if (product.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = product.name,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = product.priceStr,
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                Icons.Default.Storefront,
-                contentDescription = null,
-                modifier = Modifier.size(12.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = stringResource(R.string.sold_by, product.seller),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
+fun NewProductCard(
+    product: Product,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    ProductCard(
+        product = product,
+        modifier = modifier.width(160.dp),
+        onClick = onClick
+    )
 }
 
 @Composable
-fun SuggestedProductCard(product: Product, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Column(modifier = modifier.clickable { onClick() }) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            AsyncImage(
-                model = product.imageUrl,
-                contentDescription = product.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(R.drawable.ic_launcher_background),
-                error = painterResource(R.drawable.ic_launcher_background)
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = product.name,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = product.priceStr,
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                modifier = Modifier.size(12.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = product.seller,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
+fun SuggestedProductCard(
+    product: Product,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    ProductCard(
+        product = product,
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick
+    )
 }
 
 @Preview(showBackground = true, showSystemUi = true, locale = "vi")
@@ -795,9 +676,9 @@ fun SuggestedProductCard(product: Product, modifier: Modifier = Modifier, onClic
 fun HomeScreenPreview() {
     AgritechTheme {
         HomeContent(
-            uiState = HomeUiState(userName = "Hoàng", searchQuery = ""),
-            textSuggestions = listOf("Dưa hấu Long An", "Dưa lưới"),
-            searchResults = emptyList(),
+            uiState = HomeUiState(userName = "Hoàng"),            searchState = ProductSearchUiState(),
+            onLoadMoreSearch = {},
+            onSearchProductClick = {},
             onSearchChange = {},
             onExecuteSearch = {},
             onCategoryClick = {},

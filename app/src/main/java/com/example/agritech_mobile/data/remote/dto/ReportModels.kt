@@ -23,7 +23,12 @@ data class ProductReportResponse(
     val imageUrls: List<String>,
     val status: String,
     val adminReply: String?,
-    val createdAt: String
+    val createdAt: String,
+    val productHidden: Boolean? = null
+)
+
+data class UpdateProductVisibilityRequest(
+    val hidden: Boolean
 )
 
 data class ReportEligibilityResponse(
