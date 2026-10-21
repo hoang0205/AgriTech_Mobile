@@ -1,0 +1,102 @@
+package com.example.agritech_mobile.data.remote
+
+import com.example.agritech_mobile.data.remote.dto.PageResponse
+import com.example.agritech_mobile.data.remote.dto.ProductRequest
+import com.example.agritech_mobile.data.remote.dto.ProductResponse
+import com.example.agritech_mobile.data.remote.dto.EditableProductResponse
+import com.example.agritech_mobile.data.remote.dto.UpdateMyProductRequest
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.PATCH
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
+import retrofit2.http.PUT
+
+interface ProductApiService {
+
+    @GET("api/products/mine/{id}")
+    suspend fun getEditableProduct(@Path("id") productId: String): Response<EditableProductResponse>
+
+    @PUT("api/products/mine/{id}")
+    suspend fun updateMyProduct(
+        @Path("id") productId: String,
+        @Body request: UpdateMyProductRequest
+    ): Response<EditableProductResponse>
+
+    @GET("api/products/nearby")
+    suspend fun getNearbyProducts(
+        @Query("addressId") addressId: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 12,
+        @Query("category") category: String? = null,
+        @Query("keyword") keyword: String? = null
+    ): Response<PageResponse<ProductResponse>>
+
+    @GET("api/products")
+    suspend fun getProducts(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<PageResponse<ProductResponse>>
+
+    @POST("api/products")
+    suspend fun createProduct(
+        @Body productRequest: ProductRequest
+    ): Response<ProductResponse>
+
+    @GET("api/products/{id}")
+    suspend fun getProductById(
+        @Path("id") productId: String
+    ): Response<ProductResponse>
+
+    @GET("api/products/search")
+    suspend fun searchProducts(
+        @Query("keyword") query: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10,
+        @Query("farmerId") farmerId: String? = null
+    ): Response<PageResponse<ProductResponse>>
+
+    @GET("api/products/suggest")
+    suspend fun getSuggestedProducts(
+        @Query("keyword") query: String,
+        @Query("farmerId") farmerId: String? = null
+    ): Response<List<String>>
+
+    @GET("api/products/random")
+    suspend fun getRandomProducts(
+        @Query("limit") limit: Int = 10
+    ): Response<List<ProductResponse>>
+
+    @GET("api/products/recommendations")
+    suspend fun getRecommendations(
+        @Query("limit") limit: Int = 10
+    ): Response<List<ProductResponse>>
+
+    @GET("api/products/category/{category}")
+    suspend fun getProductsByCategory(
+        @Path("category") category: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<PageResponse<ProductResponse>>
+    @GET("api/products/farmer/{farmerId}")
+    suspend fun getProductsByFarmerId(
+        @Path("farmerId") farmerId: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<PageResponse<ProductResponse>>
+
+    @PATCH("api/products/{id}/stock")
+    suspend fun updateStock(
+        @Path("id") productId: String,
+        @Body request: Map<String, Double>
+    ): Response<Unit>
+
+    @GET("api/products/mine")
+    suspend fun getMyProducts(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 12
+    ): Response<PageResponse<ProductResponse>>
+}
+

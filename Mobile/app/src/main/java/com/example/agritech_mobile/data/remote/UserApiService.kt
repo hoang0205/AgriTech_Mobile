@@ -1,0 +1,74 @@
+package com.example.agritech_mobile.data.remote
+
+import com.example.agritech_mobile.data.remote.dto.AddressRequest
+import com.example.agritech_mobile.data.remote.dto.MessageResponse
+import com.example.agritech_mobile.data.remote.dto.ProvinceResponse
+import com.example.agritech_mobile.data.remote.dto.SellerPickupResponse
+import com.example.agritech_mobile.data.remote.dto.ShippingAddressResponce
+import com.example.agritech_mobile.data.remote.dto.ShippingDetails
+import com.example.agritech_mobile.data.remote.dto.UpdatePasswordRequest
+import com.example.agritech_mobile.data.remote.dto.UpdateProfileRequest
+import com.example.agritech_mobile.data.remote.dto.UpdateProfileResponse
+import com.example.agritech_mobile.data.remote.dto.UpdateSellerPickupRequest
+import com.example.agritech_mobile.data.remote.dto.WardResponse
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
+import retrofit2.http.PATCH
+import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
+
+interface UserApiService {
+    @GET("api/user/profile")
+    suspend fun getUserProfile(): Response<UpdateProfileRequest>
+
+    @PUT("api/user/profile")
+    suspend fun updateUserProfile(
+        @Body request: UpdateProfileRequest
+    ): Response<MessageResponse>
+
+    @PUT("api/user/password")
+    suspend fun updateUserPassword(
+        @Body request: UpdatePasswordRequest
+    ): Response<MessageResponse>
+
+    @GET("api/user/addresses")
+    suspend fun getUserAddresses(): Response<List<ShippingDetails>>
+
+    @POST("api/user/addresses")
+    suspend fun addAddress(
+        @Body request: AddressRequest
+    ): Response<ShippingAddressResponce>
+
+    @PUT("api/user/addresses/{id}")
+    suspend fun updateAddress(
+        @Path("id") addressId: String,
+        @Body request: AddressRequest
+    ): Response<MessageResponse>
+
+    @DELETE("api/user/addresses/{id}")
+    suspend fun deleteAddress(@Path("id") addressId: String): Response<MessageResponse>
+
+    @PATCH("api/user/addresses/{id}/default")
+    suspend fun setDefaultAddress(
+        @Path("id") addressId: String
+    ): Response<ShippingAddressResponce>
+
+    @GET("api/addresses/provinces")
+    suspend fun getProvinces(): Response<List<ProvinceResponse>>
+
+    @GET("api/addresses/wards/{provinceCode}")
+    suspend fun getWards(
+        @Path("provinceCode") provinceCode: String
+    ): Response<List<WardResponse>>
+
+    @GET("api/user/pickup-location")
+    suspend fun getSellerPickupLocation(): Response<SellerPickupResponse>
+
+    @PUT("api/user/pickup-location")
+    suspend fun updateSellerPickupLocation(
+        @Body request: UpdateSellerPickupRequest
+    ): Response<SellerPickupResponse>
+}

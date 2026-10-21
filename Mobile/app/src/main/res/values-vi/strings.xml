@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AgriTech</string>
+
+    <string name="welcome">Chào mừng</string>
+    <string name="login_desc">Đăng nhập để quản lí sản phẩm và đơn hàng</string>
+    <string name="phone_number">SỐ ĐIỆN THOẠI</string>
+    <string name="password">MẬT KHẨU</string>
+    <string name="forgot_password">QUÊN MẬT KHẨU?</string>
+    <string name="login_button">Đăng nhập</string>
+    <string name="dont_have_account">Chưa có tài khoản? </string>
+    <string name="sign_up">Đăng ký</string>
+    <string name="terraform_ledger">TerraForm Ledger</string>
+    <string name="create_account">Tạo tài khoản</string>
+    <string name="join_digital_arboretum">Tham gia hệ sinh thái nông nghiệp số ngay hôm nay</string>
+    <string name="select_your_role">CHỌN VAI TRÒ CỦA BẠN</string>
+    <string name="role_buyer">Người mua</string>
+    <string name="role_farmer">Nông dân</string>
+    <string name="full_name">HỌ VÀ TÊN</string>
+    <string name="full_name_placeholder">Nguyễn Văn A</string>
+    <string name="email_address">ĐỊA CHỈ EMAIL</string>
+    <string name="email_placeholder">abc@example.com</string>
+    <string name="confirm_password">XÁC NHẬN MẬT KHẨU</string>
+    <string name="password_placeholder">••••••••</string>
+    <string name="phone_placeholder">+84 012 234 567</string>
+    <string name="already_have_account">Đã có tài khoản? </string>
+    <string name="security">Bảo mật</string>
+
+    <string name="forgot_password_x">Quên mật khẩu?</string>
+    <string name="forgot_password_desc">Nhập email đã đăng ký của bạn dưới đây để nhận mã xác minh.</string>
+    <string name="email_address_label">ĐỊA CHỈ EMAIL</string>
+    <string name="enter_email_hint">Nhập email của bạn</string>
+    <string name="send_code">Gửi mã</string>
+    <string name="trouble_receiving_code">Gặp khó khăn khi nhận mã? </string>
+    <string name="contact_support">Liên hệ hỗ trợ</string>
+
+    <string name="verification_badge">XÁC MINH</string>
+    <string name="verify_email_title">Xác minh Email</string>
+    <string name="verify_email_desc_prefix">Chúng tôi đã gửi mã 6 chữ số đến </string>
+    <string name="verify_email_desc_suffix">. Vui lòng nhập mã dưới đây để tiếp tục.</string>
+    <string name="didnt_receive_code">Chưa nhận được mã?</string>
+    <string name="resend_in">Gửi lại sau 00:%1$s</string>
+    <string name="verify_button">Xác minh</string>
+    <string name="secure_ledger_protocol">GIAO THỨC BẢO MẬT SỔ CÁI</string>
+
+    <string name="reset_password">Đặt lại mật khẩu</string>
+    <string name="reset_password_desc">Tạo một mật khẩu mới, mạnh cho tài khoản của bạn.</string>
+    <string name="security_policy_text">Mật khẩu mới của bạn phải chứa ít nhất 8 ký tự và bao gồm cả chữ cái và số.</string>
+    <string name="new_password_label">MẬT KHẨU MỚI</string>
+    <string name="confirm_new_password_label">XÁC NHẬN MẬT KHẨU MỚI</string>
+    <string name="update_password">Cập nhật mật khẩu</string>
+    <string name="locked_out">Bị khóa tài khoản? </string>
+    <string name="password_des">Mật khẩu phải từ 8 kí tự và bao gồm cả chữ và số</string>
+    <string name="password_error">Mật khẩu không khớp</string>
+    <string name="resend">Gửi lại</string>
+
+    <string name="greeting_user">Xin chào, %1$s!</string>
+    <string name="search_placeholder">Tìm kiếm sản phẩm</string>
+    <string name="category_title">Danh mục</string>
+    <string name="new_products_title">Sản phẩm mới</string>
+    <string name="see_all">Xem tất cả</string>
+    <string name="suggested_title">Gợi ý cho bạn</string>
+    <string name="sold_by">Bán bởi: %1$s</string>
+
+    <string name="nav_home">Trang chủ</string>
+    <string name="nav_cart">Giỏ hàng</string>
+    <string name="nav_orders">Đơn hàng</string>
+    <string name="nav_account">Tài khoản</string>
+
+    <string name="sell_product_title">Đăng bán nông sản</string>
+    <string name="product_images">Hình ảnh sản phẩm</string>
+    <string name="max_5_images">TỐI ĐA 5 ẢNH</string>
+    <string name="click_to_upload">Nhấn để tải ảnh lên</string>
+    <string name="upload_subtext">PNG, JPG tối đa 10MB</string>
+
+    <string name="product_name">Tên nông sản</string>
+    <string name="product_name_hint">VD: Cà chua Đà Lạt</string>
+
+    <string name="category">Danh mục</string>
+    <string name="category_hint">Chọn danh mục sản phẩm</string>
+
+    <string name="price">Giá bán (VNĐ)</string>
+    <string name="price_hint">0</string>
+    <string name="currency">đ</string>
+
+    <string name="unit">Đơn vị tính</string>
+    <string name="unit_hint">kg, bó, quả...</string>
+
+    <string name="quantity">Số lượng hiện có</string>
+
+    <string name="description">Mô tả chi tiết</string>
+    <string name="description_hint">Mô tả về quy trình trồng trọt, chứng nhận an toàn, hoặc thông tin giao hàng...</string>
+
+    <string name="cert_title">Chứng nhận nông sản sạch</string>
+    <string name="cert_desc">Thêm các chứng nhận VietGAP, GlobalGAP để tăng độ uy tín và khả năng chốt đơn.</string>
+    <string name="add_cert">Thêm chứng chỉ +</string>
+
+    <string name="btn_sell">Đăng Bán</string>
+
+    <string name="product_rating_format">%1$s (%2$s Đánh giá)</string>
+    <string name="stock_format">Kho: %1$s %2$s</string>
+    <string name="sold_by_label">Bán bởi:</string>
+    <string name="view_shop_btn">Xem Shop</string>
+    <string name="product_desc_title">Mô tả sản phẩm</string>
+    <string name="shipping_fee_tag">PHÍ VẬN CHUYỂN: %1$s đ</string>
+    <string name="delivery_time_tag">GIAO HÀNG TRONG 2H</string>
+    <string name="add_to_cart_btn">Thêm vào giỏ hàng</string>
+    <string name="loading">Đang tải...</string>
+    <string name="library">Thư viện</string>
+    <string name="take_picture">Chụp ảnh</string>
+    <string name="search_noti">Nhập tên sản phẩm bạn muốn tìm...</string>
+    <string name="search_result_not_found">Không tìm thấy kết quả tìm kiếm</string>
+
+    <string name="cat_vegetables">Rau củ</string>
+    <string name="cat_fruits">Trái cây</string>
+    <string name="cat_meat">Thịt</string>
+    <string name="cat_seafood">Thủy hải sản</string>
+    <string name="cat_others">Sản phẩm khác</string>
+
+    <string name="category_dropdown_hint">Chọn danh mục sản phẩm</string>
+    <string name="cart_title">Giỏ hàng (%1$d)</string>
+    <string name="cart_review_harvest">Đơn hàng\nCủa bạn</string>
+    <string name="cart_organic_certified">CHỈ BÁN ĐỒ\nHỮU CƠ</string>
+    <string name="cart_grown_by">Cung cấp bởi  </string>
+    <string name="cart_remove">XÓA</string>
+
+    <string name="cart_order_summary">Tóm tắt đơn hàng</string>
+    <string name="cart_subtotal">Tạm tính (%1$d sản phẩm)</string>
+    <string name="cart_delivery_fee">Phí giao hàng</string>
+    <string name="cart_tax_exempt">Thuế nông nghiệp (Miễn phí)</string>
+    <string name="cart_total_payable">TỔNG THANH TOÁN</string>
+    <string name="cart_estimated_delivery">DỰ KIẾN GIAO: 2 NGÀY</string>
+    <string name="select_all">Chọn tất cả</string>
+    <string name="checkout">Thanh toán</string>
+
+    <string name="checkout_title">Thanh toán</string>
+
+    <string name="checkout_shipping_address">Địa chỉ giao hàng</string>
+    <string name="checkout_default_address">Địa chỉ</string>
+    <string name="checkout_change">Thay đổi</string>
+
+    <string name="checkout_order_summary">Tóm tắt đơn hàng</string>
+    <string name="checkout_items_count">%1$d SẢN PHẨM</string>
+
+    <string name="checkout_payment_method">Phương thức thanh toán</string>
+    <string name="checkout_cod">Thanh toán khi nhận hàng</string>
+    <string name="checkout_e_wallet">Ví điện tử</string>
+    <string name="checkout_e_wallet_desc">Momo / ZaloPay</string>
+    <string name="checkout_bank_transfer">Chuyển khoản ngân hàng</string>
+    <string name="checkout_bank_transfer_desc">Chuyển khoản 24/7</string>
+
+    <string name="checkout_subtotal">Tạm tính</string>
+    <string name="checkout_shipping_fee">Phí vận chuyển</string>
+    <string name="checkout_discount">Khuyến mãi</string>
+    <string name="checkout_total_amount">Tổng thanh toán</string>
+
+    <string name="checkout_place_order">Đặt hàng</string>
+    <string name="no_order">Không có đơn hàng nào.</string>
+    <string name="pending">Chờ xác nhận</string>
+    <string name="confirmed">Đang xử lý</string>
+    <string name="shipping">Đang giao hàng</string>
+    <string name="completed">Hoàn thành</string>
+    <string name="cancelled">Đã hủy</string>
+    <string name="end_order">Hết đơn hàng</string>
+    <string name="cancel">Hủy đơn</string>
+    <string name="but_pending">Xác nhận</string>
+    <string name="but_confirm">Giao hàng</string>
+    <string name="but_shipping">Hoàn thành</string>
+    <string name="order_title">Quản lí đơn hàng</string>
+    <string name="total_amount">Tổng thanh toán</string>
+    <string name="new_order">Mới</string>
+    <string name="address_selection_title">Chọn địa chỉ nhận hàng</string>
+    <string name="address_selection_banner_title">Giao hàng nhanh từ nông trại</string>
+    <string name="address_selection_banner_subtitle">Đảm bảo độ tươi ngon trong 24h</string>
+    <string name="address_selection_confirm">Xác nhận</string>
+    <string name="address_selection_add_new">Thêm địa chỉ mới</string>
+    <string name="address_selection_saved_addresses">ĐỊA CHỈ ĐÃ LƯU</string>
+    <string name="address_selection_default_badge">MẶC ĐỊNH</string>
+
+    <string name="add_address_topbar_title">Thêm địa chỉ</string>
+    <string name="add_address_save">Lưu địa chỉ</string>
+    <string name="add_address_header">Thông tin giao hàng</string>
+    <string name="add_address_description">Vui lòng cung cấp địa chỉ chính xác để đơn hàng được vận chuyển tốt nhất.</string>
+    <string name="add_address_fullname">Họ và tên</string>
+    <string name="add_address_phone">Số điện thoại</string>
+    <string name="add_address_city">Tỉnh/Thành phố</string>
+    <string name="add_address_district">Quận/Huyện</string>
+    <string name="add_address_ward">Phường/Xã</string>
+    <string name="add_address_detail">Địa chỉ chi tiết</string>
+    <string name="add_address_detail_placeholder">Số nhà, tên đường, tòa nhà...</string>
+    <string name="add_address_set_default">Đặt làm địa chỉ mặc định</string>
+    <string name="add_address_set_default_desc">Sử dụng địa chỉ này cho các đơn hàng sau.</string>
+    <string name="add_address_my_location">Định vị của tôi</string>
+
+    <string name="profile_title">Thông tin người dùng</string>
+    <string name="profile_app_name">AgriTech</string>
+    <string name="profile_badge_premium">PREMIUM PRODUCER</string>
+    <string name="profile_orders_title">Đơn hàng của tôi</string>
+    <string name="profile_orders_see_all">Xem tất cả ></string>
+
+    <string name="profile_settings_title">CÀI ĐẶT TÀI KHOẢN</string>
+    <string name="profile_menu_address">Sổ địa chỉ</string>
+    <string name="profile_menu_payment">Phương thức thanh toán</string>
+    <string name="profile_menu_password">Đổi mật khẩu</string>
+    <string name="profile_menu_help">Trung tâm trợ giúp</string>
+    <string name="profile_logout">Đăng xuất</string>
+
+    <string name="order_status_pending">Chờ xác nhận</string>
+    <string name="order_status_confirmed">Đang xử lý</string>
+    <string name="order_status_shipping">Đang giao</string>
+    <string name="order_status_completed">Hoàn thành</string>
+    <string name="order_status_cancelled">Đã hủy</string>
+    <string name="common_loading">Đang tải...</string>
+    <string name="common_loading_data">Đang tải dữ liệu...</string>
+    <string name="common_save">Lưu</string>
+    <string name="common_cancel">Hủy</string>
+    <string name="common_update">Cập nhật</string>
+    <string name="common_error_empty_fields">Confirm Password</string>
+    <string name="common_default_customer">Khách hàng</string>
+
+    <string name="profile_edit_dialog_title">Cập nhật thông tin</string>
+    <string name="profile_edit_take_photo">Chụp ảnh</string>
+    <string name="profile_edit_choose_gallery">Thư viện</string>
+    <string name="profile_edit_fullname_label">Họ và tên</string>
+
+    <string name="profile_change_pwd_title">Đổi mật khẩu</string>
+    <string name="profile_change_pwd_current">Mật khẩu hiện tại</string>
+    <string name="profile_change_pwd_new">Mật khẩu mới</string>
+    <string name="profile_change_pwd_confirm">Xác nhận mật khẩu mới</string>
+    <string name="profile_change_pwd_error_mismatch">Mật khẩu xác nhận không khớp!</string>
+
+    <string name="add_address_success">Thêm địa chỉ thành công</string>
+
+    <string name="checkout_unit_price">Đơn giá:</string>
+    <string name="checkout_default_product">Sản phẩm</string>
+    <string name="checkout_error_no_address">Vui lòng chọn địa chỉ giao hàng</string>
+    <string name="checkout_no_phone">Chưa có SĐT</string>
+    <string name="checkout_no_address">Chưa có địa chỉ</string>
+    <string name="checkout_prompt_add_address">Vui lòng thêm địa chỉ giao hàng</string>
+
+    <string name="buyer_order_title">Đơn mua của tôi</string>
+    <string name="buyer_order_empty">Chưa có đơn hàng nào</string>
+    <string name="buyer_order_total">Thành tiền</string>
+    <string name="buyer_order_cancel_btn">Hủy đơn hàng</string>
+    <string name="buyer_order_shop_default">Cửa hàng</string>
+</resources>
