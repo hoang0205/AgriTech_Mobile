@@ -224,12 +224,12 @@ class OrderViewModel @Inject constructor(
         }
     }
 
-    fun confirmOrderPaid(orderId: Long, onSuccess: () -> Unit) {
+    fun confirmOrderPaid(orderId: Long, params: Map<String, String>, onError: (String) -> Unit, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            val result = repository.markOrderAsPaid(orderId)
+            val result = repository.markOrderAsPaid(orderId, params)
             result.onSuccess {
                 onSuccess()
-            }
+            }.onFailure { onError(it.message ?: "Không xác nhận được thanh toán. Vui lòng kiểm tra đơn hàng.") }
         }
     }
     fun resetState() {

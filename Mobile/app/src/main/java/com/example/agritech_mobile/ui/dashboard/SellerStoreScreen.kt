@@ -232,27 +232,6 @@ fun SellerStoreContent(
                                         )
                                     }
 
-                                    if (
-                                        !isOwnStore &&
-                                        !uiState.sellerPhone.isNullOrBlank()
-                                    ) {
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                Icons.Default.Phone,
-                                                contentDescription = null,
-                                                tint = textGray,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = uiState.sellerPhone,
-                                                fontSize = 12.sp,
-                                                color = textGray
-                                            )
-                                        }
-                                    }
-
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "${uiState.totalProducts ?: uiState.products.size} sản phẩm đang bán",                                        fontSize = 12.sp,

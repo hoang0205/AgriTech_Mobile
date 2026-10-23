@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.LocalAtm
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
@@ -494,15 +493,6 @@ fun CheckoutContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 PaymentMethodCard(
-                    icon = Icons.Default.CreditCard,
-                    title = "Cổng thanh toán VNPay",
-                    description = "Thanh toán bằng VNPay",
-                    isSelected = uiState.selectedPaymentMethod == PaymentMethodType.VNPAY,
-                    onClick = { onPaymentMethodSelect(PaymentMethodType.VNPAY) }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                PaymentMethodCard(
                     icon = Icons.Default.AccountBalance,
                     title = stringResource(R.string.checkout_bank_transfer),
                     description = stringResource(R.string.checkout_bank_transfer_desc),
@@ -740,103 +730,67 @@ private fun DeliveryInfoCard(
     state: CheckoutUiState,
     onRetry: () -> Unit
 ) {
-    val moneyFormatter = DecimalFormat("#,###")
-    val distanceFormatter = DecimalFormat("0.0")
-
+    val money = DecimalFormat("#,###")
+    val distance = DecimalFormat("0.0")
+    var showFeeInfo by remember { mutableStateOf(false) }
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-            )
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text(
-            "Thông tin giao hàng",
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            "Khoảng cách đường thẳng ước tính. Phí tính riêng từng người bán.",
-            style = MaterialTheme.typography.bodySmall
-        )
-
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Giao hàng", style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = { showFeeInfo = true }) { Text("Cách tính phí") }
+        }
         if (state.deliveryLoading) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("Đang tính phí giao hàng...")
+                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(10.dp))
+                Text("Đang tính phí…", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             state.deliveryError?.let { error ->
-                Text(
-                    error,
-                    color = MaterialTheme.colorScheme.error
-                )
-
-                TextButton(onClick = onRetry) {
-                    Text("Thử lại")
+                Text(error, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = onRetry) { Text("Thử lại") }
+            }
+            state.deliveryQuotes.forEachIndexed { index, seller ->
+                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                val available = seller.status == DeliveryStatus.AVAILABLE && seller.shippingFee != null
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(seller.sellerName, style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        val detail = listOfNotNull(
+                            seller.pickupArea?.takeIf { it.isNotBlank() },
+                            seller.distanceKm?.let { "≈ ${distance.format(it)} km" }
+                        ).joinToString(" · ")
+                        if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        if (!available) Text(seller.message, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error)
+                    }
+                    if (available) Text("${money.format(seller.shippingFee).replace(',', '.')} đ",
+                        style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary)
                 }
             }
-
-            state.deliveryQuotes.forEach { seller ->
-                HorizontalDivider()
-
-                Text(
-                    seller.sellerName,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Text(
-                    text = seller.pickupArea
-                        ?.takeIf { it.isNotBlank() }
-                        ?.let { "Gửi từ: $it" }
-                        ?: "Gửi từ: Chưa có thông tin khu vực",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                seller.distanceKm?.let { distance ->
-                    Text(
-                        "Khoảng cách: ${distanceFormatter.format(distance)} km"
-                    )
-                }
-
-                if (
-                    seller.status == DeliveryStatus.AVAILABLE &&
-                    seller.shippingFee != null
-                ) {
-                    Text(
-                        "Phí giao hàng: ${
-                            moneyFormatter.format(seller.shippingFee)
-                                .replace(',', '.')
-                        } đ"
-                    )
-                } else {
-                    Text(
-                        seller.message,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-
-            if (
-                state.deliveryQuotes.isNotEmpty() &&
-                !state.deliveryAvailable
-            ) {
-                Text(
-                    "Bạn có thể đổi địa chỉ nhận hoặc quay lại giỏ hàng " +
-                            "để bỏ chọn người bán không giao được.",
-                    style = MaterialTheme.typography.bodySmall
-                )
+            if (state.deliveryQuotes.isNotEmpty() && !state.deliveryAvailable) {
+                Text("Đổi địa chỉ hoặc bỏ chọn shop chưa hỗ trợ giao.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        Spacer(Modifier.height(2.dp))
     }
+    if (showFeeInfo) AlertDialog(onDismissRequest = { showFeeInfo = false },
+        title = { Text("Cách tính phí giao") },
+        text = { Text("Mỗi người bán có phí giao riêng, dựa trên khoảng cách đường thẳng ước tính đến địa chỉ nhận.\n\nĐến 5 km: 15.000 đ\nTrên 5–15 km: 25.000 đ\nTrên 15–30 km: 40.000 đ\n\nPhạm vi hỗ trợ: tối đa 30 km.",
+            style = MaterialTheme.typography.bodyMedium) },
+        confirmButton = { TextButton(onClick = { showFeeInfo = false }) { Text("Đã hiểu") } })
 }
 
 @Composable
@@ -995,7 +949,7 @@ fun CheckoutScreenPreview() {
                 shippingFee = 35000.0,
                 discount = 15000.0,
                 totalAmount = 590000.0,
-                selectedPaymentMethod = PaymentMethodType.VNPAY
+                selectedPaymentMethod = PaymentMethodType.COD
             ),
             onBackClick = {},
             onChangeAddressClick = {},

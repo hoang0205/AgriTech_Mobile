@@ -475,16 +475,11 @@ fun OrderSummaryCard(
             Spacer(modifier = Modifier.height(12.dp))
             SummaryRow(
                 stringResource(R.string.cart_delivery_fee),
-                "Chưa tính"
+                "Tính khi thanh toán"
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = "Phí giao hàng được tính sau khi chọn địa chỉ nhận.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
 //            Spacer(modifier = Modifier.height(12.dp))
 //            SummaryRow(
 //                stringResource(R.string.cart_tax_exempt),
@@ -535,9 +530,10 @@ fun OrderSummaryCard(
 
 @Composable
 fun SummaryRow(label: String, value: String, isValueGreen: Boolean = false) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = label,
+            modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

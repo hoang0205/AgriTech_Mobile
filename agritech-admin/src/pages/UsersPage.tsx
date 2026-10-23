@@ -253,6 +253,7 @@ export default function UsersPage() {
     {
       title: "Thao tác",
       key: "actions",
+      fixed: "right",
       width: 220,
       render: (_, user) => (
         <Space size={4}>

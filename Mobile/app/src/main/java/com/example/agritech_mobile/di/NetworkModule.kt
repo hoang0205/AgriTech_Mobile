@@ -4,6 +4,7 @@ import android.content.Context
 import coil.ImageLoader
 import com.example.agritech_mobile.data.remote.AiApiService
 import com.example.agritech_mobile.data.remote.AuthApiService
+import com.example.agritech_mobile.data.remote.GhnApiService
 import com.example.agritech_mobile.data.remote.CartApiService
 import com.example.agritech_mobile.data.remote.NotificationApiService
 import com.example.agritech_mobile.data.remote.OrderApiService
@@ -95,6 +96,19 @@ object NetworkModule {
     @Singleton
     fun provideOrderApiService(retrofit: Retrofit): OrderApiService {
         return retrofit.create(OrderApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGhnApiService(retrofit: Retrofit, okHttpClient: OkHttpClient): GhnApiService {
+        val ghnClient = okHttpClient.newBuilder()
+            .readTimeout(120, TimeUnit.SECONDS)
+            .callTimeout(130, TimeUnit.SECONDS)
+            .build()
+        return retrofit.newBuilder()
+            .client(ghnClient)
+            .build()
+            .create(GhnApiService::class.java)
     }
 
     @Provides

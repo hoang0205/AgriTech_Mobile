@@ -324,6 +324,7 @@ async function updateVisibility() {
     {
   title: "Thao tác",
   key: "actions",
+  fixed: "right",
   width: 230,
   render: (_, product) => (
     <Space size={4}>

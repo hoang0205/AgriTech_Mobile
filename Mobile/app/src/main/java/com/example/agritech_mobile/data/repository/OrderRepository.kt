@@ -193,13 +193,16 @@ class OrderRepository @Inject constructor(
         }
     }
 
-    suspend fun markOrderAsPaid(orderId: Long): Result<Unit> {
+    suspend fun markOrderAsPaid(orderId: Long, params: Map<String, String>): Result<Unit> {
         return try {
-            val response = orderApiService.markOrderAsPaid(orderId)
+            val response = orderApiService.markOrderAsPaid(orderId, params)
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Không thể cập nhật trạng thái đơn"))
+                val message = runCatching {
+                    Gson().fromJson(response.errorBody()?.string(), ErrorResponse::class.java)?.message
+                }.getOrNull()
+                Result.failure(Exception(message ?: "Chưa xác nhận được thanh toán. Vui lòng kiểm tra lại đơn hàng."))
             }
         } catch (e: Exception) {
             Result.failure(e)

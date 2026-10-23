@@ -494,7 +494,7 @@ fun HomeContent(
                             onActionClick = if (nearbyState.category != null) onResetCategoryClick else onSeeAllClick
                         )
                         Text(
-                            "Khoảng cách đường thẳng ước tính. Phạm vi giao hàng 30 km.",
+                            "Khoảng cách được tính theo đường chim bay. Phạm vi giao hàng 30 km.",
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                         )

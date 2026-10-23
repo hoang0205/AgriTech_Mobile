@@ -77,7 +77,7 @@ fun LoginContent(
             Icon(
                 painter = painterResource(id = R.drawable.farm_svgrepo_com),
                 contentDescription = "Logo App",
-                tint = MaterialTheme.colorScheme.secondary,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(40.dp)
             )
         }

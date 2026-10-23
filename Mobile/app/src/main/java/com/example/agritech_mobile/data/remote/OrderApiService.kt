@@ -46,9 +46,10 @@ interface OrderApiService {
         @Path("id") orderId: Long
     ): Response<Map<String, String>>
 
-    @PUT("api/orders/{id}/mark-as-paid")
+    @POST("api/orders/{id}/vnpay-result")
     suspend fun markOrderAsPaid(
-        @Path("id") orderId: Long
+        @Path("id") orderId: Long,
+        @Body params: Map<String, String>
     ): Response<Map<String, String>>
 
     @PUT("api/orders/{orderId}/cancel")

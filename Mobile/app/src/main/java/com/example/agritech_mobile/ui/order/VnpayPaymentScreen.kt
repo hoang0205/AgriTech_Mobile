@@ -29,12 +29,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 @Composable
 fun VnpayPaymentScreen(
     paymentUrl: String,
-    onPaymentSuccess: () -> Unit,
+    onPaymentSuccess: (Map<String, String>) -> Unit,
     onPaymentFailed: (String) -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    var resultHandled by remember(paymentUrl) { mutableStateOf(false) }
     var progress by remember { mutableIntStateOf(0) }
     var currentWebUrl by remember { mutableStateOf(paymentUrl) }
 
@@ -162,7 +163,7 @@ fun VnpayPaymentScreen(
                                 handler: SslErrorHandler?,
                                 error: SslError?
                             ) {
-                                handler?.proceed()
+                                handler?.cancel()
                             }
 
                             override fun shouldOverrideUrlLoading(
@@ -172,13 +173,14 @@ fun VnpayPaymentScreen(
                                 val url = request?.url?.toString() ?: ""
                                 currentWebUrl = url
 
-                                if (url.contains("payment-result")) {
+                                if (request?.isForMainFrame == true && Uri.parse(url).host == "agritech.com.vn" && Uri.parse(url).path == "/payment-result") {
+                                    if (resultHandled) return true
+                                    resultHandled = true
                                     val uri = Uri.parse(url)
                                     val responseCode = uri.getQueryParameter("vnp_ResponseCode")
 
                                     if (responseCode == "00") {
-                                        Toast.makeText(context, "Thanh toán thành công!", Toast.LENGTH_SHORT).show()
-                                        onPaymentSuccess()
+                                        onPaymentSuccess(uri.queryParameterNames.associateWith { uri.getQueryParameter(it).orEmpty() })
                                     } else {
                                         val message = when (responseCode) {
                                             "24" -> "Bạn đã hủy giao dịch thanh toán"

@@ -70,13 +70,23 @@ data class SellerOrder(
     val status: OrderStatus,
     val items: List<SellerOrderItem>,
     val totalAmount: Double,
-    val shippingFee: Long = 0
+    val shippingFee: Long = 0,
+    val ghnOrderCode: String? = null,
+    val ghnStatus: String? = null,
+    val ghnPendingCreation: Boolean = false,
+    val deliveryMethod: String? = null,
+    val actualShippingCost: Long? = null,
+    val receiverName: String? = null,
+    val receiverPhone: String? = null,
+    val shippingAddress: String? = null
 )
 
 @Composable
 fun SellerOrdersScreen(
     viewModel: OrderViewModel = hiltViewModel()
 ) {
+    var ghnOrderId by remember { mutableStateOf<String?>(null) }
+    var deliveryOrderId by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val orderState by viewModel.orderState.collectAsState()
 
@@ -122,7 +132,15 @@ fun SellerOrdersScreen(
                             )
                         } ?: emptyList(),
                         totalAmount = res.totalRevenueFromThisOrder + res.shippingFee.toDouble(),
-                        shippingFee = res.shippingFee
+                        shippingFee = res.shippingFee,
+                        receiverName = res.receiverName?.takeIf { it.isNotBlank() } ?: res.buyerName,
+                        receiverPhone = res.buyerPhone,
+                        shippingAddress = res.shippingAddress,
+                        ghnOrderCode = res.ghnOrderCode,
+                        ghnStatus = res.ghnStatus,
+                        ghnPendingCreation = res.ghnPendingCreation,
+                        deliveryMethod = res.deliveryMethod,
+                        actualShippingCost = res.actualShippingCost
                     )
                 } ?: emptyList()
             }
@@ -148,9 +166,20 @@ fun SellerOrdersScreen(
         }
     }
 
+    deliveryOrderId?.let { id ->
+        DeliveryManagementDialog(id, onDismiss = { deliveryOrderId = null },
+            onChanged = { viewModel.getSellerOrders() },
+            onGhn = { deliveryOrderId = null; ghnOrderId = id })
+    }
+    ghnOrderId?.let { id ->
+        GhnShipmentDialog(id, seller = true, onDismiss = { ghnOrderId = null }, onChanged = { viewModel.getSellerOrders() })
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         SellerOrdersContent(
             orders = orders,
+            onGhnClick = { ghnOrderId = it },
+            onDeliveryClick = { deliveryOrderId = it },
             onUpdateOrderStatus = { orderId, newStatus ->
                 viewModel.updateOrderStatus(orderId, newStatus.name)
             },
@@ -173,6 +202,8 @@ fun SellerOrdersScreen(
 fun SellerOrdersContent(
     orders: List<SellerOrder>,
     onUpdateOrderStatus: (String, OrderStatus) -> Unit,
+    onGhnClick: (String) -> Unit = {},
+    onDeliveryClick: (String) -> Unit = {},
 ) {
     val formatter = DecimalFormat("#,###")
 
@@ -241,6 +272,8 @@ fun SellerOrdersContent(
                             SellerOrderCard(
                                 order = order,
                                 formatter = formatter,
+                                onGhnClick = { onGhnClick(order.orderId) },
+                                onDeliveryClick = { onDeliveryClick(order.orderId) },
                                 onUpdateStatus = { newStatus ->
                                     onUpdateOrderStatus(order.orderId, newStatus)
                                 }
@@ -314,7 +347,9 @@ fun SellerOrdersTopBar(itemCount: Int) {
 fun SellerOrderCard(
     order: SellerOrder,
     formatter: DecimalFormat,
-    onUpdateStatus: (OrderStatus) -> Unit
+    onUpdateStatus: (OrderStatus) -> Unit,
+    onGhnClick: () -> Unit = {},
+    onDeliveryClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -362,6 +397,26 @@ fun SellerOrderCard(
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow
+            ) {
+                androidx.compose.foundation.text.selection.SelectionContainer {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Thông tin nhận hàng", style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold)
+                        Text("Người nhận: ${order.receiverName?.takeIf { it.isNotBlank() } ?: order.buyerName}",
+                            style = MaterialTheme.typography.bodyMedium)
+                        Text("Số điện thoại: ${order.receiverPhone?.takeIf { it.isNotBlank() } ?: "Chưa có thông tin"}",
+                            style = MaterialTheme.typography.bodyMedium)
+                        Text("Địa chỉ: ${order.shippingAddress?.takeIf { it.isNotBlank() } ?: "Chưa có thông tin"}",
+                            style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             order.items.forEach { item ->
@@ -436,12 +491,34 @@ fun SellerOrderCard(
                 )
                 Text(
                     text = "${formatter.format(order.totalAmount).replace(',', '.')}đ",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = Color(0xFF1B5E20)
                 )
             }
 
-            if (order.status != OrderStatus.COMPLETED && order.status != OrderStatus.CANCELLED) {
+            if (order.status in listOf(OrderStatus.CONFIRMED, OrderStatus.SHIPPING, OrderStatus.COMPLETED, OrderStatus.CANCELLED)) {
+                Spacer(Modifier.height(12.dp))
+                if (order.deliveryMethod != null) {
+                    SummaryRow("Cách giao", deliveryMethodLabel(order.deliveryMethod))
+                    Spacer(Modifier.height(6.dp))
+                }
+                SummaryRow("Chi phí giao", order.actualShippingCost?.let { formatter.format(it) + " đ" } ?: "Chưa ghi")
+                OutlinedButton(onClick = onDeliveryClick, modifier = Modifier.fillMaxWidth()) {
+                    Text("Giao hàng & chi phí")
+                }
+            }
+
+            if (order.ghnOrderCode != null || order.ghnPendingCreation) {
+                Spacer(Modifier.height(12.dp))
+                if (order.ghnStatus != null) Text(ghnStatusLabel(order.ghnStatus),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                order.ghnOrderCode?.let { Text("${if (order.ghnStatus == "simulation") "Mã thử nghiệm cũ" else "GHN"} · $it", style = MaterialTheme.typography.bodySmall) }
+                OutlinedButton(onClick = onGhnClick, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (order.ghnStatus == "simulation") "Chi tiết mô phỏng" else "Vận đơn GHN cũ")
+                }
+            }
+
+            if ((order.ghnOrderCode == null && !order.ghnPendingCreation || order.ghnStatus == "cancel" || order.ghnStatus == "simulation" && order.deliveryMethod == "SELF") && order.status != OrderStatus.COMPLETED && order.status != OrderStatus.CANCELLED) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -467,8 +544,8 @@ fun SellerOrderCard(
 
                     val actionText = when (order.status) {
                         OrderStatus.PENDING -> stringResource(R.string.but_pending)
-                        OrderStatus.CONFIRMED -> stringResource(R.string.but_confirm)
-                        OrderStatus.SHIPPING -> stringResource(R.string.but_shipping)
+                        OrderStatus.CONFIRMED -> "Bắt đầu giao"
+                        OrderStatus.SHIPPING -> "Xác nhận đã giao"
                         else -> ""
                     }
                     val nextStatus = when (order.status) {
@@ -478,7 +555,7 @@ fun SellerOrderCard(
                         else -> order.status
                     }
 
-                    Button(
+                    if (order.status != OrderStatus.CONFIRMED || order.deliveryMethod == "SELF") Button(
                         onClick = { onUpdateStatus(nextStatus) },
                         modifier = Modifier
                             .weight(1f)
@@ -541,7 +618,10 @@ fun SellerOrdersScreenPreview() {
                             "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=200"
                         )
                     ),
-                    totalAmount = 70000.0
+                    totalAmount = 70000.0,
+                    receiverName = "Nguyễn Thị Bình",
+                    receiverPhone = "0900000000",
+                    shippingAddress = "Số 12, Xã Hải Hưng, Tỉnh Ninh Bình"
                 )
             ),
             onUpdateOrderStatus = { _, _ -> },

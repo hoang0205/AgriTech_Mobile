@@ -19,6 +19,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.data.remote.dto.ProductReportResponse
 import com.example.agritech_mobile.data.remote.dto.ReportReason
@@ -30,6 +32,7 @@ fun ReportHistoryScreen(
     viewModel: ReportHistoryViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
 
     var expandedReportIds by rememberSaveable {
         mutableStateOf(arrayListOf<Long>())

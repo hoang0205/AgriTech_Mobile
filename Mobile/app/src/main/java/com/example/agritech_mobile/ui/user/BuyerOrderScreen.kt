@@ -36,6 +36,9 @@ import com.example.agritech_mobile.ui.cart.SummaryRow
 import com.example.agritech_mobile.ui.order.EndOfListIndicator
 import com.example.agritech_mobile.ui.order.OrderState
 import com.example.agritech_mobile.ui.order.OrderStatus
+import com.example.agritech_mobile.ui.order.GhnShipmentDialog
+import com.example.agritech_mobile.ui.order.deliveryMethodLabel
+import com.example.agritech_mobile.ui.order.ghnStatusLabel
 import com.example.agritech_mobile.ui.order.OrderViewModel
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 import kotlinx.coroutines.launch
@@ -60,7 +63,10 @@ data class BuyerOrder(
     val items: List<BuyerOrderItem>,
     val totalAmount: Double,
     val shippingFee: Long = 0,
-    val pickupAddress: String? = null
+    val pickupAddress: String? = null,
+    val ghnOrderCode: String? = null,
+    val ghnStatus: String? = null,
+    val deliveryMethod: String? = null
 )
 
 @Composable
@@ -70,6 +76,7 @@ fun BuyerOrdersScreen(
     viewModel: OrderViewModel = hiltViewModel(),
     onReviewClick: (productId: String, productName: String, productImageUrl: String, shopName: String) -> Unit
 ) {
+    var ghnOrderId by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val orderState by viewModel.orderState.collectAsState()
 
@@ -127,7 +134,10 @@ fun BuyerOrdersScreen(
                         } ?: emptyList(),
                         totalAmount = res.totalAmount,
                         shippingFee = res.shippingFee,
-                        pickupAddress = res.pickupAddress
+                        pickupAddress = res.pickupAddress,
+                        ghnOrderCode = res.ghnOrderCode,
+                        ghnStatus = res.ghnStatus,
+                        deliveryMethod = res.deliveryMethod
                     )
                 }
             }
@@ -147,9 +157,14 @@ fun BuyerOrdersScreen(
         }
     }
 
+    ghnOrderId?.let { id ->
+        GhnShipmentDialog(id, seller = false, onDismiss = { ghnOrderId = null }, onChanged = { viewModel.getBuyerOrders() })
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         BuyerOrdersContent(
             orders = orders,
+            onGhnClick = { ghnOrderId = it },
             initialStatus = initialStatus,
             onBackClick = onBackClick,
             onCancelOrder = { orderIdStr ->
@@ -187,7 +202,8 @@ fun BuyerOrdersContent(
     initialStatus: String,
     onBackClick: () -> Unit,
     onCancelOrder: (String) -> Unit,
-    onReviewClick: (productId: String, productName: String, productImageUrl: String, shopName: String) -> Unit
+    onReviewClick: (productId: String, productName: String, productImageUrl: String, shopName: String) -> Unit,
+    onGhnClick: (String) -> Unit = {}
 ) {
     val formatter = DecimalFormat("#,###")
     val tabs = OrderStatus.values()
@@ -257,6 +273,7 @@ fun BuyerOrdersContent(
                     } else {
                         items(filteredOrders) { order ->
                             BuyerOrderCard(
+                                onGhnClick = { onGhnClick(order.orderId) },
                                 order = order,
                                 formatter = formatter,
                                 onCancelClick = { onCancelOrder(order.orderId) },
@@ -300,7 +317,8 @@ fun BuyerOrderCard(
     order: BuyerOrder,
     formatter: DecimalFormat,
     onCancelClick: () -> Unit,
-    onReviewClick: (productId: String, productName: String, productImageUrl: String, shopName: String) -> Unit
+    onReviewClick: (productId: String, productName: String, productImageUrl: String, shopName: String) -> Unit,
+    onGhnClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -402,6 +420,14 @@ fun BuyerOrderCard(
             )
 
             Spacer(modifier = Modifier.height(12.dp))
+            if (order.deliveryMethod != null) Text("Cách giao: ${deliveryMethodLabel(order.deliveryMethod)}")
+            if (order.ghnOrderCode != null) {
+                Text("${if (order.ghnStatus == "simulation") "Mã thử nghiệm cũ" else "Vận đơn GHN"}: ${order.ghnOrderCode}")
+                Text(ghnStatusLabel(order.ghnStatus))
+                OutlinedButton(onClick = onGhnClick) { Text("Theo dõi GHN") }
+                Spacer(Modifier.height(8.dp))
+            }
+
             SummaryRow(
                 label = "Tiền hàng",
                 value = "${

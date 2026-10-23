@@ -32,7 +32,7 @@ import java.util.TimeZone
 @Composable
 fun NotificationScreen(
     onBackClick: () -> Unit,
-    onOpenOrder: (InboxNotification) -> Unit,
+    onOpenNotification: (InboxNotification) -> Unit,
     viewModel: NotificationViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -76,13 +76,13 @@ fun NotificationScreen(
                         Icon(Icons.Default.Notifications, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(16.dp))
                         Text("Chưa có thông báo", style = MaterialTheme.typography.titleMedium)
-                        Text("Các cập nhật đơn hàng sẽ xuất hiện ở đây.", style = MaterialTheme.typography.bodySmall)
+                        Text("Các cập nhật đơn hàng và báo cáo sẽ xuất hiện ở đây.", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
             items(state.items, key = { it.id }) { item ->
                 Card(onClick = { viewModel.open(item) { opened ->
-                    if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) onOpenOrder(opened)
+                    if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) onOpenNotification(opened)
                 } }, enabled = !state.busy && !state.isLoading,
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = if (item.read) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)

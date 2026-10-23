@@ -53,7 +53,14 @@ data class OrderResponse(
     val orderItems: List<OrderItem>,
     val totalRevenueFromThisOrder: Double,
     val shippingFee: Long = 0,
-    val pickupAddress: String? = null
+    val pickupAddress: String? = null,
+    val ghnOrderCode: String? = null,
+    val ghnStatus: String? = null,
+    val ghnShippingFee: Long? = null,
+    val ghnPendingCreation: Boolean = false,
+    val deliveryMethod: String? = null,
+    val actualShippingCost: Long? = null,
+    val receiverName: String? = null
 )
 
 data class OrderBuyerResponse(
@@ -64,7 +71,12 @@ data class OrderBuyerResponse(
     val totalAmount: Double,
     val items: List<OrderBuyerItem>,
     val shippingFee: Long = 0,
-    val pickupAddress: String? = null
+    val pickupAddress: String? = null,
+    val ghnOrderCode: String? = null,
+    val ghnStatus: String? = null,
+    val ghnShippingFee: Long? = null,
+    val ghnPendingCreation: Boolean = false,
+    val deliveryMethod: String? = null
 )
 
 data class OrderStatusCountResponse(

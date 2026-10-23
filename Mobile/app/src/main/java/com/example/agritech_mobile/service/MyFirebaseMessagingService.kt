@@ -71,7 +71,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         val type = remoteMessage.data["type"]
 
-        if (type == "ORDER_STATUS") {
+        if (type == "ORDER_STATUS" || type == "REPORT_STATUS") {
             serviceScope.launch {
                 try { notificationRepository.refreshUnreadCount() }
                 catch (e: kotlinx.coroutines.CancellationException) { throw e }
@@ -90,12 +90,13 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 ?.toLongOrNull()
                 ?: System.currentTimeMillis()
 
-            showOrderStatusNotification(
+            showInboxNotification(
                 title = title,
                 message = body,
                 status = status,
                 orderId = orderId,
-                notificationId = remoteMessage.data["notificationId"]?.toLongOrNull()
+                notificationId = remoteMessage.data["notificationId"]?.toLongOrNull(),
+                reportId = if (type == "REPORT_STATUS") remoteMessage.data["reportId"]?.toLongOrNull() ?: return else null
             )
         } else {
             val title = remoteMessage.data["title"]
@@ -111,23 +112,26 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun showOrderStatusNotification(
+    private fun showInboxNotification(
         title: String,
         message: String,
         status: String,
         orderId: Long,
-        notificationId: Long?
+        notificationId: Long?,
+        reportId: Long? = null
     ) {
-        val channelId = "order_notifications"
+        val isReport = reportId != null
+        val channelId = if (isReport) "report_notifications" else "order_notifications"
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Thông báo đơn hàng",
+                if (isReport) "Thông báo báo cáo" else "Thông báo đơn hàng",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Cập nhật tiến trình mua hàng và vận chuyển sản phẩm"
+                description = if (isReport) "Cập nhật trạng thái và phản hồi báo cáo của bạn"
+                    else "Cập nhật tiến trình mua hàng và vận chuyển sản phẩm"
                 enableLights(true)
                 lightColor = Color.GREEN
                 enableVibration(true)
@@ -135,19 +139,21 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        val targetScreen = if (status == "NEW_ORDER_SELLER") "seller_orders" else "buyer_orders"
+        val targetScreen = if (isReport) "my_reports" else if (status == "NEW_ORDER_SELLER") "seller_orders" else "buyer_orders"
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("targetScreen", targetScreen)
             putExtra("orderStatus", status)
-            putExtra("orderId", orderId)
+            if (isReport) putExtra("reportId", reportId) else putExtra("orderId", orderId)
             notificationId?.let { putExtra("notificationId", it) }
         }
 
+        val notificationKey = if (isReport) "report:$reportId" else "order:$orderId"
+        intent.data = android.net.Uri.parse("agritech://notification/$notificationKey")
         val pendingIntent = PendingIntent.getActivity(
             this,
-            orderId.toInt(),
+            (reportId ?: orderId).toInt(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -184,7 +190,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             }
         }
 
-        notificationManager.notify(orderId.toInt(), builder.build())
+        notificationManager.notify(notificationKey, (reportId ?: orderId).toInt(), builder.build())
     }
 
     private fun showNotification(title: String, message: String, roomId: String?) {

@@ -35,17 +35,24 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.agritech_mobile.data.remote.dto.StatisticsCategoryDto
 import com.example.agritech_mobile.data.remote.dto.StatisticsMonthDto
 import com.example.agritech_mobile.data.remote.dto.StatisticsOrderDto
 import com.example.agritech_mobile.data.remote.dto.StatisticsOrderItemDto
 import com.example.agritech_mobile.data.remote.dto.StatisticsOverviewDto
 import com.example.agritech_mobile.data.remote.dto.StatisticsSectionDto
+import com.example.agritech_mobile.data.remote.dto.SellerFinanceSummary
+import com.example.agritech_mobile.data.remote.dto.SellerOrderFinance
+import com.example.agritech_mobile.data.remote.dto.SellerTaxEstimate
 import com.example.agritech_mobile.ui.theme.AgritechTheme
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.abs
+import com.example.agritech_mobile.ui.order.DeliveryManagementDialog
+import com.example.agritech_mobile.ui.order.GhnShipmentDialog
 import com.example.agritech_mobile.R
 
 internal val StatisticsGreen = Color(0xFF14532D)
@@ -58,10 +65,11 @@ internal fun statisticsMoney(value: Double): String {
 @Composable
 fun StatisticsScreen(
     onBackClick: () -> Unit,
-    onManageCosts: () -> Unit = {},
+    onEditProduct: (String) -> Unit = {},
     viewModel: StatisticsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.retry() }
 
     StatisticsScreenContent(
         state = state,
@@ -71,7 +79,7 @@ fun StatisticsScreen(
         onSelectTab = viewModel::selectTab,
         onSelectYear = viewModel::selectYear,
         onSelectMonth = viewModel::selectMonth,
-        onManageCosts = onManageCosts,
+        onEditProduct = onEditProduct,
     )
 }
 
@@ -85,8 +93,18 @@ fun StatisticsScreenContent(
     onSelectTab: (StatisticsTab) -> Unit = {},
     onSelectYear: (Int) -> Unit = {},
     onSelectMonth: (Int?) -> Unit = {},
-    onManageCosts: () -> Unit = {}
+    onEditProduct: (String) -> Unit = {}
 ) {
+    var financeOrderId by remember { mutableStateOf<String?>(null) }
+    var ghnOrderId by remember { mutableStateOf<String?>(null) }
+    financeOrderId?.let { id ->
+        DeliveryManagementDialog(id, onDismiss = { financeOrderId = null }, onChanged = onRetry,
+            onGhn = { financeOrderId = null; ghnOrderId = id })
+    }
+    ghnOrderId?.let { id ->
+        GhnShipmentDialog(id, seller = true, onDismiss = { ghnOrderId = null }, onChanged = onRetry)
+    }
+    val finance = state.overview?.sellerFinance
     val tabs = state.availableTabs
     val tabIndex = tabs.indexOf(state.selectedTab).coerceAtLeast(0)
     val listState = rememberLazyListState()
@@ -208,7 +226,15 @@ fun StatisticsScreenContent(
                                 contentPadding = PaddingValues(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                item {
+                                if (state.selectedTab != StatisticsTab.SPENDING && finance != null) {
+                                    item { SellerFinanceCard(finance, isProfit = isProfit, period = period) }
+                                }
+                                if (isProfit) {
+                                    state.overview?.sellerTax?.let { tax ->
+                                        item { SellerTaxCard(tax, state.selectedMonth) }
+                                    }
+                                }
+                                if (state.selectedTab == StatisticsTab.SPENDING || finance == null) item {
                                     Card(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(20.dp),
@@ -258,24 +284,11 @@ fun StatisticsScreenContent(
                                         }
                                     }
                                 }
-                                if (isProfit) {
-                                    item {
-                                        OutlinedButton(
-                                            onClick = onManageCosts,
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text("Quản lý giá vốn")
-                                        }
-                                    }
-                                }
-
-                                if (isProfit && section.missingCostItems > 0) {
+                                if (isProfit && finance == null && section.missingCostItems > 0) {
                                     item {
                                         Text(
                                             text = "${section.missingCostItems} dòng sản phẩm " +
-                                                    "thiếu giá vốn, chưa được tính lãi. " +
-                                                    "Doanh thu có đủ vốn: " +
-                                                    statisticsMoney(section.knownCostRevenue),
+                                                    "chưa nhập giá vốn, tạm tính vốn 0 đ.",
                                             color = Color(0xFF9A3412)
                                         )
                                     }
@@ -289,7 +302,7 @@ fun StatisticsScreenContent(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                "12 tháng · ${state.selectedYear}",
+                                                (if (isProfit) "Lãi gộp · " else "12 tháng · ") + state.selectedYear,
                                                 fontWeight = FontWeight.Bold
                                             )
                                             TextButton(
@@ -308,15 +321,15 @@ fun StatisticsScreenContent(
                                         )
 
                                         Text(
-                                            "Chạm tháng để lọc số liệu bên dưới. " +
-                                                    "Thống kê theo ngày đặt hàng.",
+                                            "Chạm tháng để lọc · Theo ngày đặt hàng" +
+                                                    (if (isProfit) " · Chưa gồm vận chuyển" else ""),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = Color.Gray
                                         )
                                     }
                                 }
 
-                                item {
+                                if (!isProfit) item {
                                     StatisticsCategories(
                                         categories = section.categories,
                                         isProfit = isProfit,
@@ -324,9 +337,23 @@ fun StatisticsScreenContent(
                                     )
                                 }
 
+                                if (isProfit && finance != null) {
+                                    item { Text("Kết quả từng đơn · $period", fontWeight = FontWeight.Bold) }
+                                    if (finance.orders.isEmpty()) item {
+                                        Text("Chưa có đơn hoàn thành hoặc chi phí đơn hủy trong khoảng này.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    items(finance.orders, key = { "finance-${it.orderId}" }) { row ->
+                                        SellerFinanceOrderCard(row,
+                                            onEditCost = { financeOrderId = row.orderId.toString() },
+                                            onEditProduct = onEditProduct)
+                                    }
+                                }
+                                if (!isProfit || finance == null) {
                                 item {
                                     Text(
-                                        "Đơn hoàn thành · $period",
+                                        (if (isProfit) "Lãi gộp theo sản phẩm · " else "Đơn hoàn thành · ") + period,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -341,62 +368,12 @@ fun StatisticsScreenContent(
                                     items = section.orders,
                                     key = { it.orderId }
                                 ) { order ->
-                                    StatisticsCard {
-                                        Text(
-                                            "Đơn #${order.orderId}",
-                                            fontWeight = FontWeight.Bold
-                                        )
-
-                                        Text(
-                                            "Ngày đặt: " +
-                                                    order.orderDate.substringBefore('T'),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = Color.Gray
-                                        )
-
-                                        order.items.forEach { product ->
-                                            Column(
-                                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Text(product.productName)
-
-                                                Text(
-                                                    "${product.quantity} ${product.unit} × " +
-                                                            statisticsMoney(product.unitPrice),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = Color.Gray
-                                                )
-
-                                                Text(
-                                                    text = product.amount?.let {
-                                                        (if (isProfit) "Lãi gộp: " else "Thành tiền: ") +
-                                                                statisticsMoney(it)
-                                                    } ?: "Chưa có giá vốn",
-                                                    color = if ((product.amount ?: 0.0) < 0) {
-                                                        MaterialTheme.colorScheme.error
-                                                    } else {
-                                                        StatisticsGreen
-                                                    }
-                                                )
-                                            }
-                                        }
-
-                                        HorizontalDivider()
-
-                                        StatisticsValueRow(
-                                            label = if (isProfit) "Lãi đã tính" else "Tổng tiền",
-                                            amount = order.amount
-                                        )
-
-                                        if (order.missingCostItems > 0) {
-                                            Text(
-                                                "${order.missingCostItems} dòng chưa có vốn",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = Color(0xFF9A3412)
-                                            )
-                                        }
-                                    }
+                                    StatisticsOrderCard(order, isProfit = isProfit,
+                                        isSpending = state.selectedTab == StatisticsTab.SPENDING,
+                                        onEditProduct = onEditProduct.takeIf { state.selectedTab != StatisticsTab.SPENDING })
                                 }
+                                }
+
                             }
                         }
                     }
@@ -512,7 +489,7 @@ internal fun StatisticsMonthlyChart(
                                 "Tháng ${month.month}, " +
                                         "${statisticsMoney(month.amount)}, " +
                                         "${month.orderCount} đơn, " +
-                                        "${month.missingCostItems} dòng thiếu giá vốn"
+                                        "${month.missingCostItems} dòng chưa nhập vốn, tính 0 đ"
                         },
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -582,7 +559,7 @@ internal fun StatisticsMonthlyChart(
 
         if (ordered.any { it.missingCostItems > 0 }) {
             Text(
-                "! Tháng có dòng sản phẩm thiếu giá vốn",
+                "! Có sản phẩm chưa nhập vốn, tạm tính vốn 0 đ",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF9A3412)
             )
@@ -638,7 +615,7 @@ internal fun StatisticsCategories(
 
     StatisticsCard {
         Text(
-            "Theo danh mục · $period",
+            (if (isProfit) "Lãi gộp theo danh mục" else "Theo danh mục"),
             fontWeight = FontWeight.Bold
         )
 
@@ -837,7 +814,7 @@ internal fun StatisticsCategories(
 
                     if (category.missingCostItems > 0) {
                         Text(
-                            "${category.missingCostItems} dòng thiếu vốn, chưa tính lãi",
+                            "${category.missingCostItems} dòng chưa nhập vốn, tính 0 đ",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF9A3412)
                         )
@@ -869,7 +846,7 @@ private fun statisticsSampleSection(
         }
 
         val amount = when {
-            missing -> 0.0
+            missing -> revenue
             profit -> profitAmount
             else -> revenue
         }
@@ -879,6 +856,10 @@ private fun statisticsSampleSection(
             orderDate = "$year-${number.toString().padStart(2, '0')}-15T10:30:00",
             amount = amount,
             missingCostItems = if (missing) 1 else 0,
+            buyerName = if (number % 2 == 0) "Nguyễn Minh Anh" else "Trần Ngọc Hà",
+            buyerPhone = "0900000000",
+            sellerName = "Nông sản An Bình",
+            sellerPhone = "0911111111",
             items = listOf(
                 StatisticsOrderItemDto(
                     productId = "product-$number",
@@ -886,7 +867,7 @@ private fun statisticsSampleSection(
                     quantity = 2.0,
                     unit = "kg",
                     unitPrice = revenue / 2,
-                    amount = if (missing) null else amount
+                    amount = amount
                 )
             )
         )
@@ -982,20 +963,16 @@ private fun categoryPercentUnits(
 
 @Composable
 private fun StatisticsInteractiveDemo(
-    initialTab: StatisticsTab
+    initialTab: StatisticsTab,
+    initialMonth: Int? = null,
+    missingShipping: Boolean = false
 ) {
     var tab by rememberSaveable { mutableStateOf(initialTab) }
     var year by rememberSaveable { mutableStateOf(2026) }
-    var month by rememberSaveable { mutableStateOf<Int?>(null) }
+    var month by rememberSaveable { mutableStateOf(initialMonth) }
 
-    val overview = remember(year, month) {
-        StatisticsOverviewDto(
-            year = year,
-            selectedMonth = month,
-            revenue = statisticsSampleSection(year, month),
-            profit = statisticsSampleSection(year, month, profit = true),
-            spending = statisticsSampleSection(year, month, spending = true)
-        )
+    val overview = remember(year, month, missingShipping) {
+        statisticsSampleOverview(year, month, missingShipping)
     }
 
     AgritechTheme {
@@ -1015,6 +992,58 @@ private fun StatisticsInteractiveDemo(
             onSelectMonth = { month = it }
         )
     }
+}
+
+// Feed previews through the same finance/tax branches as a current overview response.
+// Keep fixtures independent of Android services, the network and the live ViewModel.
+private fun statisticsSampleOverview(year: Int, month: Int?, missingShipping: Boolean): StatisticsOverviewDto {
+    val yearlyRevenue = statisticsSampleSection(year, null)
+    val yearlyProfit = statisticsSampleSection(year, null, profit = true)
+    val profitById = yearlyProfit.orders.associateBy { it.orderId }
+    val yearlyOrders = yearlyRevenue.orders.map { order ->
+        val profit = requireNotNull(profitById[order.orderId])
+        val gross = profit.amount
+        val expense = if (missingShipping && order.orderId == 12L) null else 20_000L
+        SellerOrderFinance(orderId = order.orderId, orderDate = order.orderDate, status = "COMPLETED",
+            deliveryMethod = "SELF", merchandiseRevenue = order.amount,
+            costOfGoods = order.amount - gross, grossProfit = gross,
+            shippingCollected = 15_000L, actualShippingCost = expense,
+            shippingMargin = expense?.let { 15_000L - it } ?: 0L,
+            profitAfterShipping = gross + (expense?.let { 15_000L - it } ?: 0L),
+            missingCostItems = profit.missingCostItems, buyerName = order.buyerName,
+            buyerAvatar = order.buyerAvatar, buyerPhone = order.buyerPhone, items = order.items)
+    }
+    fun summarize(orders: List<SellerOrderFinance>): SellerFinanceSummary {
+        val included = orders
+        val gross = included.sumOf { requireNotNull(it.grossProfit) }
+        val missing = included.count { it.actualShippingCost == null }
+        val margin = included.sumOf { requireNotNull(it.shippingMargin) }
+        return SellerFinanceSummary(merchandiseRevenue = orders.sumOf { it.merchandiseRevenue },
+            costOfGoods = included.sumOf { requireNotNull(it.costOfGoods) }, grossProfit = gross,
+            shippingCollected = orders.sumOf { it.shippingCollected },
+            recordedShippingCost = orders.sumOf { it.actualShippingCost ?: 0L }, shippingMargin = margin,
+            profitAfterShipping = gross + margin, cancelledShippingCost = 0L,
+            missingCostItems = orders.sumOf { it.missingCostItems }, missingShippingCostOrders = missing,
+            orders = orders)
+    }
+    val annualFinance = summarize(yearlyOrders)
+    val selectedFinance = if (month == null) annualFinance else
+        summarize(yearlyOrders.filter { it.orderId == month.toLong() })
+    val supported = year >= 2026
+    // This sample dataset stays below the annual threshold. The dedicated tax-card
+    // previews cover the above-threshold breakdown separately.
+    val taxRevenue = yearlyOrders.filter { (it.costOfGoods ?: 0.0) > 0.0 }.sumOf { it.merchandiseRevenue }
+    return StatisticsOverviewDto(year = year, selectedMonth = month,
+        revenue = statisticsSampleSection(year, month), profit = statisticsSampleSection(year, month, profit = true),
+        spending = statisticsSampleSection(year, month, spending = true), sellerFinance = selectedFinance,
+        sellerTax = SellerTaxEstimate(year = year, status = if (supported) "BELOW_THRESHOLD" else "OUTSIDE_POLICY_YEAR",
+            annualRevenue = taxRevenue, excludedRevenue = annualFinance.merchandiseRevenue - taxRevenue,
+            qualifyingItems = yearlyOrders.count { (it.costOfGoods ?: 0.0) > 0.0 }, threshold = 1_000_000_000.0,
+            vatRate = 0.01, incomeTaxRate = 0.005, incomeTaxReductionRate = if (year in 2026..2027) 0.3 else 0.0,
+            vat = if (supported) 0.0 else null, incomeTaxBase = if (supported) 0.0 else null,
+            incomeTaxBeforeReduction = if (supported) 0.0 else null, incomeTaxReduction = if (supported) 0.0 else null,
+            incomeTax = if (supported) 0.0 else null, totalTax = if (supported) 0.0 else null,
+            annualProfitAfterEstimatedTax = annualFinance.profitAfterShipping.takeIf { supported }))
 }
 
 @Preview(
@@ -1051,4 +1080,16 @@ private fun StatisticsProfitPreview() {
 @Composable
 private fun StatisticsSpendingPreview() {
     StatisticsInteractiveDemo(StatisticsTab.SPENDING)
+}
+
+@Preview(name = "Thống kê - Đơn cũ thiếu vốn", showBackground = true, locale = "vi", widthDp = 411, heightDp = 1100)
+@Composable
+private fun StatisticsMissingCostPreview() {
+    StatisticsInteractiveDemo(StatisticsTab.PROFIT, initialMonth = 7)
+}
+
+@Preview(name = "Thống kê - Chưa có phí giao", showBackground = true, locale = "vi", widthDp = 411, heightDp = 1100)
+@Composable
+private fun StatisticsMissingShippingPreview() {
+    StatisticsInteractiveDemo(StatisticsTab.PROFIT, initialMonth = 12, missingShipping = true)
 }

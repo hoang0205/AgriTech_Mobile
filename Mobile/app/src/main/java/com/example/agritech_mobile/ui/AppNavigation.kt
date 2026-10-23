@@ -45,7 +45,6 @@ import com.example.agritech_mobile.ui.report.ReportHistoryScreen
 import com.example.agritech_mobile.ui.report.ReportScreen
 import com.example.agritech_mobile.ui.user.BuyerOrdersScreen
 import com.example.agritech_mobile.ui.user.AddAddressScreen
-import com.example.agritech_mobile.ui.user.ProductCostsScreen
 import com.example.agritech_mobile.ui.user.ReviewProductScreen
 import com.example.agritech_mobile.ui.user.SellerPickupScreen
 import com.example.agritech_mobile.ui.user.StatisticsScreen
@@ -64,6 +63,7 @@ fun AppNavigation(
     pendingOrderStatus: String? = null,
     onOrderNavigated: () -> Unit = {}
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val navController = rememberNavController()
     val currentEntry by navController.currentBackStackEntryAsState()
 
@@ -92,6 +92,10 @@ fun AppNavigation(
     LaunchedEffect(pendingTargetScreen, pendingOrderStatus, isLoggedIn) {
         if (isLoggedIn) {
             when (pendingTargetScreen) {
+                "my_reports" -> {
+                    navController.navigate("my_reports") { launchSingleTop = true }
+                    onOrderNavigated()
+                }
                 "buyer_orders" -> {
                     val status = pendingOrderStatus ?: "ALL"
                     navController.navigate("buyer_orders/$status") {
@@ -444,9 +448,12 @@ fun AppNavigation(
 
             VnpayPaymentScreen(
                 paymentUrl = paymentUrl,
-                onPaymentSuccess = {
-                    orderViewModel.confirmOrderPaid(orderId) {
-                        navController.navigate("buyer_orders/CONFIRMED") {
+                onPaymentSuccess = { params ->
+                    orderViewModel.confirmOrderPaid(orderId, params, onError = { message ->
+                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                        navController.navigate("buyer_orders/ALL") { popUpTo("main_screen") { inclusive = false } }
+                    }) {
+                        navController.navigate("buyer_orders/PENDING") {
                             popUpTo("main_screen") { inclusive = false }
                         }
                     }
@@ -718,16 +725,19 @@ fun AppNavigation(
 
             VnpayPaymentScreen(
                 paymentUrl = decodedUrl,
-                onPaymentSuccess = {
-                    orderViewModel.confirmOrderPaid(orderId) {
-                        navController.navigate("buyer_orders") {
-                            popUpTo("main") { inclusive = false }
+                onPaymentSuccess = { params ->
+                    orderViewModel.confirmOrderPaid(orderId, params, onError = { message ->
+                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                        navController.navigate("buyer_orders/ALL") { popUpTo("main_screen") { inclusive = false } }
+                    }) {
+                        navController.navigate("buyer_orders/ALL") {
+                            popUpTo("main_screen") { inclusive = false }
                         }
                     }
                 },
                 onPaymentFailed = {
-                    navController.navigate("buyer_orders") {
-                        popUpTo("main") { inclusive = false }
+                    navController.navigate("buyer_orders/ALL") {
+                        popUpTo("main_screen") { inclusive = false }
                     }
                 },
                 onBackClick = {
@@ -856,18 +866,10 @@ fun AppNavigation(
                 onBackClick = {
                     navController.popBackStack()
                 },
-                onManageCosts = {
-                    navController.navigate("product_costs") {
+                onEditProduct = { productId ->
+                    navController.navigate("edit_product/${Uri.encode(productId)}") {
                         launchSingleTop = true
                     }
-                }
-            )
-        }
-
-        composable(route = "product_costs") {
-            ProductCostsScreen(
-                onBackClick = {
-                    navController.popBackStack()
                 }
             )
         }
@@ -875,8 +877,10 @@ fun AppNavigation(
         composable("notifications") {
             NotificationScreen(
                 onBackClick = { navController.popBackStack() },
-                onOpenOrder = { notification ->
-                    if (notification.targetScreen == "seller_orders") {
+                onOpenNotification = { notification ->
+                    if (notification.targetScreen == "my_reports") {
+                        navController.navigate("my_reports") { launchSingleTop = true }
+                    } else if (notification.targetScreen == "seller_orders") {
                         targetMainTab = 1
                         navController.popBackStack("main_screen", inclusive = false)
                     } else {
