@@ -15,11 +15,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ChatUiState(
+    val partnerAvatar: String? = null,
     val messages: List<ChatMessage> = emptyList(),
     val inputText: String = "",
     val isLoading: Boolean = true,
@@ -136,6 +139,7 @@ class ChatViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 messages = emptyList(),
+                partnerAvatar = partnerAvatar?.takeIf { it.isNotBlank() },
                 isLoading = true,
                 errorMessage = null
             )
@@ -156,12 +160,20 @@ class ChatViewModel @Inject constructor(
 
                 if (roomVisible) chatRepository.markRoomAsRead(roomId, currentUserId)
 
-                chatRepository.getMessages(roomId)
-                    .collect { messageList ->
+                combine(
+                    chatRepository.getMessages(roomId),
+                    chatRepository.observePartnerAvatar(roomId, partnerId)
+                        .distinctUntilChanged()
+                        .catch { emit(null) }
+                ) { messages, avatar -> messages to avatar }
+                    .collect { (messageList, avatar) ->
                         if (roomVisible) chatRepository.markRoomAsRead(roomId, currentUserId)
                         _uiState.update {
                             it.copy(
                                 messages = messageList,
+                                partnerAvatar = avatar
+                                    ?: messageList.lastOrNull { it.senderId == partnerId && !it.senderAvatar.isNullOrBlank() }?.senderAvatar
+                                    ?: partnerAvatar?.takeIf { it.isNotBlank() },
                                 isLoading = false,
                                 errorMessage = null
                             )

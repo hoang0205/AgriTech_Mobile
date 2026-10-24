@@ -64,6 +64,7 @@ fun ProfileScreen(
     onLogoutClick: () -> Unit,
     onNavigateToStatistics: () -> Unit = {},
     onNavigateToMyProducts: () -> Unit = {},
+    onNavigateToBargains: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
     onNavigateToAdminReports: () -> Unit = {},
     onNavigateToPickupLocation: () -> Unit = {},
@@ -136,6 +137,7 @@ fun ProfileScreen(
             onChangePasswordClick = { showPasswordDialog = true },
             orderCounts = orderCounts,
             onNavigateToStatistics = onNavigateToStatistics,
+            onNavigateToBargains = onNavigateToBargains,
             onNavigateToReports = onNavigateToReports,
             isAdmin = isAdmin,
             onNavigateToAdminReports = onNavigateToAdminReports,
@@ -454,6 +456,7 @@ fun ProfileContent(
     orderCounts: OrderStatusCountResponse = OrderStatusCountResponse(),
     onNavigateToStatistics: () -> Unit = {},
     onNavigateToMyProducts: () -> Unit = {},
+    onNavigateToBargains: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
     isAdmin: Boolean = false,
     onNavigateToAdminReports: () -> Unit = {},
@@ -492,7 +495,8 @@ fun ProfileContent(
                 onNavigateToAddress = onNavigateToAddress,
                 onChangePasswordClick = onChangePasswordClick,
                 onNavigateToStatistics = onNavigateToStatistics,
-                onNavigateToReports = onNavigateToReports,
+                onNavigateToBargains = onNavigateToBargains,
+            onNavigateToReports = onNavigateToReports,
                 isAdmin = isAdmin,
                 onNavigateToAdminReports = onNavigateToAdminReports,
                 onNavigateToMyProducts = onNavigateToMyProducts,
@@ -775,6 +779,7 @@ fun AccountSettingsSection(
     onChangePasswordClick: () -> Unit,
     onNavigateToStatistics: () -> Unit = {},
     onNavigateToMyProducts: () -> Unit = {},
+    onNavigateToBargains: () -> Unit = {},
     onNavigateToReports: () -> Unit = {},
     isAdmin: Boolean = false,
     onNavigateToAdminReports: () -> Unit = {},
@@ -823,6 +828,8 @@ fun AccountSettingsSection(
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
                 }
+                SettingsMenuItem(Icons.Default.Storefront, "Trả giá", onNavigateToBargains)
+                HorizontalDivider()
                 SettingsMenuItem(
                     Icons.Default.Flag,
                     "Báo cáo của tôi",

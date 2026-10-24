@@ -37,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import coil.compose.AsyncImage
+import com.example.agritech_mobile.ui.components.UserAvatar
 import com.example.agritech_mobile.data.remote.dto.ChatMessage
 import com.example.agritech_mobile.ui.dashboard.DashboardViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -57,6 +58,7 @@ fun ChatScreen(
     initialProductImage: String? = null,
     onBack: () -> Unit,
     onNavigateToProductDetail: (String) -> Unit = {},
+    onNavigateToBargains: () -> Unit = {},
     viewModel: ChatViewModel = hiltViewModel(),
     dashboardViewModel: DashboardViewModel = hiltViewModel()
 ) {
@@ -104,7 +106,7 @@ fun ChatScreen(
         uiState = uiState,
         currentUserId = currentUserId,
         partnerName = partnerName,
-        partnerAvatar = partnerAvatar,
+        partnerAvatar = uiState.partnerAvatar ?: partnerAvatar?.takeIf { it.isNotBlank() },
         hasPhone = !partnerPhone.isNullOrBlank(),
         pendingProduct = pendingProduct,
         onBack = onBack,
@@ -123,7 +125,8 @@ fun ChatScreen(
             )
             pendingProduct = null
         },
-        onProductClick = onNavigateToProductDetail
+        onProductClick = onNavigateToProductDetail,
+        onBargainClick = onNavigateToBargains
     )
 }
 
@@ -141,6 +144,7 @@ fun ChatContent(
     onInputTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onProductClick: (String) -> Unit,
+    onBargainClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -163,13 +167,12 @@ fun ChatContent(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Box {
-                            AsyncImage(
-                                model = partnerAvatar ?: "https://via.placeholder.com/150",
+                            UserAvatar(
+                                url = partnerAvatar,
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(42.dp)
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
+                                    .clip(CircleShape)
                             )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
@@ -254,7 +257,10 @@ fun ChatContent(
                 items(uiState.messages, key = { it.id.ifBlank { it.timestamp.toString() } }) { message ->
                     val isMe = message.senderId == currentUserId
 
-                    if (!message.productId.isNullOrBlank()) {
+                    if (message.bargainId != null) {
+                        com.example.agritech_mobile.ui.bargain.BargainChatCard(
+                            message.bargainId, message.text, onBargainClick)
+                    } else if (!message.productId.isNullOrBlank()) {
                         ProductMessageCard(
                             message = message,
                             onProductClick = { onProductClick(message.productId) }
@@ -296,14 +302,14 @@ fun ChatBubbleItem(
         verticalAlignment = Alignment.Bottom
     ) {
         if (!isMe) {
-            val displayAvatar = message.senderAvatar ?: partnerAvatar ?: "https://via.placeholder.com/150"
-            AsyncImage(
-                model = displayAvatar,
+            val displayAvatar = partnerAvatar?.takeIf { it.isNotBlank() }
+                ?: message.senderAvatar?.takeIf { it.isNotBlank() }
+            UserAvatar(
+                url = displayAvatar,
                 contentDescription = null,
                 modifier = Modifier
                     .size(28.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
+                    .clip(CircleShape)
             )
             Spacer(modifier = Modifier.width(8.dp))
         }

@@ -71,9 +71,12 @@ class ChatRepository @Inject constructor() {
                 "participants" to participantIds,
                 "lastMessage" to previewText,
                 "lastUpdated" to finalMessage.timestamp,
-                "partnerName_${finalMessage.senderId}" to finalMessage.senderName,
-                "partnerAvatar_${finalMessage.senderId}" to finalMessage.senderAvatar
+                "partnerName_${finalMessage.senderId}" to finalMessage.senderName
             )
+
+            if (!finalMessage.senderAvatar.isNullOrBlank()) {
+                roomUpdates["partnerAvatar_${finalMessage.senderId}"] = finalMessage.senderAvatar
+            }
 
             if (!recipientId.isNullOrBlank()) {
                 roomUpdates["unreadCount_$recipientId"] = FieldValue.increment(1)
@@ -143,6 +146,18 @@ class ChatRepository @Inject constructor() {
                 trySend(rooms)
             }
 
+        awaitClose { listener.remove() }
+    }
+
+    fun observePartnerAvatar(roomId: String, partnerId: String): Flow<String?> = callbackFlow {
+        val listener = firestore.collection("chats").document(roomId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.getString("partnerAvatar_$partnerId")?.takeIf { it.isNotBlank() })
+            }
         awaitClose { listener.remove() }
     }
 

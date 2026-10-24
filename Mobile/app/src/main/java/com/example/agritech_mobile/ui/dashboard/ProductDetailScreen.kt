@@ -32,6 +32,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Handshake
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -60,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.agritech_mobile.ui.components.UserAvatar
 import com.example.agritech_mobile.R
 import com.example.agritech_mobile.data.remote.dto.ReviewModelsResponse
 import com.example.agritech_mobile.data.remote.dto.ReviewSummaryResponse
@@ -99,6 +102,7 @@ data class ProductDetailUiState(
 fun ProductDetailScreen(
     onBackClick: () -> Unit = {},
     productId: String = "",
+    onBargainClick: () -> Unit = {},
     onViewShopClick: (sellerId: String, sellerName: String, sellerAvatar: String?, sellerPhone: String?) -> Unit = { _, _, _, _ -> },
     onChatClick: (
         sellerId: String,
@@ -219,6 +223,7 @@ fun ProductDetailScreen(
 
     ProductDetailContent(
         uiState = uiState,
+        onBargainClick = onBargainClick,
         onBackClick = onBackClick,
         onFavoriteClick = { uiState = uiState.copy(isFavorite = !uiState.isFavorite) },
         onViewShopClick = {
@@ -279,6 +284,7 @@ fun ProductDetailScreen(
 @Composable
 fun ProductDetailContent(
     uiState: ProductDetailUiState,
+    onBargainClick: () -> Unit = {},
     onBackClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onViewShopClick: () -> Unit,
@@ -311,16 +317,34 @@ fun ProductDetailContent(
 
     Scaffold(
         bottomBar = {
-            ProductDetailBottomBar(
-                quantity = uiState.quantity,
-                availableQuantity = uiState.stock.toDoubleOrNull() ?: 0.0,
-                unit = uiState.unit,
-                onChatClick = onChatClick,
-                onAddToCartClick = onAddToCartClick,
-                onIncreaseQuantity = onIncreaseQuantity,
-                onDecreaseQuantity = onDecreaseQuantity,
-                onQuantityChange = onQuantityChange
-            )
+            Column(Modifier.background(Color.White)) {
+                if (!uiState.isLoading && uiState.sellerId.isNotBlank() &&
+                    uiState.sellerId != com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid) {
+                    OutlinedButton(
+                        onClick = onBargainClick,
+                        enabled = (uiState.stock.toDoubleOrNull() ?: 0.0) > 0,
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp).heightIn(min = 44.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFFF1F8F2), contentColor = Color(0xFF1B5E20))
+                    ) {
+                        Icon(Icons.Default.Handshake, null, Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("Trả giá với người bán", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                        Icon(Icons.Default.ChevronRight, null, Modifier.size(20.dp))
+                    }
+                }
+                ProductDetailBottomBar(
+                    quantity = uiState.quantity,
+                    availableQuantity = uiState.stock.toDoubleOrNull() ?: 0.0,
+                    unit = uiState.unit,
+                    onChatClick = onChatClick,
+                    onAddToCartClick = onAddToCartClick,
+                    onIncreaseQuantity = onIncreaseQuantity,
+                    onDecreaseQuantity = onDecreaseQuantity,
+                    onQuantityChange = onQuantityChange
+                )
+            }
         }
     ) { paddingValues ->
         Box(
@@ -472,19 +496,12 @@ fun ProductDetailContent(
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
+                        UserAvatar(
+                            url = uiState.sellerAvatar,
+                            contentDescription = uiState.sellerName,
                             modifier = Modifier
                                 .size(48.dp)
-                                .clip(CircleShape)
-                                .background(Color.Gray),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = null,
-                                tint = Color.White
-                            )
-                        }
+                        )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(

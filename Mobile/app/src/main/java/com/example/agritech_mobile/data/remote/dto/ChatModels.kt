@@ -6,6 +6,7 @@ data class ChatMessage(
     val senderName: String = "",
     val senderAvatar: String? = null,
     val text: String = "",
+    val bargainId: Long? = null,
     val timestamp: Long = System.currentTimeMillis(),
 
     val productId: String? = null,

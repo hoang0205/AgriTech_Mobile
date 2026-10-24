@@ -92,6 +92,10 @@ fun AppNavigation(
     LaunchedEffect(pendingTargetScreen, pendingOrderStatus, isLoggedIn) {
         if (isLoggedIn) {
             when (pendingTargetScreen) {
+                "bargains" -> {
+                    navController.navigate("bargains") { launchSingleTop = true }
+                    onOrderNavigated()
+                }
                 "my_reports" -> {
                     navController.navigate("my_reports") { launchSingleTop = true }
                     onOrderNavigated()
@@ -262,6 +266,7 @@ fun AppNavigation(
                 onNavigateToNotifications = {
                     navController.navigate("notifications") { launchSingleTop = true }
                 },
+                onNavigateToBargains = { navController.navigate("bargains") },
                 onNavigateToReports = {
                     navController.navigate("my_reports") {
                         launchSingleTop = true
@@ -300,6 +305,7 @@ fun AppNavigation(
 
             ProductDetailScreen(
                 productId = productId,
+                onBargainClick = { navController.navigate("create_bargain/${Uri.encode(productId)}") },
                 onBackClick = { navController.popBackStack() },
                 onReportClick = { reportProductId, reportProductName ->
                     navController.navigate(
@@ -649,6 +655,7 @@ fun AppNavigation(
 
             ChatScreen(
                 roomId = roomId,
+                onNavigateToBargains = { navController.navigate("bargains") },
                 partnerId = partnerId,
                 partnerName = partnerName,
                 partnerAvatar = partnerAvatar,
@@ -874,11 +881,26 @@ fun AppNavigation(
             )
         }
 
+        composable("bargains") {
+            com.example.agritech_mobile.ui.bargain.BargainScreen(
+                onBack = { navController.popBackStack() },
+                onAddresses = { navController.navigate("address_selection?source=home") },
+                onOrders = { navController.navigate("buyer_orders/ALL") })
+        }
+        composable("create_bargain/{productId}") { entry ->
+            com.example.agritech_mobile.ui.bargain.CreateBargainScreen(
+                productId = entry.arguments?.getString("productId").orEmpty(),
+                onBack = { navController.popBackStack() },
+                onCreated = { navController.popBackStack(); navController.navigate("bargains") })
+        }
+
         composable("notifications") {
             NotificationScreen(
                 onBackClick = { navController.popBackStack() },
                 onOpenNotification = { notification ->
-                    if (notification.targetScreen == "my_reports") {
+                    if (notification.targetScreen == "bargains") {
+                        navController.navigate("bargains") { launchSingleTop = true }
+                    } else if (notification.targetScreen == "my_reports") {
                         navController.navigate("my_reports") { launchSingleTop = true }
                     } else if (notification.targetScreen == "seller_orders") {
                         targetMainTab = 1

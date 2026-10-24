@@ -71,7 +71,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         val type = remoteMessage.data["type"]
 
-        if (type == "ORDER_STATUS" || type == "REPORT_STATUS") {
+        if (type == "ORDER_STATUS" || type == "REPORT_STATUS" || type == "BARGAIN") {
             serviceScope.launch {
                 try { notificationRepository.refreshUnreadCount() }
                 catch (e: kotlinx.coroutines.CancellationException) { throw e }
@@ -96,7 +96,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 status = status,
                 orderId = orderId,
                 notificationId = remoteMessage.data["notificationId"]?.toLongOrNull(),
-                reportId = if (type == "REPORT_STATUS") remoteMessage.data["reportId"]?.toLongOrNull() ?: return else null
+                reportId = if (type == "REPORT_STATUS") remoteMessage.data["reportId"]?.toLongOrNull() ?: return else null,
+                isBargain = type == "BARGAIN"
             )
         } else {
             val title = remoteMessage.data["title"]
@@ -118,7 +119,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         status: String,
         orderId: Long,
         notificationId: Long?,
-        reportId: Long? = null
+        reportId: Long? = null,
+        isBargain: Boolean = false
     ) {
         val isReport = reportId != null
         val channelId = if (isReport) "report_notifications" else "order_notifications"
@@ -139,7 +141,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        val targetScreen = if (isReport) "my_reports" else if (status == "NEW_ORDER_SELLER") "seller_orders" else "buyer_orders"
+        val targetScreen = if (isBargain) "bargains" else if (isReport) "my_reports" else if (status == "NEW_ORDER_SELLER") "seller_orders" else "buyer_orders"
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP

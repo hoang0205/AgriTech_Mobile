@@ -1,5 +1,7 @@
 package com.example.agritech_mobile.ui.chat
 
+import com.example.agritech_mobile.ui.components.UserAvatar
+
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,14 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -137,13 +137,12 @@ fun ChatRoomRowItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box {
-            AsyncImage(
-                model = room.partnerAvatar ?: "https://via.placeholder.com/150",
+            UserAvatar(
+                url = room.partnerAvatar,
                 contentDescription = room.partnerName,
                 modifier = Modifier
                     .size(52.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
+                    .clip(CircleShape)
             )
             Box(
                 modifier = Modifier
