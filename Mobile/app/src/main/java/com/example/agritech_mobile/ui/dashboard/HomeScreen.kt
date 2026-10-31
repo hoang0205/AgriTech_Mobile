@@ -48,6 +48,7 @@ import com.example.agritech_mobile.ui.theme.AgritechTheme
 import com.example.agritech_mobile.ui.user.AddressState
 import com.example.agritech_mobile.ui.user.UserViewModel
 import com.example.agritech_mobile.ui.notification.HomeBadgeViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 data class Product(
     val id: String,
@@ -62,14 +63,16 @@ data class Product(
     val reviewCount: Int = 0,
     val availableQuantity: Double = 0.0,
     val distanceKm: Double? = null,
-    val deliveryStatus: DeliveryStatus? = null
+    val deliveryStatus: DeliveryStatus? = null,
+    val isOwnProduct: Boolean = false
 )
 
-private fun ProductResponse.toNearbyProduct() = Product(
+internal fun ProductResponse.toProductCard(currentUserId: String? = null, isNew: Boolean = false) = Product(
     id = id, name = name, priceStr = formatProductPrice(price), seller = farmerName,
     imageUrl = imageUrls.firstOrNull().orEmpty(), unit = unit, rating = rating,
     reviewCount = reviewCount, availableQuantity = quantity,
-    distanceKm = distanceKm, deliveryStatus = deliveryStatus
+    distanceKm = distanceKm, deliveryStatus = deliveryStatus, isNew = isNew,
+    isOwnProduct = !currentUserId.isNullOrBlank() && farmerId == currentUserId
 )
 
 data class CategoryItem(
@@ -101,6 +104,13 @@ fun HomeScreen(
     badgeViewModel: HomeBadgeViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val auth = remember { FirebaseAuth.getInstance() }
+    var currentUserId by remember { mutableStateOf(auth.currentUser?.uid) }
+    DisposableEffect(auth) {
+        val listener = FirebaseAuth.AuthStateListener { currentUserId = it.currentUser?.uid }
+        auth.addAuthStateListener(listener)
+        onDispose { auth.removeAuthStateListener(listener) }
+    }
     val unreadMessages by badgeViewModel.unreadMessages.collectAsStateWithLifecycle()
     val unreadNotifications by badgeViewModel.unreadNotifications.collectAsStateWithLifecycle()
     LifecycleResumeEffect(badgeViewModel) {
@@ -184,7 +194,7 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(dashboardState) {
+    LaunchedEffect(dashboardState, currentUserId) {
         when (val state = dashboardState) {
             is DashboardState.Loading -> {
                 viewModel.updateHomeUiState {
@@ -194,32 +204,11 @@ fun HomeScreen(
 
             is DashboardState.HomeDataSuccess -> {
                 val mappedNew = state.newProducts.map { res ->
-                    Product(
-                        id = res.id,
-                        name = res.name,
-                        isNew = true,
-                        priceStr = formatProductPrice(res.price),
-                        seller = res.farmerName,
-                        imageUrl = res.imageUrls.firstOrNull().orEmpty(),
-                        unit = res.unit,
-                        rating = res.rating,
-                        reviewCount = res.reviewCount,
-                        availableQuantity = res.quantity
-                    )
+                    res.toProductCard(currentUserId, isNew = true)
                 }
 
                 val mappedSuggested = state.suggestedProducts.map { res ->
-                    Product(
-                        id = res.id,
-                        name = res.name,
-                        priceStr = formatProductPrice(res.price),
-                        seller = res.farmerName,
-                        imageUrl = res.imageUrls.firstOrNull().orEmpty(),
-                        unit = res.unit,
-                        rating = res.rating,
-                        reviewCount = res.reviewCount,
-                        availableQuantity = res.quantity
-                    )
+                    res.toProductCard(currentUserId)
                 }
 
                 viewModel.updateHomeUiState {
@@ -234,17 +223,7 @@ fun HomeScreen(
 
             is DashboardState.ProductListSuccess -> {
                 val mappedProducts = state.products.map { res ->
-                    Product(
-                        id = res.id,
-                        name = res.name,
-                        priceStr = formatProductPrice(res.price),
-                        seller = res.farmerName,
-                        imageUrl = res.imageUrls.firstOrNull().orEmpty(),
-                        unit = res.unit,
-                        rating = res.rating,
-                        reviewCount = res.reviewCount,
-                        availableQuantity = res.quantity
-                    )
+                    res.toProductCard(currentUserId)
                 }
 
                 viewModel.updateHomeUiState {
@@ -278,6 +257,7 @@ fun HomeScreen(
 
     HomeContent(
         uiState = uiState,
+        currentUserId = currentUserId,
         searchState = searchState,
         nearbyState = if (hasDeliveryLocation) {
             if (nearbyState.address == deliveryAddress) nearbyState
@@ -350,7 +330,8 @@ fun HomeContent(
     onLoadMoreNearby: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
     unreadMessages: Long = 0,
-    unreadNotifications: Long = 0
+    unreadNotifications: Long = 0,
+    currentUserId: String? = null
 ) {
     var isSearchMode by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -429,6 +410,7 @@ fun HomeContent(
         if (isSearchMode) {
             ProductSearchContent(
                 state = searchState,
+                currentUserId = currentUserId,
                 onExecuteSearch = { query ->
                     focusManager.clearFocus()
                     onExecuteSearch(query)
@@ -505,7 +487,7 @@ fun HomeContent(
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             rowProducts.forEach { response ->
-                                val product = response.toNearbyProduct()
+                                val product = response.toProductCard(currentUserId)
                                 SuggestedProductCard(
                                     product = product, modifier = Modifier.weight(1f),
                                     onClick = { onProductClick(product) }

@@ -19,6 +19,19 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface OrderApiService {
+    @GET("api/orders/{orderId}/complaint")
+    suspend fun getOrderComplaint(@Path("orderId") orderId: Long): Response<com.example.agritech_mobile.data.remote.dto.OrderComplaintContext>
+
+    @POST("api/orders/{orderId}/complaint")
+    suspend fun createOrderComplaint(@Path("orderId") orderId: Long,
+        @Body request: com.example.agritech_mobile.data.remote.dto.CreateOrderComplaintRequest): Response<com.example.agritech_mobile.data.remote.dto.OrderComplaintResponse>
+
+    @POST("api/orders/{orderId}/confirm-received")
+    suspend fun confirmOrderReceived(@Path("orderId") orderId: Long): Response<OrderMessageResponse>
+
+    @GET("api/orders/{orderId}")
+    suspend fun getOrderDetail(@Path("orderId") orderId: Long): Response<com.example.agritech_mobile.data.remote.dto.OrderDetailResponse>
+
     @POST("api/orders/checkout")
     suspend fun checkout(
         @Body request: CheckOutRequest

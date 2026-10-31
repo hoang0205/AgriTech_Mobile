@@ -57,6 +57,7 @@ fun MainScreen(
     onNavigateToAddress: () -> Unit,
     onLogoutSuccess: () -> Unit,
     onNavigateToBuyerOrders: (String) -> Unit,
+    onNavigateToOrderDetail: (String) -> Unit = {},
     onNavigateToChat: () -> Unit,
     onNavigateToStatistics: () -> Unit = {},
     onNavigateToBargains: () -> Unit = {},
@@ -237,7 +238,7 @@ fun MainScreen(
                     onNavigateToNotifications = onNavigateToNotifications,
                 )
 
-                "ORDERS" -> SellerOrdersScreen()
+                "ORDERS" -> SellerOrdersScreen(onOrderClick = onNavigateToOrderDetail)
 
                 "CART" -> CartScreen(
                     onNavigateToCheckout = onNavigateToCheckout

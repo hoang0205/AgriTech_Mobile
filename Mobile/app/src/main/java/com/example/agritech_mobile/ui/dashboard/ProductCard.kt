@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -112,6 +113,7 @@ fun ProductCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
+                    .alpha(if (product.availableQuantity <= 0.0) 0.5f else 1f)
             )
 
             if (product.availableQuantity <= 0.0) {
@@ -122,25 +124,41 @@ fun ProductCard(
                     contentColor = MaterialTheme.colorScheme.onErrorContainer
                 ) {
                     Text("Hết hàng", modifier = Modifier.padding(8.dp),
-                        style = MaterialTheme.typography.labelMedium)
+                        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 }
             }
 
-            if (product.isNew) {
-                Surface(
-                    modifier = Modifier.padding(8.dp),
+            Column(
+                modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (product.isOwnProduct) Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ) {
-                    Text(
-                        text = "Mới",
-                        modifier = Modifier.padding(
-                            horizontal = 8.dp,
-                            vertical = 4.dp
-                        ),
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                    Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Default.Storefront, null, modifier = Modifier.size(12.dp))
+                        Text("Sản phẩm của bạn", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (product.isNew) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ) {
+                        Text(
+                            text = "Mới",
+                            modifier = Modifier.padding(
+                                horizontal = 8.dp,
+                                vertical = 4.dp
+                            ),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
                 }
             }
         }
@@ -269,8 +287,10 @@ private fun ProductCardPreview() {
                         name = "Hạt điều rang muối Bình Phước",
                         priceStr = formatProductPrice(150000.0),
                         seller = "Nông sản Hoàng",
+                        isOwnProduct = true,
                         isNew = true,
                         imageUrl = "",
+                        availableQuantity = 12.0,
                         unit = "hộp 500g",
                         rating = 4.8,
                         reviewCount = 24
@@ -285,6 +305,8 @@ private fun ProductCardPreview() {
                         name = "Cà chua bi",
                         priceStr = formatProductPrice(45000.0),
                         seller = "Nhà vườn Đà Lạt",
+                        isOwnProduct = true,
+                        availableQuantity = 0.0,
                         imageUrl = "",
                         unit = "kg"
                     ),

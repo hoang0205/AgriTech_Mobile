@@ -66,7 +66,10 @@ data class BuyerOrder(
     val pickupAddress: String? = null,
     val ghnOrderCode: String? = null,
     val ghnStatus: String? = null,
-    val deliveryMethod: String? = null
+    val deliveryMethod: String? = null,
+    val sellerDeliveredAt: String? = null,
+    val buyerReceivedAt: String? = null,
+    val complaintOpen: Boolean = false
 )
 
 @Composable
@@ -74,6 +77,7 @@ fun BuyerOrdersScreen(
     initialStatus: String = "ALL",
     onBackClick: () -> Unit,
     viewModel: OrderViewModel = hiltViewModel(),
+    onOrderClick: (String) -> Unit = {},
     onReviewClick: (productId: String, productName: String, productImageUrl: String, shopName: String) -> Unit
 ) {
     var ghnOrderId by remember { mutableStateOf<String?>(null) }
@@ -88,10 +92,6 @@ fun BuyerOrdersScreen(
     LifecycleResumeEffect(Unit) {
         viewModel.getBuyerOrders()
         onPauseOrDispose { }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.getBuyerOrders()
     }
 
     LaunchedEffect(orderState) {
@@ -137,7 +137,10 @@ fun BuyerOrdersScreen(
                         pickupAddress = res.pickupAddress,
                         ghnOrderCode = res.ghnOrderCode,
                         ghnStatus = res.ghnStatus,
-                        deliveryMethod = res.deliveryMethod
+                        deliveryMethod = res.deliveryMethod,
+                        sellerDeliveredAt = res.sellerDeliveredAt,
+                        buyerReceivedAt = res.buyerReceivedAt,
+                        complaintOpen = res.complaintOpen
                     )
                 }
             }
@@ -164,6 +167,8 @@ fun BuyerOrdersScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         BuyerOrdersContent(
             orders = orders,
+            onConfirmReceived = viewModel::confirmReceived,
+            isProcessing = isLoading,
             onGhnClick = { ghnOrderId = it },
             initialStatus = initialStatus,
             onBackClick = onBackClick,
@@ -180,7 +185,8 @@ fun BuyerOrdersScreen(
                     }
                 )
             },
-            onReviewClick = onReviewClick
+            onReviewClick = onReviewClick,
+            onOrderClick = onOrderClick
         )
 
         if (isLoading && orders.isEmpty()) {
@@ -203,7 +209,10 @@ fun BuyerOrdersContent(
     onBackClick: () -> Unit,
     onCancelOrder: (String) -> Unit,
     onReviewClick: (productId: String, productName: String, productImageUrl: String, shopName: String) -> Unit,
-    onGhnClick: (String) -> Unit = {}
+    onGhnClick: (String) -> Unit = {},
+    onOrderClick: (String) -> Unit = {},
+    onConfirmReceived: (String) -> Unit = {},
+    isProcessing: Boolean = false
 ) {
     val formatter = DecimalFormat("#,###")
     val tabs = OrderStatus.values()
@@ -262,7 +271,7 @@ fun BuyerOrdersContent(
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     if (filteredOrders.isEmpty()) {
@@ -273,6 +282,9 @@ fun BuyerOrdersContent(
                     } else {
                         items(filteredOrders) { order ->
                             BuyerOrderCard(
+                                onConfirmReceived = { onConfirmReceived(order.orderId) },
+                                isProcessing = isProcessing,
+                                onDetailClick = { onOrderClick(order.orderId) },
                                 onGhnClick = { onGhnClick(order.orderId) },
                                 order = order,
                                 formatter = formatter,
@@ -318,10 +330,25 @@ fun BuyerOrderCard(
     formatter: DecimalFormat,
     onCancelClick: () -> Unit,
     onReviewClick: (productId: String, productName: String, productImageUrl: String, shopName: String) -> Unit,
-    onGhnClick: () -> Unit = {}
+    onGhnClick: () -> Unit = {},
+    onDetailClick: () -> Unit = {},
+    onConfirmReceived: () -> Unit = {},
+    isProcessing: Boolean = false
 ) {
+    var showReceiptConfirmation by remember(order.orderId) { mutableStateOf(false) }
+    if (showReceiptConfirmation) AlertDialog(
+        onDismissRequest = { showReceiptConfirmation = false },
+        title = { Text("Bạn đã nhận được hàng?") },
+        text = { Text("Chỉ xác nhận khi bạn đã nhận được hàng. Đơn sẽ chuyển sang Hoàn thành.") },
+        confirmButton = {
+            TextButton(enabled = !isProcessing, onClick = { showReceiptConfirmation = false; onConfirmReceived() }) {
+                Text("Đã nhận hàng", color = Color(0xFF1B5E20))
+            }
+        },
+        dismissButton = { TextButton(onClick = { showReceiptConfirmation = false }) { Text("Quay lại") } }
+    )
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onDetailClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -341,6 +368,13 @@ fun BuyerOrderCard(
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = Color(0xFF1B5E20)
                 )
+            }
+
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(order.orderCode, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = Color(0xFF757575))
+                Text("Xem chi tiết ›", color = Color(0xFF1B5E20), style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onDetailClick)
+                        .padding(horizontal = 8.dp, vertical = 4.dp))
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -463,6 +497,23 @@ fun BuyerOrderCard(
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                     color = Color(0xFF1B5E20)
                 )
+            }
+
+            if (order.status == OrderStatus.SHIPPING) {
+                Spacer(Modifier.height(16.dp))
+                Text(if (order.sellerDeliveredAt != null) "Người bán đã xác nhận giao hàng" else "Đang chờ người bán xác nhận đã giao",
+                    style = MaterialTheme.typography.bodySmall, color = Color(0xFF757575))
+                Spacer(Modifier.height(8.dp))
+                if (order.complaintOpen) Text("Đơn đang có khiếu nại • Xem chi tiết để theo dõi", color = Color(0xFF1B5E20))
+                else if (order.sellerDeliveredAt == null) Text("Bạn có thể xác nhận khi người bán đã giao hàng.", style = MaterialTheme.typography.bodySmall)
+                else if (order.buyerReceivedAt != null) Text("Bạn đã xác nhận nhận hàng",
+                    color = Color(0xFF1B5E20), style = MaterialTheme.typography.bodyMedium)
+                else Button(
+                    onClick = { showReceiptConfirmation = true }, enabled = !isProcessing,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20)),
+                    shape = RoundedCornerShape(8.dp)
+                ) { Text(if (isProcessing) "Đang xử lý…" else "Đã nhận hàng", fontWeight = FontWeight.Bold) }
             }
 
             if (order.status == OrderStatus.PENDING || order.status.name == "UNPAID") {

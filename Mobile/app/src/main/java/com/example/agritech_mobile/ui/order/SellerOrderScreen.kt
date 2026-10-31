@@ -34,6 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import coil.compose.AsyncImage
 import com.example.agritech_mobile.R
 import com.example.agritech_mobile.ui.cart.SummaryRow
@@ -78,12 +79,16 @@ data class SellerOrder(
     val actualShippingCost: Long? = null,
     val receiverName: String? = null,
     val receiverPhone: String? = null,
-    val shippingAddress: String? = null
+    val shippingAddress: String? = null,
+    val sellerDeliveredAt: String? = null,
+    val buyerReceivedAt: String? = null,
+    val complaintOpen: Boolean = false
 )
 
 @Composable
 fun SellerOrdersScreen(
-    viewModel: OrderViewModel = hiltViewModel()
+    viewModel: OrderViewModel = hiltViewModel(),
+    onOrderClick: (String) -> Unit = {}
 ) {
     var ghnOrderId by remember { mutableStateOf<String?>(null) }
     var deliveryOrderId by remember { mutableStateOf<String?>(null) }
@@ -93,8 +98,9 @@ fun SellerOrdersScreen(
     var orders by remember { mutableStateOf<List<SellerOrder>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    LifecycleResumeEffect(viewModel) {
         viewModel.getSellerOrders()
+        onPauseOrDispose { }
     }
 
     LaunchedEffect(orderState) {
@@ -140,7 +146,10 @@ fun SellerOrdersScreen(
                         ghnStatus = res.ghnStatus,
                         ghnPendingCreation = res.ghnPendingCreation,
                         deliveryMethod = res.deliveryMethod,
-                        actualShippingCost = res.actualShippingCost
+                        actualShippingCost = res.actualShippingCost,
+                        sellerDeliveredAt = res.sellerDeliveredAt,
+                        buyerReceivedAt = res.buyerReceivedAt,
+                        complaintOpen = res.complaintOpen
                     )
                 } ?: emptyList()
             }
@@ -178,6 +187,7 @@ fun SellerOrdersScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         SellerOrdersContent(
             orders = orders,
+            onOrderClick = onOrderClick,
             onGhnClick = { ghnOrderId = it },
             onDeliveryClick = { deliveryOrderId = it },
             onUpdateOrderStatus = { orderId, newStatus ->
@@ -204,6 +214,7 @@ fun SellerOrdersContent(
     onUpdateOrderStatus: (String, OrderStatus) -> Unit,
     onGhnClick: (String) -> Unit = {},
     onDeliveryClick: (String) -> Unit = {},
+    onOrderClick: (String) -> Unit = {},
 ) {
     val formatter = DecimalFormat("#,###")
 
@@ -270,6 +281,7 @@ fun SellerOrdersContent(
                     } else {
                         items(filteredOrders) { order ->
                             SellerOrderCard(
+                                onDetailClick = { onOrderClick(order.orderId) },
                                 order = order,
                                 formatter = formatter,
                                 onGhnClick = { onGhnClick(order.orderId) },
@@ -349,15 +361,20 @@ fun SellerOrderCard(
     formatter: DecimalFormat,
     onUpdateStatus: (OrderStatus) -> Unit,
     onGhnClick: () -> Unit = {},
-    onDeliveryClick: () -> Unit = {}
+    onDeliveryClick: () -> Unit = {},
+    onDetailClick: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onDetailClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(order.orderCode, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = Color(0xFF757575))
+                TextButton(onClick = onDetailClick) { Text("Xem chi tiết", color = Color(0xFF1B5E20)) }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AsyncImage(
                     model = order.buyerAvatar,
@@ -375,7 +392,7 @@ fun SellerOrderCard(
                         color = Color(0xFF212121)
                     )
                     Text(
-                        text = "${order.orderCode} • ${order.dateTime}",
+                        text = order.dateTime,
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF757575)
                     )
@@ -518,7 +535,25 @@ fun SellerOrderCard(
                 }
             }
 
-            if ((order.ghnOrderCode == null && !order.ghnPendingCreation || order.ghnStatus == "cancel" || order.ghnStatus == "simulation" && order.deliveryMethod == "SELF") && order.status != OrderStatus.COMPLETED && order.status != OrderStatus.CANCELLED) {
+            if (order.status == OrderStatus.SHIPPING) {
+                Spacer(Modifier.height(12.dp))
+                Text(if (order.buyerReceivedAt != null) "Người mua đã xác nhận nhận hàng" else "Đang chờ người mua xác nhận nhận hàng",
+                    style = MaterialTheme.typography.bodySmall, color = Color(0xFF757575))
+                if (order.complaintOpen) Text("Đơn đang có khiếu nại • Xem chi tiết để theo dõi", color = Color(0xFF1B5E20))
+                else if (order.sellerDeliveredAt != null) Text("Đã giao • Tự hoàn thành sau 48 giờ nếu người mua không phản hồi và không khiếu nại",
+                    color = Color(0xFF1B5E20), style = MaterialTheme.typography.bodyMedium)
+                else Button(onClick = { onUpdateStatus(OrderStatus.COMPLETED) }, modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20))) {
+                    Text("Xác nhận đã giao")
+                }
+            }
+
+            if (order.status == OrderStatus.UNPAID) {
+                Spacer(Modifier.height(12.dp))
+                Text("Chờ người mua thanh toán. Đơn sẽ được xử lý sau khi thanh toán thành công.",
+                    style = MaterialTheme.typography.bodySmall, color = Color(0xFF757575))
+            }
+            if ((order.ghnOrderCode == null && !order.ghnPendingCreation || order.ghnStatus == "cancel" || order.ghnStatus == "simulation" && order.deliveryMethod == "SELF") && order.status in listOf(OrderStatus.PENDING, OrderStatus.CONFIRMED)) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),

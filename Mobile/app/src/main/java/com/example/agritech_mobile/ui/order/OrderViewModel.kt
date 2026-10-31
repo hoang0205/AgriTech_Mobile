@@ -178,6 +178,18 @@ class OrderViewModel @Inject constructor(
         }
     }
 
+    fun confirmReceived(orderId: String) {
+        if (_orderState.value is OrderState.Loading) return
+        val id = orderId.toLongOrNull() ?: return
+        _orderState.value = OrderState.Loading
+        viewModelScope.launch {
+            repository.confirmOrderReceived(id).fold(
+                onSuccess = { _orderState.value = OrderState.Success(it.message) },
+                onFailure = { _orderState.value = OrderState.Error(it.message ?: "Không xác nhận được nhận hàng.") }
+            )
+        }
+    }
+
     fun getBuyerOrders(status: String ? = null) {
         _orderState.value = OrderState.Loading
         viewModelScope.launch {

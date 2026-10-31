@@ -14,6 +14,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -62,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.google.firebase.auth.FirebaseAuth
 import com.example.agritech_mobile.ui.components.UserAvatar
 import com.example.agritech_mobile.R
 import com.example.agritech_mobile.data.remote.dto.ReviewModelsResponse
@@ -121,6 +123,16 @@ fun ProductDetailScreen(
     reportEligibilityViewModel: ReportEligibilityViewModel = hiltViewModel()
 ) {
     var uiState by remember { mutableStateOf(ProductDetailUiState()) }
+    val auth = remember { FirebaseAuth.getInstance() }
+    var currentUserId by remember { mutableStateOf(auth.currentUser?.uid) }
+    DisposableEffect(auth) {
+        val listener = FirebaseAuth.AuthStateListener { currentUserId = it.currentUser?.uid }
+        auth.addAuthStateListener(listener)
+        onDispose { auth.removeAuthStateListener(listener) }
+    }
+    val isOwnProduct = !currentUserId.isNullOrBlank() && uiState.sellerId == currentUserId
+    val canContactSeller = !uiState.isLoading && uiState.sellerId.isNotBlank() &&
+        !currentUserId.isNullOrBlank() && !isOwnProduct
     val dashboardState by viewModel.dashboardState.collectAsState()
     val cartState by cartViewModel.cartState.collectAsState()
     val reportEligibility by reportEligibilityViewModel
@@ -223,11 +235,13 @@ fun ProductDetailScreen(
 
     ProductDetailContent(
         uiState = uiState,
+        isOwnProduct = isOwnProduct,
+        canContactSeller = canContactSeller,
         onBargainClick = onBargainClick,
         onBackClick = onBackClick,
         onFavoriteClick = { uiState = uiState.copy(isFavorite = !uiState.isFavorite) },
         onViewShopClick = {
-            onViewShopClick(
+            if (canContactSeller) onViewShopClick(
                 uiState.sellerId,
                 uiState.sellerName,
                 uiState.sellerAvatar,
@@ -235,7 +249,7 @@ fun ProductDetailScreen(
             )
         },
         onChatClick = {
-            onChatClick(
+            if (canContactSeller) onChatClick(
                 uiState.sellerId,
                 uiState.sellerName,
                 uiState.sellerAvatar,
@@ -251,7 +265,7 @@ fun ProductDetailScreen(
         },
         onAddToCartClick = {
             val stock = uiState.stock.toDoubleOrNull() ?: 0.0
-            if (uiState.quantity > 0.0 && uiState.quantity <= stock) {
+            if (canContactSeller && uiState.quantity > 0.0 && uiState.quantity <= stock) {
                 cartViewModel.addToCart(uiState.id, uiState.quantity)
             }
         },
@@ -265,8 +279,7 @@ fun ProductDetailScreen(
             }
         },
         onQuantityChange = { input ->
-            val filtered = input.filter { it.isDigit() || it == '.' }
-            val newQty = filtered.toDoubleOrNull() ?: 0.0
+            val newQty = input.replace(',', '.').toDoubleOrNull() ?: 0.0
             val stock = uiState.stock.toDoubleOrNull() ?: 0.0
             uiState = uiState.copy(quantity = newQty.coerceIn(0.0, stock.coerceAtLeast(0.0)))
         },
@@ -297,7 +310,9 @@ fun ProductDetailContent(
     reviews: List<ReviewModelsResponse>,
     reviewSummary: ReviewSummaryResponse?,
     onReportClick: () -> Unit = {},
-    canReport: Boolean = false
+    canReport: Boolean = false,
+    isOwnProduct: Boolean = false,
+    canContactSeller: Boolean = true
 ) {
     val primaryGreen = Color(0xFF1B5E20)
     val lightGreen = Color(0xFFE8F5E9)
@@ -318,8 +333,15 @@ fun ProductDetailContent(
     Scaffold(
         bottomBar = {
             Column(Modifier.background(Color.White)) {
-                if (!uiState.isLoading && uiState.sellerId.isNotBlank() &&
-                    uiState.sellerId != com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid) {
+                if (isOwnProduct) {
+                    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(Icons.Default.Person, null, tint = primaryGreen)
+                        Text("Đây là sản phẩm của bạn", color = primaryGreen, fontWeight = FontWeight.SemiBold)
+                    }
+                } else if (canContactSeller && !uiState.isLoading && uiState.sellerId.isNotBlank()) {
                     OutlinedButton(
                         onClick = onBargainClick,
                         enabled = (uiState.stock.toDoubleOrNull() ?: 0.0) > 0,
@@ -333,17 +355,17 @@ fun ProductDetailContent(
                         Text("Trả giá với người bán", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
                         Icon(Icons.Default.ChevronRight, null, Modifier.size(20.dp))
                     }
+                    ProductDetailBottomBar(
+                        quantity = uiState.quantity,
+                        availableQuantity = uiState.stock.toDoubleOrNull() ?: 0.0,
+                        unit = uiState.unit,
+                        onChatClick = onChatClick,
+                        onAddToCartClick = onAddToCartClick,
+                        onIncreaseQuantity = onIncreaseQuantity,
+                        onDecreaseQuantity = onDecreaseQuantity,
+                        onQuantityChange = onQuantityChange
+                    )
                 }
-                ProductDetailBottomBar(
-                    quantity = uiState.quantity,
-                    availableQuantity = uiState.stock.toDoubleOrNull() ?: 0.0,
-                    unit = uiState.unit,
-                    onChatClick = onChatClick,
-                    onAddToCartClick = onAddToCartClick,
-                    onIncreaseQuantity = onIncreaseQuantity,
-                    onDecreaseQuantity = onDecreaseQuantity,
-                    onQuantityChange = onQuantityChange
-                )
             }
         }
     ) { paddingValues ->
@@ -519,13 +541,13 @@ fun ProductDetailContent(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color(0xFFE0E0E0))
-                                .clickable { onViewShopClick() }
+                                .clickable(enabled = canContactSeller && !isOwnProduct) { onViewShopClick() }
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         ) {
                             Text(
-                                text = stringResource(R.string.view_shop_btn),
+                                text = if (isOwnProduct) "Shop của bạn" else stringResource(R.string.view_shop_btn),
                                 style = MaterialTheme.typography.labelMedium,
-                                color = textDark,
+                                color = if (isOwnProduct || !canContactSeller) textGray else textDark,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -1227,6 +1249,13 @@ fun ProductDetailBottomBar(
     } else {
         quantity.toString()
     }
+    // Keep incomplete input (such as "0." or "1.0") while the user is typing.
+    var quantityInput by remember { mutableStateOf(displayQuantity) }
+    LaunchedEffect(quantity) {
+        if ((quantityInput.toDoubleOrNull() ?: 0.0) != quantity) {
+            quantityInput = displayQuantity
+        }
+    }
 
     Surface(
         shadowElevation = 16.dp,
@@ -1280,9 +1309,22 @@ fun ProductDetailBottomBar(
                 }
 
                 BasicTextField(
-                    value = displayQuantity,
+                    value = quantityInput,
                     enabled = availableQuantity > 0.0,
-                    onValueChange = onQuantityChange,
+                    onValueChange = { input ->
+                        val normalized = input.replace(',', '.')
+                        if (normalized.matches(Regex("[0-9]*[.]?[0-9]*"))) {
+                            val parsed = normalized.toDoubleOrNull() ?: 0.0
+                            if (parsed.isFinite()) {
+                                quantityInput = if (parsed > availableQuantity) {
+                                    availableQuantity.toString()
+                                } else {
+                                    normalized
+                                }
+                                onQuantityChange(quantityInput)
+                            }
+                        }
+                    },
                     modifier = Modifier.widthIn(min = 28.dp, max = 45.dp),
                     textStyle = androidx.compose.ui.text.TextStyle(
                         fontWeight = FontWeight.Bold,

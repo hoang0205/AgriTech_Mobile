@@ -21,9 +21,10 @@ import UsersPage from "./pages/UsersPage";
 import ProductsPage from "./pages/ProductsPage";
 import OrdersPage from "./pages/OrdersPage";
 import ReportsPage from "./pages/ReportsPage";
-import StatisticsPage from "./pages/StatisticsPage";
+import OrderComplaintsPage from "./pages/OrderComplaintsPage";
+import StatisticsPage from "./pages/UserStatisticsPage";
 import AuditLogs from "./components/AuditLogs";
-
+import { FlagOutlined } from "@ant-design/icons";
 import DashboardMetrics from "./components/DashboardMetrics";
 
 const sections = [
@@ -51,6 +52,12 @@ const sections = [
     description: "Tiếp nhận phản ánh và xử lý nội dung vi phạm.",
     icon: <FileSearchOutlined />,
   },
+{
+  key: "order-complaints",
+  title: "Khiếu nại đơn hàng",
+  description: "Tiếp nhận và xử lý các vấn đề giao nhận đơn hàng.",
+  icon: <FlagOutlined />,
+},
   {
     key: "statistics",
     title: "Thống kê",
@@ -69,7 +76,7 @@ const navigation = [
   {
     key: "dashboard",
     icon: <DashboardOutlined />,
-    label: "Tổng quan",
+    label: "Dashboard",
   },
   ...sections.map((section) => ({
     key: section.key,
@@ -301,6 +308,8 @@ export default function App({
             <OrdersPage />
           ) : page === "reports" ? (
             <ReportsPage />
+          ) : page === "order-complaints" ? (
+            <OrderComplaintsPage />
           ) : page === "statistics" ? (
             <StatisticsPage />
           ) : page === "audit" ? (

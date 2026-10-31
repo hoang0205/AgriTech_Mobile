@@ -141,7 +141,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        val targetScreen = if (isBargain) "bargains" else if (isReport) "my_reports" else if (status == "NEW_ORDER_SELLER") "seller_orders" else "buyer_orders"
+        val targetScreen = if (isBargain) "bargains" else if (isReport) "my_reports" else if (status in setOf("NEW_ORDER_SELLER", "RECEIVED_BY_BUYER")) "seller_orders" else "buyer_orders"
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP

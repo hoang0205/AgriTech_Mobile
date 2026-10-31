@@ -815,21 +815,12 @@ fun AccountSettingsSection(
                     thickness = 1.dp,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
-                if (isAdmin) {
-                    SettingsMenuItem(
-                        Icons.Default.AdminPanelSettings,
-                        "Quản lý báo cáo",
-                        onNavigateToAdminReports
-                    )
-
-                    HorizontalDivider(
-                        color = Color(0xFFF0F0F0),
-                        thickness = 1.dp,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
-                SettingsMenuItem(Icons.Default.Storefront, "Trả giá", onNavigateToBargains)
-                HorizontalDivider()
+                SettingsMenuItem(Icons.Default.Shop, "Trả giá", onNavigateToBargains)
+                HorizontalDivider(
+                    color = Color(0xFFF0F0F0),
+                    thickness = 1.dp,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
                 SettingsMenuItem(
                     Icons.Default.Flag,
                     "Báo cáo của tôi",

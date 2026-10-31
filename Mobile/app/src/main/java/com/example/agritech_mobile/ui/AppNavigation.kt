@@ -39,6 +39,7 @@ import com.example.agritech_mobile.ui.order.AddressSelectionScreen
 import com.example.agritech_mobile.ui.notification.NotificationScreen
 import com.example.agritech_mobile.ui.order.MapPickerScreen
 import com.example.agritech_mobile.ui.order.OrderViewModel
+import com.example.agritech_mobile.ui.order.OrderDetailScreen
 import com.example.agritech_mobile.ui.order.VnpayPaymentScreen
 import com.example.agritech_mobile.ui.report.AdminReportScreen
 import com.example.agritech_mobile.ui.report.ReportHistoryScreen
@@ -260,6 +261,7 @@ fun AppNavigation(
                 onNavigateToBuyerOrders = { status ->
                     navController.navigate("buyer_orders/$status")
                 },
+                onNavigateToOrderDetail = { id -> navController.navigate("order_detail/$id") },
                 onNavigateToChat = {
                     navController.navigate("chat_list")
                 },
@@ -321,6 +323,7 @@ fun AppNavigation(
                 },
                 onChatClick = { sellerId, sellerName, sellerAvatar, sellerPhone, pId, pName, pPrice, pImage ->
                     val myUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                    if (myUserId.isBlank() || sellerId.isBlank() || myUserId == sellerId) return@ProductDetailScreen
                     val roomId = com.example.agritech_mobile.data.repository.ChatRepository.generateRoomId(myUserId, sellerId)
 
                     navController.navigate(
@@ -451,21 +454,25 @@ fun AppNavigation(
                 ?.get<String>("vnpay_raw_url") ?: ""
 
             val orderViewModel: OrderViewModel = hiltViewModel()
+            val returnToOrderDetail = navController.previousBackStackEntry?.destination?.route == "order_detail/{orderId}"
 
             VnpayPaymentScreen(
                 paymentUrl = paymentUrl,
                 onPaymentSuccess = { params ->
                     orderViewModel.confirmOrderPaid(orderId, params, onError = { message ->
                         android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
-                        navController.navigate("buyer_orders/ALL") { popUpTo("main_screen") { inclusive = false } }
+                        if (returnToOrderDetail) navController.popBackStack()
+                        else navController.navigate("buyer_orders/ALL") { popUpTo("main_screen") { inclusive = false } }
                     }) {
-                        navController.navigate("buyer_orders/PENDING") {
+                        if (returnToOrderDetail) navController.popBackStack()
+                        else navController.navigate("buyer_orders/PENDING") {
                             popUpTo("main_screen") { inclusive = false }
                         }
                     }
                 },
                 onPaymentFailed = {
-                    navController.navigate("buyer_orders/ALL") {
+                    if (returnToOrderDetail) navController.popBackStack()
+                    else navController.navigate("buyer_orders/ALL") {
                         popUpTo("main_screen") { inclusive = false }
                     }
                 },
@@ -571,6 +578,7 @@ fun AppNavigation(
 
             BuyerOrdersScreen(
                 initialStatus = initialStatus,
+                onOrderClick = { id -> navController.navigate("order_detail/$id") },
                 onBackClick = { navController.popBackStack() },
                 onReviewClick = { productId, productName, productImageUrl, shopName ->
                     navController.currentBackStackEntry?.savedStateHandle?.apply {
@@ -579,6 +587,21 @@ fun AppNavigation(
                         set("shopName", shopName)
                     }
                     navController.navigate("review_screen/$productId")
+                }
+            )
+        }
+
+        composable(
+            route = "order_detail/{orderId}",
+            arguments = listOf(navArgument("orderId") { type = NavType.LongType })
+        ) { entry ->
+            OrderDetailScreen(
+                orderId = entry.arguments?.getLong("orderId") ?: 0L,
+                onBack = { navController.popBackStack() },
+                onProductClick = { id -> navController.navigate("product_detail/$id") },
+                onPayment = { id, url ->
+                    entry.savedStateHandle.set("vnpay_raw_url", url)
+                    navController.navigate("vnpay_payment/$id")
                 }
             )
         }
@@ -789,6 +812,7 @@ fun AppNavigation(
                 },
                 onChatClick = {
                     val myUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                    if (myUserId.isBlank() || sellerId.isBlank() || myUserId == sellerId) return@SellerStoreScreen
                     val roomId = com.example.agritech_mobile.data.repository.ChatRepository.generateRoomId(myUserId, sellerId)
 
                     navController.navigate(

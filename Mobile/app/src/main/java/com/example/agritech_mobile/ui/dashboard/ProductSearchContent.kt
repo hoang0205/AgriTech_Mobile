@@ -16,7 +16,8 @@ fun ProductSearchContent(
     onExecuteSearch: (String) -> Unit,
     onProductClick: (String) -> Unit,
     onLoadMore: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    currentUserId: String? = null
 ) {
     if (state.isSearching || state.isSuggesting) {
         Box(
@@ -57,19 +58,7 @@ fun ProductSearchContent(
                         ) {
                             rowProducts.forEach { product ->
                                 SuggestedProductCard(
-                                    product = Product(
-                                        id = product.id,
-                                        name = product.name,
-                                        priceStr = "${product.price.toLong()} đ",
-                                        seller = product.farmerName,
-                                        imageUrl = product.imageUrls.firstOrNull().orEmpty(),
-                                        rating = product.rating,
-                                        reviewCount = product.reviewCount,
-                                        availableQuantity = product.quantity,
-                                        unit = product.unit,
-                                        distanceKm = product.distanceKm,
-                                        deliveryStatus = product.deliveryStatus
-                                    ),
+                                    product = product.toProductCard(currentUserId),
                                     modifier = Modifier.weight(1f),
                                     onClick = { onProductClick(product.id) }
                                 )

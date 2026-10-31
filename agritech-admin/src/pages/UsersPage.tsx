@@ -98,6 +98,9 @@ export default function UsersPage() {
   const [statusTarget, setStatusTarget] = useState<AdminUser | null>(
     null,
   );
+  const [roleTarget, setRoleTarget] = useState<AdminUser | null>(null);
+  const [savingRole, setSavingRole] = useState(false);
+  const [roleError, setRoleError] = useState("");
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState("");
 
@@ -205,6 +208,23 @@ export default function UsersPage() {
     }
   }
 
+  async function grantAdmin() {
+    if (!roleTarget || savingRole) return;
+    setSavingRole(true);
+    setRoleError("");
+    try {
+      const { data } = await api.patch<AdminUser>(`/admin/users/${encodeURIComponent(roleTarget.id)}/role`);
+      setSelectedUser((current) => current?.id === data.id ? data : current);
+      setRoleTarget(null);
+      setReload((value) => value + 1);
+      void messageApi.success("Đã cấp quyền Admin. Người dùng cần đăng nhập lại.");
+    } catch (cause) {
+      setRoleError(getErrorMessage(cause));
+    } finally {
+      setSavingRole(false);
+    }
+  }
+
   const columns: TableColumnsType<AdminUser> = [
     {
       title: "Người dùng",
@@ -254,7 +274,7 @@ export default function UsersPage() {
       title: "Thao tác",
       key: "actions",
       fixed: "right",
-      width: 220,
+      width: 350,
       render: (_, user) => (
         <Space size={4}>
           <Button
@@ -266,6 +286,12 @@ export default function UsersPage() {
             Chi tiết
           </Button>
 
+          {user.role === "USER" && (
+            <Button type="text" disabled={user.locked || savingRole || savingStatus || loading}
+              onClick={() => { setRoleError(""); setRoleTarget(user); }}>
+              Cấp quyền Admin
+            </Button>
+          )}
           {user.role === "ADMIN" ? (
             <Tooltip title="Không được khóa tài khoản Admin">
               <span>
@@ -417,6 +443,17 @@ export default function UsersPage() {
         }}
       />
 
+      <Modal title="Cấp quyền Admin" open={roleTarget !== null}
+        onOk={() => void grantAdmin()} onCancel={() => { if (!savingRole) setRoleTarget(null); }}
+        confirmLoading={savingRole} okText="Xác nhận cấp quyền" cancelText="Hủy"
+        cancelButtonProps={{ disabled: savingRole }} closable={!savingRole}
+        maskClosable={!savingRole} keyboard={!savingRole}>
+        <Typography.Paragraph>
+          Cấp quyền Admin cho <strong>{roleTarget?.fullName}</strong> ({roleTarget?.email})?
+          Tài khoản này sẽ có toàn quyền quản trị, bao gồm cấp quyền cho người khác, và cần đăng nhập lại.
+        </Typography.Paragraph>
+        {roleError && <Alert type="error" showIcon title={roleError} />}
+      </Modal>
       <Drawer
         title="Thông tin người dùng"
         open={selectedUser !== null}

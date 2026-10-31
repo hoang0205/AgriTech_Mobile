@@ -3,6 +3,7 @@ import {
   Alert,
   Button,
   Input,
+  Select,
   Space,
   Spin,
   Table,
@@ -45,6 +46,9 @@ type Statistics = {
 type DateRange = {
   from: string;
   to: string;
+  userId?: string;
+  userType?: "BUYER" | "SELLER";
+  productId?: string;
 };
 
 const currency = new Intl.NumberFormat("vi-VN", {
@@ -208,8 +212,47 @@ function RevenueChart({ daily }: { daily: DailyStatistics[] }) {
   );
 }
 
-export default function StatisticsPage() {
-  const [query, setQuery] = useState<DateRange>(defaultRange);
+export function FilterSearch({ kind, value, onChange }: {
+  kind: "users" | "products";
+  value?: string;
+  onChange: (value?: string) => void;
+}) {
+  const [keyword, setKeyword] = useState("");
+  const [options, setOptions] = useState<{ value: string; label: string }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setBusy(true);
+      setError("");
+      try {
+        const { data } = await api.get<{ items: { id: string; fullName?: string; phoneNumber?: string; name?: string }[] }>(`/admin/${kind}`, {
+          params: { keyword, size: 50 }, signal: controller.signal,
+        });
+        if (!controller.signal.aborted) setOptions(data.items.map((item) => ({
+          value: item.id,
+          label: kind === "users" ? `${item.fullName} (${item.phoneNumber})` : `${item.name} (${item.id})`,
+        })));
+      } catch (cause) {
+        if (!controller.signal.aborted && !axios.isCancel(cause)) setError(getErrorMessage(cause));
+      } finally {
+        if (!controller.signal.aborted) setBusy(false);
+      }
+    }, 250);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [kind, keyword]);
+  return <div>
+    <Select style={{ width: 300 }} allowClear showSearch filterOption={false}
+      aria-label={kind === "users" ? "Lọc người dùng" : "Lọc mặt hàng"}
+      placeholder={kind === "users" ? "Tìm tên, email, số điện thoại" : "Tìm mặt hàng"}
+      value={value} options={options} loading={busy} onSearch={setKeyword} onChange={onChange} />
+    {error && <Typography.Text type="danger">{error}</Typography.Text>}
+  </div>;
+}
+
+export default function StatisticsPage({ initialFilters }: { initialFilters?: DateRange } = {}) {
+  const [query, setQuery] = useState<DateRange>(() => initialFilters ?? defaultRange());
   const [draft, setDraft] = useState<DateRange>(query);
   const [data, setData] = useState<Statistics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -364,6 +407,26 @@ export default function StatisticsPage() {
             />
           </div>
 
+          {!initialFilters && <>
+          <div>
+            <label style={{ display: "block", marginBottom: 6 }}>Người dùng</label>
+            <Space wrap>
+              <Select value={draft.userType ?? "BUYER"} aria-label="Vai trò trong giao dịch"
+                options={[{ value: "BUYER", label: "Người mua" }, { value: "SELLER", label: "Người bán" }]}
+                onChange={(userType: "BUYER" | "SELLER") => setDraft((current) => ({ ...current, userType }))} />
+              <FilterSearch kind="users" value={draft.userId}
+                onChange={(userId) => setDraft((current) => ({ ...current, userId }))} />
+            </Space>
+          </div>
+          </>}
+          <div>
+            <label style={{ display: "block", marginBottom: 6 }}>Mặt hàng</label>
+            <FilterSearch kind="products" value={draft.productId}
+              onChange={(productId) => setDraft((current) => ({ ...current, productId }))} />
+          </div>
+          <Button onClick={() => { const range = defaultRange(); const reset = initialFilters ?? range; setDraft(reset); setQuery(reset); setInputError(""); }}>
+            Đặt lại bộ lọc
+          </Button>
           <Button
             type="primary"
             icon={<SearchOutlined />}
@@ -396,7 +459,8 @@ export default function StatisticsPage() {
           style={{ margin: "18px 0 0", fontSize: 12 }}
         >
           Lọc theo ngày đặt đơn. Doanh thu chỉ tính đơn hiện đã hoàn
-          thành, chưa phải tiền COD đối soát thực thu.
+          thành, theo giá và số lượng mặt hàng trong đơn, không gồm phí vận chuyển.
+          Các bộ lọc được áp dụng đồng thời. Chưa phải tiền COD đối soát thực thu.
         </Typography.Paragraph>
       </section>
 

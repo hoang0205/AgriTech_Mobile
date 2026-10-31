@@ -26,6 +26,7 @@ import { api, getErrorMessage } from "../api";
 type AuditAction =
   | "USER_LOCK"
   | "USER_UNLOCK"
+  | "USER_GRANT_ADMIN"
   | "PRODUCT_HIDE"
   | "PRODUCT_SHOW"
   | "REPORT_UPDATE";
@@ -67,6 +68,7 @@ type AuditLogsProps = {
 const actionLabels: Record<AuditAction, string> = {
   USER_LOCK: "Khóa tài khoản",
   USER_UNLOCK: "Mở khóa tài khoản",
+  USER_GRANT_ADMIN: "Cấp quyền Admin",
   PRODUCT_HIDE: "Ẩn sản phẩm",
   PRODUCT_SHOW: "Hiển thị sản phẩm",
   REPORT_UPDATE: "Xử lý báo cáo",
@@ -75,6 +77,7 @@ const actionLabels: Record<AuditAction, string> = {
 const actionColors: Record<AuditAction, string> = {
   USER_LOCK: "red",
   USER_UNLOCK: "green",
+  USER_GRANT_ADMIN: "purple",
   PRODUCT_HIDE: "orange",
   PRODUCT_SHOW: "green",
   REPORT_UPDATE: "blue",

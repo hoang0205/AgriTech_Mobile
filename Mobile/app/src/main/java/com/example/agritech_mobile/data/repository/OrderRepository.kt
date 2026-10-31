@@ -19,6 +19,40 @@ import kotlin.coroutines.cancellation.CancellationException
 class OrderRepository @Inject constructor(
     private val orderApiService: OrderApiService
 ) {
+    suspend fun confirmOrderReceived(orderId: Long): Result<OrderMessageResponse> {
+        return try {
+            val response = orderApiService.confirmOrderReceived(orderId)
+            val body = response.body()
+            if (response.isSuccessful && body != null) Result.success(body)
+            else {
+                val message = runCatching {
+                    Gson().fromJson(response.errorBody()?.string(), ErrorResponse::class.java)?.message
+                }.getOrNull()
+                Result.failure(Exception(message ?: "Không xác nhận được nhận hàng. Vui lòng tải lại đơn hàng."))
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { Result.failure(Exception("Chưa nhận được kết quả xác nhận. Vui lòng tải lại đơn hàng và thử lại.")) }
+    }
+
+    suspend fun getOrderDetail(orderId: Long): Result<com.example.agritech_mobile.data.remote.dto.OrderDetailResponse> {
+        return try {
+            val response = orderApiService.getOrderDetail(orderId)
+            val body = response.body()
+            if (response.isSuccessful && body != null) Result.success(body)
+            else {
+                val message = runCatching {
+                    Gson().fromJson(response.errorBody()?.string(), ErrorResponse::class.java)?.message
+                }.getOrNull()
+                Result.failure(Exception(message ?: when (response.code()) {
+                    403 -> "Bạn không có quyền xem đơn hàng này."
+                    404 -> "Không tìm thấy đơn hàng."
+                    else -> "Không tải được chi tiết đơn hàng. Vui lòng thử lại."
+                }))
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { Result.failure(Exception("Không kết nối được máy chủ. Vui lòng thử lại.")) }
+    }
+
     suspend fun getSellerOrders(): Result<List<OrderResponse>> {
         return try {
             val response = orderApiService.getSellerOrders()
@@ -133,8 +167,13 @@ class OrderRepository @Inject constructor(
                     Result.failure(Exception("Phản hồi từ server bị rỗng!"))
                 }
             } else {
-                Result.failure(Exception("Lỗi từ server: ${response.code()}"))
+                val message = runCatching {
+                    Gson().fromJson(response.errorBody()?.string(), ErrorResponse::class.java)?.message
+                }.getOrNull()?.takeIf { it.isNotBlank() }
+                Result.failure(Exception(message ?: "Không cập nhật được đơn hàng. Vui lòng tải lại và thử lại."))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(Exception("Không thể kết nối đến server: ${e.localizedMessage}"))
         }

@@ -123,6 +123,10 @@ class ChatViewModel @Inject constructor(
             return
         }
 
+        if (partnerId == currentUserId) {
+            _uiState.update { it.copy(isLoading = false, errorMessage = "Bạn không thể chat với chính mình.") }
+            return
+        }
         if (partnerId.isBlank()) {
             Log.e("CHAT_DEBUG", "[initChatRoom] partnerId bị rỗng! Kiểm tra lại tham số truyền từ Navigation.")
             _uiState.update { it.copy(isLoading = false, errorMessage = "ID đối phương không hợp lệ") }

@@ -60,7 +60,10 @@ data class OrderResponse(
     val ghnPendingCreation: Boolean = false,
     val deliveryMethod: String? = null,
     val actualShippingCost: Long? = null,
-    val receiverName: String? = null
+    val receiverName: String? = null,
+    val sellerDeliveredAt: String? = null,
+    val buyerReceivedAt: String? = null,
+    val complaintOpen: Boolean = false
 )
 
 data class OrderBuyerResponse(
@@ -76,7 +79,10 @@ data class OrderBuyerResponse(
     val ghnStatus: String? = null,
     val ghnShippingFee: Long? = null,
     val ghnPendingCreation: Boolean = false,
-    val deliveryMethod: String? = null
+    val deliveryMethod: String? = null,
+    val sellerDeliveredAt: String? = null,
+    val buyerReceivedAt: String? = null,
+    val complaintOpen: Boolean = false
 )
 
 data class OrderStatusCountResponse(
